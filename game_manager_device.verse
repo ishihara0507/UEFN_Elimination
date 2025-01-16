@@ -3,6 +3,8 @@ using { /Verse.org/Simulation }
 using { /UnrealEngine.com/Temporary/Diagnostics }
 using { /Verse.org/Random }
 
+## テスト
+
 Stage := struct<concrete>:
     Teleporters1:[]teleporter_device = array{}
     Teleporters2:[]teleporter_device = array{}

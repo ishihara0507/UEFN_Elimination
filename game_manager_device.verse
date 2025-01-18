@@ -30,6 +30,14 @@ game_manager_device := class(creative_device):
 
     @editable
     Stages:[]stage_data = array{}
+
+    @editable
+    WeaponEreaTeleportersRed:[]teleporter_device = array{} # チーム赤の武器エリアに設置するテレポーター
+    @editable
+    WeaponEreaTeleportersBlue:[]teleporter_device = array{} # チーム青の武器エリアに設置するテレポーター
+
+    @editable
+    WeaponEreaTeleporters:[][]teleporter_device = array{}
     
     @editable
     MessageHud:hud_message_device = hud_message_device{}
@@ -63,6 +71,8 @@ game_manager_device := class(creative_device):
     var GamePlayers:[]player = array{} # ゲームに参加するプレイヤー
 
     var TeamDatas:team_data = array{}
+
+    var UseStage:stage_data = stage_data{}
 
     # var TeamRed:[]player = array{}
     # var TeamBlue:[]player = array{}
@@ -115,40 +125,42 @@ game_manager_device := class(creative_device):
     # ステージをランダムで選択して、その場所にプレイヤーをテレポートさせる関数
     # チーム分けもする
     StageSelect():void=
-        if(S := Shuffle(Stages)[0]):
+        if(RandomStage := Shuffle(Stages)[0]):
+            set UseStage = RandomStage
             Players := Shuffle(GamePlayers)
             if:
                 TeamPlayerNum := Int[MatchPlayerNum * 1.0 / 2.0]
                 T1 := Players.Slice[0, TeamPlayerNum - 1]
                 T2 := Players.Slice[TeamPlayerNum]
             then:
-                set TeamRed = T1
-                set TeamBlue = T2
-
-                Team
-
                 # 同じチーム同士はダメージを受けないようにするために、島設定のチーム機能を使う
                 TeamCollection := GetPlayspace().GetTeamCollection()
                 TeamArray := TeamCollection.GetTeams()
-
-                for(Team:TeamArray):
-                    if. TeamWinsMap[Team] = 0 # チームごとの処理数を保持するマップの初期化
-
-                for(Player:TeamRed):
+                for(Player:T1):
                     if. TeamCollection.AddToTeam[Player, TeamArray[0]]
-                for(Player:TeamBlue):
+                for(Player:T2):
                     if. TeamCollection.AddToTeam[Player, TeamArray[1]]
+
+                set TeamDatas = array{
+                    team_data{Team := TeamArray[0], Wins := 0, Members := T1},
+                    team_data{Team := TeamArray[1], Wins := 0, Members := T2}
+                }
 
                 TeleportAllPlayersToStage()
         else:
             Print("ステージ選択の際にエラーが発生しました。")
 
-    TeleportAllPlayersToStage():void=
+    # 全員をチームごとに別の武器選択上にテレポートする
+    TeleportAllPlayersToWeaponErea():void=
+        for(TeamData:TeamDatas):
+            for(Index->Member:TeamData.Members):
+                
+
         for(Index := 0..TeamRed.Length-1):
-            if(Player := TeamRed[Index], Teleporter := S.TeleportersRed[Index]):
+            if(Player := TeamRed[Index], Teleporter := UseStage.TeleportersRed[Index]):
                 Teleporter.Teleport(Player)
         for(Index := 0..TeamBlue.Length-1):
-            if(Player := TeamBlue[Index], Teleporter := S.TeleportersRed[Index]):
+            if(Player := TeamBlue[Index], Teleporter := UseStage.TeleportersRed[Index]):
                 Teleporter.Teleport(Player)
 
     # 引数で与えられた時間(s)を00:00の形にして返す関数
@@ -181,6 +193,12 @@ game_manager_device := class(creative_device):
             RemoconGranter.GrantItem(Player)
 
     OnRemoconBoot(Agent:agent):void=
+        if(Player := player[Agent]):
+            for(TeamData:TeamDatas):
+                for(Index->Member:TeamData.Members):
+                    if(Player = Member, Teleporter := S.TeleportersRed[Index]):
+                        Teleporter.Teleport(Player)
+
         if(Player := player[Agent]):
             for(Index := 0..TeamRed.Length-1):
                 if(Player = TeamRed[Index], Teleporter := S.TeleportersRed[Index]):

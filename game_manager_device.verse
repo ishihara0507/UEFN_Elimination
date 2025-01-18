@@ -3,9 +3,15 @@ using { /Verse.org/Simulation }
 using { /UnrealEngine.com/Temporary/Diagnostics }
 using { /Verse.org/Random }
 
-Stage := struct<concrete>:
+stage_data := struct<concrete>:
     TeleportersRed:[]teleporter_device = array{}
     TeleportersBlue:[]teleporter_device = array{}
+    FlagPos:vector3 = vector3{}
+
+team_data := struct:
+    Team:team = team{}
+    Wins:int = 0
+    Members:[]player = array{}
 
 game_manager_device := class(creative_device):
 
@@ -20,14 +26,21 @@ game_manager_device := class(creative_device):
     RoundReadyTime:int = 180 # 武器を選んだり、ステージを見学したりする時間
 
     @editable
-    Stages:[]Stage = array{}
+    RoundTime:int = 300
+
+    @editable
+    Stages:[]stage_data = array{}
     
     @editable
     MessageHud:hud_message_device = hud_message_device{}
     @editable
     CountDownHud:hud_message_device = hud_message_device{}
     @editable
-    RoundCoundDownHud:hud_message_device = hud_message_device{} # 試合開始直前のカウントダウンを表示するHUD（数字を大きめにしたいから別で用意）
+    StartDelayHud:hud_message_device = hud_message_device{} # 試合開始直前のカウントダウンを表示するHUD（数字を大きめにしたいから別で用意）
+    @editable
+    RoundCoundDownHud:hud_message_device = hud_message_device{}
+    @editable
+    FlagHud:hud_message_device = hud_message_device{} # ラウンド制限時間が終了して、フラッグが発生したことを知らせるHUD
 
     @editable
     StageTeleporter:[]teleporter_device = teleporter_device{} # 武器選択フェーズにおけるステージへのテレポーター
@@ -49,10 +62,22 @@ game_manager_device := class(creative_device):
     ### ゲーム中に変動する変数 -------------------------------------
     var GamePlayers:[]player = array{} # ゲームに参加するプレイヤー
 
-    var TeamRed:[]player = array{}
-    var TeamBlue:[]player = array{}
+    var TeamDatas:team_data = array{}
+
+    # var TeamRed:[]player = array{}
+    # var TeamBlue:[]player = array{}
+
+    # var TeamWinsMap:[team]int = map{} # 各チームの勝利回数を保持する
 
     var WeaponPlayerMap:[player][]int = map{} # これはできるか？
+
+    var FlagCapturedPlayer:?player = false
+    ### ------------------------------------------------------------
+
+    ### event() ----------------------------------------------------
+    KillEvent:event() = event(){} # キルの発生を管理するイベント
+
+    FlagCaptured:event() = event(){} # フラッグの取得を管理するイベント
     ### ------------------------------------------------------------
 
     S2M<localizes>(S:string):message = "{S}"
@@ -67,9 +92,20 @@ game_manager_device := class(creative_device):
             Players := GetPlayspace().GetPlayers()
             if(Players.Length >= MatchPlayerNum):
                 Print("プレイヤーが揃ったのでゲームを開始する")
-                CountFunc := spawn{CountDown("Game starts in", StartDelay)}
-                CountFunc.Await() # これできるのか？
-                set GamePlayers = Player
+                var Count:int = StartDelay
+                loop:
+                    CountDownHud.Show(S2M("Game starts in: {Count}"))
+                    Sleep(1.0)
+                    set Count -= 1
+                CountDownHud.Hide()
+
+                set GamePlayers = Players
+
+                # すべてのプレイヤーをダメージを受けない状態にする
+                for(Player := GamePlayers):
+                    if(FortCharacter := Player.GetFortCharacter[]):
+                        FortCharacter.SetVulnerability(false)
+
                 StageSelect()
                 break
             NeedPlayerNum:int = MatchPlayerNum - Players.Length
@@ -88,6 +124,21 @@ game_manager_device := class(creative_device):
             then:
                 set TeamRed = T1
                 set TeamBlue = T2
+
+                Team
+
+                # 同じチーム同士はダメージを受けないようにするために、島設定のチーム機能を使う
+                TeamCollection := GetPlayspace().GetTeamCollection()
+                TeamArray := TeamCollection.GetTeams()
+
+                for(Team:TeamArray):
+                    if. TeamWinsMap[Team] = 0 # チームごとの処理数を保持するマップの初期化
+
+                for(Player:TeamRed):
+                    if. TeamCollection.AddToTeam[Player, TeamArray[0]]
+                for(Player:TeamBlue):
+                    if. TeamCollection.AddToTeam[Player, TeamArray[1]]
+
                 TeleportAllPlayersToStage()
         else:
             Print("ステージ選択の際にエラーが発生しました。")
@@ -100,13 +151,28 @@ game_manager_device := class(creative_device):
             if(Player := TeamBlue[Index], Teleporter := S.TeleportersRed[Index]):
                 Teleporter.Teleport(Player)
 
-    CountDown(Str:string, TimeLimit:int)<suspends>:void=
-        var Count:int = TimeLimit
-        loop:
-            CountDownHud.Show(S2M("{Str}: {Count}"))
-            Sleep(1.0)
-            set Count -= 1
-        CountDownHud.Hide()
+    # 引数で与えられた時間(s)を00:00の形にして返す関数
+    CalcElapsedTime(StormRemainingTime:int):string=
+        # 各値を算出
+        var Seconds : int = 0 # 秒
+        var Minutes : int = 0 # 分
+        if:
+            # 秒
+            tmp_sec := Mod[StormRemainingTime, 60] 
+            set Seconds = tmp_sec
+            # 分
+            tmp_min := Int[(StormRemainingTime - Seconds)*1.0 / 60.0]
+            set Minutes = tmp_min
+
+        # 文字列に変換するための準備
+        var Minutes_zero : string = ""
+        var Seconds_zero : string = ""
+        if(Minutes < 10):
+            set Minutes_zero = "0"
+        if(Seconds < 10):
+            set Seconds_zero = "0"
+
+        return "{Minutes_zero}{Minutes}:{Seconds_zero}{Seconds}"
 
     # 武器選択フェーズ中に、ステージにテレポートした際に実行する関数
     OnTeleportToStage(Agent:agent):void=
@@ -126,23 +192,45 @@ game_manager_device := class(creative_device):
             for(Index := 0..WeaponPlayerMap[Player].Length-1):
                 WeaponGranter.GrantItemIndex(Player, WeaponPlayerMap[Player][Index])
 
+    OnPlayerEliminated(Result:elimination_result):void=
+        Print("キル発生!!")
+        EliminatorFort:?fort_character = Result.EliminatingCharacter
+
+        if(FortCharacter := EliminatorFort?, EliminatorAgent := FortCharacter.GetAgent[]):
+            TeamCollection := GetPlayspace().GetTeamCollection()
+            TeamArray := TeamCollection.GetTeams()
+            RoundWinTeam := TeamCollection.GetTeam(EliminatorAgent)
+            for(Team->Wins:TeamWinsMap):
+                if. (Team = RoundWinTeam, set TeamWinsMap[Team] += 1)
+        else:
+            Print("キルに関するエラーが発生した。")
+        
+        KillEvent.Signal()
+
+    OnFlagCaptured(FlagCapturedAgent:agent):void=
+        if(Player := player[FlagCapturedAgent]):
+            set FlagCapturedPlayer = option{Player}
+        else:
+            Print("フラッグ関連のエラーが発生しました。")
+        FlagCaptured.Signal()
+
     # ゲーム全体の流れを実行する関数
     StartGameFlow()<suspends>:void=
-        # ステージ見学＋武器を選択するフェーズ
-            # 前回の武器選択を統計データで保持できるようにしたい。
-            # ステージではリモコンだけ持ってて、武器選択エリアに瞬間移動できる。
-            # 武器選択エリアでは、テレポーターに入ることでステージに移動できる。
-            # ステージと武器選択エリアを自由に行き来できる。武器選択エリアはチームごとに作る。
-            # 移動はリモコンで行える。
-            # 全部で2分か3分くらい設ける。
-            # 武器選択エリアには、武器練習用のやつも用意しておく。
-        CountFunc := spawn{CountDown("Round starts in", RoundReadyTime)}
-        CountFunc.Await()
+        ### ステージ見学＋武器を選択するフェーズ -----------------------------------------------------------
+        # 武器選択フェーズのカウントダウン開始
+        var Count:int = RoundReadyTime
+        loop:
+            CountDownHud.Show(S2M("Round starts in: {Count}"))
+            Sleep(1.0)
+            set Count -= 1
+        CountDownHud.Hide()
 
+        ### 試合をするフェーズ ----------------------------------------------------------------------------------
         # プレイヤーを静止させる
-        for(GamePlayers):
+        for(Player:GamePlayers):
             if(FortCharacter := Player.GetFortCharacter[]):
                 FortCharacter.PutInStasis(stasis_args{AllowTurning := false, AllowFalling := false, AllowEmotes := true})
+                FortCharacter.EliminatedEvent().Subscribe(OnPlayerEliminated)
         
         TeleportAllPlayersToStage()
 
@@ -156,22 +244,48 @@ game_manager_device := class(creative_device):
             for(Index := 0..WeaponPlayerMap[Player].Length-1):
                 WeaponGranter.GrantItemIndex(Player, WeaponPlayerMap[Player][Index])
         
-
-        # 試合をするフェーズ
-            # ラウンド
-            # 勝敗判定
+        # ラウンド開始前に数秒カウントダウンする
         var Count:int = StartDelay
         loop:
-            RoundCoundDownHud.Show(S2M("{Count}"))
+            StartDelayHud.Show(S2M("{Count}"))
             Sleep(1.0)
             set Count -= 1
-            
+        StartDelayHud.Hide()
+
         # プレイヤーの静止を解除する
-        for(GamePlayers):
+        for(Player:GamePlayers):
             if(FortCharacter := Player.GetFortCharacter[]):
+                FortCharacter.SetVulnerability(true) # ダメージを受けるようにする
                 FortCharacter.ReleaseFromStasis()
 
+        race:
+            loop: # プレイヤー退出待ち
+                LeavingAgent := GetPlayspace().PlayerRemovedEvent().Await()
+                if(LeavingPlayer := player[LeavingAgent]):
+                    TeamCollection := GetPlayspace().GetTeamCollection()
+                    TeamArray := TeamCollection.GetTeams()
+                then:
+                    for(Player : Players):
+                        if(not(LeavingPlayer = Player)):
+
+        # ラウンドタイマーを開始する
+        var Count:int = RoundTime
+        loop:
+            RoundCoundDownHud.Show(S2M("{CalcElapsedTime(Count)}"))
+            Sleep(1.0)
+            set Count -= 1
+        RoundCoundDownHud.Hide()
+
+        FlagHud.Show()
+        FlagCaptured.Await()
+        TeamCollection := GetPlayspace().GetTeamCollection()
+        TeamArray := TeamCollection.GetTeams()
+        if(FCPlayer := FlagCapturedPlayer?):
+            RoundWinTeam := TeamCollection.GetTeam(FCPlayer)
+            for(Team->Wins:TeamWinsMap):
+                if. (Team = RoundWinTeam, set TeamWinsMap[Team] += 1)
+            set FlagCapturedPlayer = false
+        else:
+            Print("フラッグに関するエラーが発生した。")
         
-        
-        
-        # ゲームを終了するフェーズ
+        # ゲームを終了するフェーズ ------------------------------------------------------------------------

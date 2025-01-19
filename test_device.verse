@@ -8,27 +8,13 @@ using { /Fortnite.com/Characters }
 using { /Fortnite.com/Game }
 using { /Fortnite.com/FortPlayerUtilities }
 
-bb := struct<concrete>:
-    @editable
-    a:int = 0
-    @editable
-    b:int = 1
-
-aaa := class<concrete>:
-    @editable
-    a:int = 0
-    @editable
-    b:int = 0
+### 試したいこと
+# LeavingAgent := GetPlayspace().PlayerRemovedEvent().Await()
+# if. (Team := TeamCollection.GetTeam[LeavingAgent], set TeamRemainingMap[Team] -= 1)
+# 退出したプレイヤーのTeamはちゃんと取得できるのか？
+# ↑ができなかったら、ラウンドが始まった瞬間にteamとplayerをmapとして別で管理すればおっけー
 
 test_device:= class(creative_device):
-
-    @editable
-    v:[]bb = array{}
-
-    @editable
-    var AA:[]aaa = array{}
-
-    e:event(int) := event(int){}
 
     OnBegin<override>()<suspends>:void=
         # TeamCollection := GetPlayspace().GetTeamCollection()
@@ -39,16 +25,3 @@ test_device:= class(creative_device):
         #     LeavingAgent := GetPlayspace().PlayerRemovedEvent().Await()
         #     if(Team := TeamCollection.GetTeam[LeavingAgent], l2 := TeamCollection.GetAgents[Team].Length):
         #         Print("プレイヤー退出後のチームの長さ: {l2}")
-        var Count:int = 10
-        loop:
-            Print("{Count}")
-            Sleep(1.0)
-            set Count -= 1
-            if(Count <= 0):
-                break
-        Players := GetPlayspace().GetPlayers()
-        if. Players[0].SendToLobby()
-    
-    Wait(c:int)<suspends>:void=
-        Sleep(5.0)
-        e.Signal(c)

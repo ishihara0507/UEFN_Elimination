@@ -15,15 +15,6 @@ stage_data := struct<concrete>:
     @editable
     FlagPos:vector3 = vector3{}
 
-# team_data := struct:
-#     Wins:int = 0
-#     Members:[]player = array{}
-
-# 構造体だとインスタンス化後、メンバの内容を変更することができないからクラスで定義することにした
-team_data := class:
-    var Wins:int = 0
-    var Members:[]player = array{}
-
 game_manager_device := class(creative_device):
 
     ### @editable --------------------------------------------------
@@ -79,7 +70,9 @@ game_manager_device := class(creative_device):
     ### ゲーム中に変動する変数 -------------------------------------
     var GamePlayers:[]player = array{} # ゲームに参加するプレイヤー
 
-    var TeamDataMap:[team]team_data = map{}
+    var TeamRemainingMap:[team]int = map{} # ラウンドごとの残りプレイヤーの数を保持するマップ
+
+    var TeamWinsMap:[team]int = map{}
 
     var TeamWeaponTelepotersMap:[team][]teleporter_device = map{}
     
@@ -88,12 +81,10 @@ game_manager_device := class(creative_device):
     var UseStage:stage_data = stage_data{}
 
     var WeaponPlayerMap:[player][]int = map{} # これはできるか？
-
-    # var FlagCapturedPlayer:?player = false
     ### ------------------------------------------------------------
 
     ### event() ----------------------------------------------------
-    KillEvent:event() = event(){} # キルの発生を管理するイベント
+    KillEvent:event(agent) = event(agent){} # キルの発生を管理するイベント
 
     FlagCaptured:event(agent) = event(agent){} # フラッグの取得を管理するイベント
     ### ------------------------------------------------------------
@@ -155,8 +146,12 @@ game_manager_device := class(creative_device):
 
                 if:
                     # TeamDataMapを初期化
-                    set TeamDataMap[TeamArray[0]] = team_data{Wins := 0, Members := T1}
-                    set TeamDataMap[TeamArray[1]] = team_data{Wins := 0, Members := T2}
+                    # set TeamDataMap[TeamArray[0]] = team_data{Wins := 0, Members := T1}
+                    # set TeamDataMap[TeamArray[1]] = team_data{Wins := 0, Members := T2}
+
+                    # TeamWinsMapを初期化
+                    set TeamWinsMap[TeamArray[0]] = 0
+                    set TeamWinsMap[TeamArray[1]] = 0
                     
                     # TeamWeaponTelepotersMapを初期化
                     set TeamWeaponTelepotersMap[TeamArray[0]] = WeaponEreaTeleportersRed
@@ -170,11 +165,12 @@ game_manager_device := class(creative_device):
         else:
             Print("ステージ選択の際にエラーが発生しました。")
 
-    # 全員をチームごとに別の武器選択上にテレポートする
+    # 全員をチームごとに別の武器選択エリア上にテレポートする
     TeleportAllPlayersToWeaponErea():void=
-        TeamArray := GetPlayspace().GetTeamCollection().GetTeams()
+        TeamCollection := GetPlayspace().GetTeamCollection()
+        TeamArray := TeamCollection.GetTeams()
         for(Team:TeamArray):
-            if(Members := TeamDataMap[Team].Members, WeaponTeleporters := TeamWeaponTelepotersMap[Team]):
+            if(Members := TeamCollection.GetAgents[Team], WeaponTeleporters := TeamWeaponTelepotersMap[Team]):
                 for(Index->Member:Members):
                     if(WeaponTeleporter := WeaponTeleporters[Index]):
                         WeaponTeleporter.Teleport(Member)
@@ -182,7 +178,7 @@ game_manager_device := class(creative_device):
     TeleportAllPlayersToStage():void=
         TeamArray := GetPlayspace().GetTeamCollection().GetTeams()
         for(Team:TeamArray):
-            if(Members := TeamDataMap[Team].Members, StageTeleporters := TeamStageTelepotersMap[Team]):
+            if(Members := TeamCollection.GetAgents[Team], StageTeleporters := TeamStageTelepotersMap[Team]):
                 for(Index->Member:Members):
                     if(StageTeleporter := StageTeleporters[Index]):
                         StageTeleporter.Teleport(Member)
@@ -220,7 +216,7 @@ game_manager_device := class(creative_device):
         TeamCollection := GetPlayspace().GetTeamCollection()
         if(Player := player[Agent]):
             # リモコンを起動したプレイヤーが所属しているチームに合わせて、テレポート先を変更する
-            if(Team := TeamCollection.GetTeam[Agent], Members := TeamDataMap[Team].Members, WeaponTeleporters := TeamWeaponTelepotersMap[Team]): # リモコンを起動したプレイヤーが所属しているチームを取得
+            if(Team := TeamCollection.GetTeam[Agent], Members := TeamCollection.GetAgents[Team], WeaponTeleporters := TeamWeaponTelepotersMap[Team]): # リモコンを起動したプレイヤーが所属しているチームを取得
                 for(Index->Member:Members):
                     if(Player = Member, WeaponTeleporter := WeaponTeleporters[Index]):
                         WeaponTeleporter.Teleport(Player)
@@ -231,16 +227,13 @@ game_manager_device := class(creative_device):
 
     OnPlayerEliminated(Result:elimination_result):void=
         Print("キル発生!!")
-        EliminatorFort:?fort_character = Result.EliminatingCharacter
+        EliminatedFort:fort_character = Result.EliminatedCharacter
         if:
-            FortCharacter := EliminatorFort?
-            EliminatorAgent := FortCharacter.GetAgent[]
-            RoundWinTeam := GetPlayspace().GetTeamCollection().GetTeam[EliminatorAgent]
-            set TeamDataMap[RoundWinTeam].Wins += 1
+            EliminatedAgent := EliminatedFort.GetAgent[]
+        then:
+            KillEvent.Signal(EliminatedAgent)
         else:
             Print("キルに関するエラーが発生した。")
-        
-        KillEvent.Signal()
 
     OnFlagCaptured(FlagCapturedAgent:agent):void=
         FlagCaptured.Signal(FlagCapturedAgent)
@@ -261,21 +254,30 @@ game_manager_device := class(creative_device):
                 break
         CountDownHud.Hide()
 
-        # プレイヤー人数を確認して、０人のチームがあったら強制終了とする。
-        set TeamArray = TeamCollection.GetTeams()
-        for(Team:TeamArray):
-            if(TeamCollection.GetAgents[Team].Length <= 0):
-                Print("あるチームのプレイヤー人数が０人です。ゲームを終了します。")
-                # ゲーム終了処理を追加
+        for(Player:GamePlayers):
+            if(FortCharacter := Player.GetFortCharacter[]):
+                FortCharacter.EliminatedEvent().Subscribe(OnPlayerEliminated)
 
         ### 試合をするフェーズ ----------------------------------------------------------------------------------
         # プレイヤーを静止させる
         for(Player:GamePlayers):
             if(FortCharacter := Player.GetFortCharacter[]):
                 FortCharacter.PutInStasis(stasis_args{AllowTurning := false, AllowFalling := false, AllowEmotes := true})
-                FortCharacter.EliminatedEvent().Subscribe(OnPlayerEliminated)
         
         TeleportAllPlayersToStage()
+
+        set TeamArray = TeamCollection.GetTeams()
+        for(Team:TeamArray):
+            if(RemainingCount := TeamCollection.GetAgents[Team].Length):
+                set TeamRemainingMap[team] = RemainingCount
+
+        # ラウンド開始時の各チームの初期人数を設定＋プレイヤーとチームのMapを初期化する（プレイヤーが退出したとき用に作成してる）
+        var PlayerTeamMap:[player]team = map{}
+        set TeamArray = TeamCollection.GetTeams()
+        for(Team:TeamArray):
+            if(TeamAgents := TeamCollection.GetAgents[Team], set TeamRemainingMap[team] = TeamAgents.Length):
+                for(Agent:TeamAgents):
+                    if. (Player := player[Agent], set PlayerTeamMap[Player] = Team)
 
         # 武器を付与する
         for(Player:GamePlayers):
@@ -301,17 +303,13 @@ game_manager_device := class(creative_device):
 
         race:
             loop: # プレイヤー退出待ち
-                LeavingAgent := GetPlayspace().PlayerRemovedEvent().Await()
-                # if(LeavingPlayer := player[LeavingAgent]):
-                #     TeamCollection := GetPlayspace().GetTeamCollection()
-                #     TeamArray := TeamCollection.GetTeams()
-                # then:
-                #     for(Player : Players):
-                #         if(not(LeavingPlayer = Player)):
+                LeavingPlayer:player = GetPlayspace().PlayerRemovedEvent().Await()
+                if. (Team := PlayerTeamMap[LeavingPlayer], set TeamRemainingMap[Team] -= 1)
+                # ラウンド勝利判定
             loop: # 一方のチームの全滅待ち
-                KillEvent.Await()
-
-                
+                EliminatedAgent := KillEvent.Await() # キルされたプレイヤー
+                if. (Team := TeamCollection.GetTeam[EliminatedAgent], set TeamRemainingMap[Team] -= 1)
+                # ラウンド勝利判定               
             block: # 制限時間終了し、旗が取られるの待ち
                 # 旗の生成はキャプチャーエリアの仕掛けを使う
                 set Count = RoundTime
@@ -327,5 +325,6 @@ game_manager_device := class(creative_device):
                 set TeamArray = TeamCollection.GetTeams()
                 if. (RoundWinTeam := TeamCollection.GetTeam[FlagCapturedAgent], set TeamDataMap[RoundWinTeam].Wins += 1)
                 else. Print("フラッグに関するエラーが発生した。")
+                # ラウンド終了処理
         
         # ゲームを終了するフェーズ ------------------------------------------------------------------------

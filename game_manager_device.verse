@@ -1,17 +1,28 @@
 using { /Fortnite.com/Devices }
 using { /Verse.org/Simulation }
 using { /UnrealEngine.com/Temporary/Diagnostics }
+using { /UnrealEngine.com/Temporary/SpatialMath }
 using { /Verse.org/Random }
+using { /Verse.org/Simulation }
+using { /Fortnite.com/Characters }
+using { /Fortnite.com/Game }
 
 stage_data := struct<concrete>:
+    @editable
     TeleportersRed:[]teleporter_device = array{}
+    @editable
     TeleportersBlue:[]teleporter_device = array{}
+    @editable
     FlagPos:vector3 = vector3{}
 
-team_data := struct:
-    Team:team = team{}
-    Wins:int = 0
-    Members:[]player = array{}
+# team_data := struct:
+#     Wins:int = 0
+#     Members:[]player = array{}
+
+# 構造体だとインスタンス化後、メンバの内容を変更することができないからクラスで定義することにした
+team_data := class:
+    var Wins:int = 0
+    var Members:[]player = array{}
 
 game_manager_device := class(creative_device):
 
@@ -31,13 +42,11 @@ game_manager_device := class(creative_device):
     @editable
     Stages:[]stage_data = array{}
 
+    # 武器エリアのテレポーターは、一応１チームの人数分用意しておく
     @editable
     WeaponEreaTeleportersRed:[]teleporter_device = array{} # チーム赤の武器エリアに設置するテレポーター
     @editable
     WeaponEreaTeleportersBlue:[]teleporter_device = array{} # チーム青の武器エリアに設置するテレポーター
-
-    @editable
-    WeaponEreaTeleporters:[][]teleporter_device = array{}
     
     @editable
     MessageHud:hud_message_device = hud_message_device{}
@@ -51,7 +60,7 @@ game_manager_device := class(creative_device):
     FlagHud:hud_message_device = hud_message_device{} # ラウンド制限時間が終了して、フラッグが発生したことを知らせるHUD
 
     @editable
-    StageTeleporter:[]teleporter_device = teleporter_device{} # 武器選択フェーズにおけるステージへのテレポーター
+    ToStageTeleporters:[]teleporter_device = array{} # 武器選択フェーズにおけるステージへのテレポーター
 
     @editable
     RemoconGranter:item_granter_device = item_granter_device{} # リモコンを付与するデバイス
@@ -70,31 +79,32 @@ game_manager_device := class(creative_device):
     ### ゲーム中に変動する変数 -------------------------------------
     var GamePlayers:[]player = array{} # ゲームに参加するプレイヤー
 
-    var TeamDatas:team_data = array{}
+    var TeamDataMap:[team]team_data = map{}
+
+    var TeamWeaponTelepotersMap:[team][]teleporter_device = map{}
+    
+    var TeamStageTelepotersMap:[team][]teleporter_device = map{}
 
     var UseStage:stage_data = stage_data{}
 
-    # var TeamRed:[]player = array{}
-    # var TeamBlue:[]player = array{}
-
-    # var TeamWinsMap:[team]int = map{} # 各チームの勝利回数を保持する
-
     var WeaponPlayerMap:[player][]int = map{} # これはできるか？
 
-    var FlagCapturedPlayer:?player = false
+    # var FlagCapturedPlayer:?player = false
     ### ------------------------------------------------------------
 
     ### event() ----------------------------------------------------
     KillEvent:event() = event(){} # キルの発生を管理するイベント
 
-    FlagCaptured:event() = event(){} # フラッグの取得を管理するイベント
+    FlagCaptured:event(agent) = event(agent){} # フラッグの取得を管理するイベント
     ### ------------------------------------------------------------
 
     S2M<localizes>(S:string):message = "{S}"
 
     # プレイヤーが揃うまで待機する関数
     OnBegin<override>()<suspends>:void=
-        StageTeleporter.EnterEvent.Subscribe(OnTeleportToStage)
+        
+        for(Teleporter:ToStageTeleporters):
+            Teleporter.EnterEvent.Subscribe(OnTeleportToStage)
         Remocon.PrimarySignalEvent.Subscribe(OnRemoconBoot)
         Remocon.SecondarySignalEvent.Subscribe(OnRemoconBoot)
 
@@ -107,12 +117,14 @@ game_manager_device := class(creative_device):
                     CountDownHud.Show(S2M("Game starts in: {Count}"))
                     Sleep(1.0)
                     set Count -= 1
+                    if(Count <= 0):
+                        break
                 CountDownHud.Hide()
 
                 set GamePlayers = Players
 
                 # すべてのプレイヤーをダメージを受けない状態にする
-                for(Player := GamePlayers):
+                for(Player:GamePlayers):
                     if(FortCharacter := Player.GetFortCharacter[]):
                         FortCharacter.SetVulnerability(false)
 
@@ -141,27 +153,39 @@ game_manager_device := class(creative_device):
                 for(Player:T2):
                     if. TeamCollection.AddToTeam[Player, TeamArray[1]]
 
-                set TeamDatas = array{
-                    team_data{Team := TeamArray[0], Wins := 0, Members := T1},
-                    team_data{Team := TeamArray[1], Wins := 0, Members := T2}
-                }
+                if:
+                    # TeamDataMapを初期化
+                    set TeamDataMap[TeamArray[0]] = team_data{Wins := 0, Members := T1}
+                    set TeamDataMap[TeamArray[1]] = team_data{Wins := 0, Members := T2}
+                    
+                    # TeamWeaponTelepotersMapを初期化
+                    set TeamWeaponTelepotersMap[TeamArray[0]] = WeaponEreaTeleportersRed
+                    set TeamWeaponTelepotersMap[TeamArray[1]] = WeaponEreaTeleportersBlue
 
-                TeleportAllPlayersToStage()
+                    # TeamStageTelepotersMapを初期化
+                    set TeamStageTelepotersMap[TeamArray[0]] = UseStage.TeleportersRed
+                    set TeamStageTelepotersMap[TeamArray[1]] = UseStage.TeleportersBlue
+
+                TeleportAllPlayersToWeaponErea()
         else:
             Print("ステージ選択の際にエラーが発生しました。")
 
     # 全員をチームごとに別の武器選択上にテレポートする
     TeleportAllPlayersToWeaponErea():void=
-        for(TeamData:TeamDatas):
-            for(Index->Member:TeamData.Members):
-                
+        TeamArray := GetPlayspace().GetTeamCollection().GetTeams()
+        for(Team:TeamArray):
+            if(Members := TeamDataMap[Team].Members, WeaponTeleporters := TeamWeaponTelepotersMap[Team]):
+                for(Index->Member:Members):
+                    if(WeaponTeleporter := WeaponTeleporters[Index]):
+                        WeaponTeleporter.Teleport(Member)
 
-        for(Index := 0..TeamRed.Length-1):
-            if(Player := TeamRed[Index], Teleporter := UseStage.TeleportersRed[Index]):
-                Teleporter.Teleport(Player)
-        for(Index := 0..TeamBlue.Length-1):
-            if(Player := TeamBlue[Index], Teleporter := UseStage.TeleportersRed[Index]):
-                Teleporter.Teleport(Player)
+    TeleportAllPlayersToStage():void=
+        TeamArray := GetPlayspace().GetTeamCollection().GetTeams()
+        for(Team:TeamArray):
+            if(Members := TeamDataMap[Team].Members, StageTeleporters := TeamStageTelepotersMap[Team]):
+                for(Index->Member:Members):
+                    if(StageTeleporter := StageTeleporters[Index]):
+                        StageTeleporter.Teleport(Member)
 
     # 引数で与えられた時間(s)を00:00の形にして返す関数
     CalcElapsedTime(StormRemainingTime:int):string=
@@ -193,47 +217,39 @@ game_manager_device := class(creative_device):
             RemoconGranter.GrantItem(Player)
 
     OnRemoconBoot(Agent:agent):void=
+        TeamCollection := GetPlayspace().GetTeamCollection()
         if(Player := player[Agent]):
-            for(TeamData:TeamDatas):
-                for(Index->Member:TeamData.Members):
-                    if(Player = Member, Teleporter := S.TeleportersRed[Index]):
-                        Teleporter.Teleport(Player)
+            # リモコンを起動したプレイヤーが所属しているチームに合わせて、テレポート先を変更する
+            if(Team := TeamCollection.GetTeam[Agent], Members := TeamDataMap[Team].Members, WeaponTeleporters := TeamWeaponTelepotersMap[Team]): # リモコンを起動したプレイヤーが所属しているチームを取得
+                for(Index->Member:Members):
+                    if(Player = Member, WeaponTeleporter := WeaponTeleporters[Index]):
+                        WeaponTeleporter.Teleport(Player)
 
-        if(Player := player[Agent]):
-            for(Index := 0..TeamRed.Length-1):
-                if(Player = TeamRed[Index], Teleporter := S.TeleportersRed[Index]):
-                    Teleporter.Teleport(Player)
-            for(Index := 0..TeamBlue.Length-1):
-                if(Player = TeamBlue[Index], Teleporter := S.TeleportersRed[Index]):
-                    Teleporter.Teleport(Player)
             ItemRemover.Remove(Player) # 所持アイテムの削除
-            for(Index := 0..WeaponPlayerMap[Player].Length-1):
-                WeaponGranter.GrantItemIndex(Player, WeaponPlayerMap[Player][Index])
+            for(WeaponIndex:WeaponPlayerMap[Player]):
+                WeaponGranter.GrantItemIndex(Player, WeaponIndex)
 
     OnPlayerEliminated(Result:elimination_result):void=
         Print("キル発生!!")
         EliminatorFort:?fort_character = Result.EliminatingCharacter
-
-        if(FortCharacter := EliminatorFort?, EliminatorAgent := FortCharacter.GetAgent[]):
-            TeamCollection := GetPlayspace().GetTeamCollection()
-            TeamArray := TeamCollection.GetTeams()
-            RoundWinTeam := TeamCollection.GetTeam(EliminatorAgent)
-            for(Team->Wins:TeamWinsMap):
-                if. (Team = RoundWinTeam, set TeamWinsMap[Team] += 1)
+        if:
+            FortCharacter := EliminatorFort?
+            EliminatorAgent := FortCharacter.GetAgent[]
+            RoundWinTeam := GetPlayspace().GetTeamCollection().GetTeam[EliminatorAgent]
+            set TeamDataMap[RoundWinTeam].Wins += 1
         else:
             Print("キルに関するエラーが発生した。")
         
         KillEvent.Signal()
 
     OnFlagCaptured(FlagCapturedAgent:agent):void=
-        if(Player := player[FlagCapturedAgent]):
-            set FlagCapturedPlayer = option{Player}
-        else:
-            Print("フラッグ関連のエラーが発生しました。")
-        FlagCaptured.Signal()
+        FlagCaptured.Signal(FlagCapturedAgent)
 
     # ゲーム全体の流れを実行する関数
     StartGameFlow()<suspends>:void=
+        TeamCollection := GetPlayspace().GetTeamCollection()
+        var TeamArray:[]team = array{}
+
         ### ステージ見学＋武器を選択するフェーズ -----------------------------------------------------------
         # 武器選択フェーズのカウントダウン開始
         var Count:int = RoundReadyTime
@@ -241,7 +257,16 @@ game_manager_device := class(creative_device):
             CountDownHud.Show(S2M("Round starts in: {Count}"))
             Sleep(1.0)
             set Count -= 1
+            if(Count <= 0):
+                break
         CountDownHud.Hide()
+
+        # プレイヤー人数を確認して、０人のチームがあったら強制終了とする。
+        set TeamArray = TeamCollection.GetTeams()
+        for(Team:TeamArray):
+            if(TeamCollection.GetAgents[Team].Length <= 0):
+                Print("あるチームのプレイヤー人数が０人です。ゲームを終了します。")
+                # ゲーム終了処理を追加
 
         ### 試合をするフェーズ ----------------------------------------------------------------------------------
         # プレイヤーを静止させる
@@ -253,21 +278,19 @@ game_manager_device := class(creative_device):
         TeleportAllPlayersToStage()
 
         # 武器を付与する
-        for(Player:TeamRed):
-            ItemRemover.Remove(Player)
-            for(Index := 0..WeaponPlayerMap[Player].Length-1):
-                WeaponGranter.GrantItemIndex(Player, WeaponPlayerMap[Player][Index])
-        for(Player:TeamBlue):
-            ItemRemover.Remove(Player)
-            for(Index := 0..WeaponPlayerMap[Player].Length-1):
-                WeaponGranter.GrantItemIndex(Player, WeaponPlayerMap[Player][Index])
+        for(Player:GamePlayers):
+            ItemRemover.Remove(Player) # 所持アイテムの削除
+            for(WeaponIndex:WeaponPlayerMap[Player]):
+                WeaponGranter.GrantItemIndex(Player, WeaponIndex)
         
         # ラウンド開始前に数秒カウントダウンする
-        var Count:int = StartDelay
+        set Count = StartDelay
         loop:
             StartDelayHud.Show(S2M("{Count}"))
             Sleep(1.0)
             set Count -= 1
+            if(Count <= 0):
+                break
         StartDelayHud.Hide()
 
         # プレイヤーの静止を解除する
@@ -279,31 +302,30 @@ game_manager_device := class(creative_device):
         race:
             loop: # プレイヤー退出待ち
                 LeavingAgent := GetPlayspace().PlayerRemovedEvent().Await()
-                if(LeavingPlayer := player[LeavingAgent]):
-                    TeamCollection := GetPlayspace().GetTeamCollection()
-                    TeamArray := TeamCollection.GetTeams()
-                then:
-                    for(Player : Players):
-                        if(not(LeavingPlayer = Player)):
+                # if(LeavingPlayer := player[LeavingAgent]):
+                #     TeamCollection := GetPlayspace().GetTeamCollection()
+                #     TeamArray := TeamCollection.GetTeams()
+                # then:
+                #     for(Player : Players):
+                #         if(not(LeavingPlayer = Player)):
+            loop: # 一方のチームの全滅待ち
+                KillEvent.Await()
 
-        # ラウンドタイマーを開始する
-        var Count:int = RoundTime
-        loop:
-            RoundCoundDownHud.Show(S2M("{CalcElapsedTime(Count)}"))
-            Sleep(1.0)
-            set Count -= 1
-        RoundCoundDownHud.Hide()
-
-        FlagHud.Show()
-        FlagCaptured.Await()
-        TeamCollection := GetPlayspace().GetTeamCollection()
-        TeamArray := TeamCollection.GetTeams()
-        if(FCPlayer := FlagCapturedPlayer?):
-            RoundWinTeam := TeamCollection.GetTeam(FCPlayer)
-            for(Team->Wins:TeamWinsMap):
-                if. (Team = RoundWinTeam, set TeamWinsMap[Team] += 1)
-            set FlagCapturedPlayer = false
-        else:
-            Print("フラッグに関するエラーが発生した。")
+                
+            block: # 制限時間終了し、旗が取られるの待ち
+                # 旗の生成はキャプチャーエリアの仕掛けを使う
+                set Count = RoundTime
+                loop:
+                    RoundCoundDownHud.Show(S2M("{CalcElapsedTime(Count)}"))
+                    Sleep(1.0)
+                    set Count -= 1
+                    if(Count <= 0):
+                        break
+                RoundCoundDownHud.Hide()
+                FlagHud.Show()
+                FlagCapturedAgent := FlagCaptured.Await()
+                set TeamArray = TeamCollection.GetTeams()
+                if. (RoundWinTeam := TeamCollection.GetTeam[FlagCapturedAgent], set TeamDataMap[RoundWinTeam].Wins += 1)
+                else. Print("フラッグに関するエラーが発生した。")
         
         # ゲームを終了するフェーズ ------------------------------------------------------------------------

@@ -31,7 +31,7 @@ test_device:= class(creative_device):
         Print("硬直")
         Players := GetPlayspace().GetPlayers()
         if(Fort := Players[0].GetFortCharacter[]):
-            Fort.PutInStasis(stasis_args{AllowTurning := false, AllowFalling := false, AllowEmotes := true})
+            Fort.PutInStasis(stasis_args{AllowTurning := false, AllowFalling := true, AllowEmotes := true})
 
         Sleep(10)
 

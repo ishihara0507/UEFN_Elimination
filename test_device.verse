@@ -14,6 +14,8 @@ using { /Fortnite.com/FortPlayerUtilities }
 # 退出したプレイヤーのTeamはちゃんと取得できるのか？
 # ↑ができなかったら、ラウンドが始まった瞬間にteamとplayerをmapとして別で管理すればおっけー
 
+
+
 test_device:= class(creative_device):
 
     OnBegin<override>()<suspends>:void=
@@ -25,3 +27,14 @@ test_device:= class(creative_device):
         #     LeavingAgent := GetPlayspace().PlayerRemovedEvent().Await()
         #     if(Team := TeamCollection.GetTeam[LeavingAgent], l2 := TeamCollection.GetAgents[Team].Length):
         #         Print("プレイヤー退出後のチームの長さ: {l2}")
+
+        Print("硬直")
+        Players := GetPlayspace().GetPlayers()
+        if(Fort := Players[0].GetFortCharacter[]):
+            Fort.PutInStasis(stasis_args{AllowTurning := false, AllowFalling := false, AllowEmotes := true})
+
+        Sleep(10)
+
+        Print("解除")
+        if(Fort := Players[0].GetFortCharacter[]):
+            Fort.PutInStasis(stasis_args{AllowTurning := true, AllowFalling := true, AllowEmotes := true})

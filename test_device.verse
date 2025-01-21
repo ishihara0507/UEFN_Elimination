@@ -18,6 +18,12 @@ using { /Fortnite.com/FortPlayerUtilities }
 
 test_device:= class(creative_device):
 
+    @editable
+    Trigger:trigger_device = trigger_device{}
+
+    @editable
+    Trigger1:trigger_device = trigger_device{}
+
     OnBegin<override>()<suspends>:void=
         # TeamCollection := GetPlayspace().GetTeamCollection()
         # Players := GetPlayspace().GetPlayers()
@@ -28,13 +34,38 @@ test_device:= class(creative_device):
         #     if(Team := TeamCollection.GetTeam[LeavingAgent], l2 := TeamCollection.GetAgents[Team].Length):
         #         Print("プレイヤー退出後のチームの長さ: {l2}")
 
-        Print("硬直")
-        Players := GetPlayspace().GetPlayers()
-        if(Fort := Players[0].GetFortCharacter[]):
-            Fort.PutInStasis(stasis_args{AllowTurning := false, AllowFalling := true, AllowEmotes := true})
+        Trigger.TriggeredEvent.Subscribe(OnTriggered)
+        Trigger1.TriggeredEvent.Subscribe(OnTriggered1)
 
-        Sleep(10)
+        TeamCollection := GetPlayspace().GetTeamCollection()
+        TeamArray := TeamCollection.GetTeams()
+    
+        Sleep(3.0)
+        for(Index->Team:TeamArray):
+            if(Num := TeamCollection.GetAgents[Team].Length):
+                Print("チーム{Index}の人数: {Num}人")
 
-        Print("解除")
-        if(Fort := Players[0].GetFortCharacter[]):
-            Fort.PutInStasis(stasis_args{AllowTurning := true, AllowFalling := true, AllowEmotes := true})
+
+
+    OnTriggered(OAgent:?agent):void=
+        TeamCollection := GetPlayspace().GetTeamCollection()
+        TeamArray := TeamCollection.GetTeams()
+
+        if(Agent := OAgent?):
+            if. TeamCollection.AddToTeam[Agent, TeamArray[0]]
+
+        for(Index->Team:TeamArray):
+            if(Num := TeamCollection.GetAgents[Team].Length):
+                Print("チーム{Index}の人数: {Num}人")
+
+    
+    OnTriggered1(OAgent:?agent):void=
+        TeamCollection := GetPlayspace().GetTeamCollection()
+        TeamArray := TeamCollection.GetTeams()
+
+        if(Agent := OAgent?):
+            if. TeamCollection.AddToTeam[Agent, TeamArray[1]]
+        
+        for(Index->Team:TeamArray):
+            if(Num := TeamCollection.GetAgents[Team].Length):
+                Print("チーム{Index}の人数: {Num}人")

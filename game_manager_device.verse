@@ -6,6 +6,7 @@ using { /Verse.org/Random }
 using { /Verse.org/Simulation }
 using { /Fortnite.com/Characters }
 using { /Fortnite.com/Game }
+using { /Fortnite.com/FortPlayerUtilities }
 
 stage_data := struct<concrete>:
     @editable
@@ -92,7 +93,7 @@ game_manager_device := class(creative_device):
     var WeaponPlayerMap:[player][]int = map{}
 
     var ResDataRed:[]res_data = array{} # 赤チームのリスポーン位置の配列
-    var RedDataBlue:[]res_data = array{} # 青チームのリスポーン位置の配列
+    var ResDataBlue:[]res_data = array{} # 青チームのリスポーン位置の配列
     ### ------------------------------------------------------------
 
     ### event() ----------------------------------------------------
@@ -184,7 +185,8 @@ game_manager_device := class(creative_device):
                         WeaponTeleporter.Teleport(Member)
 
     TeleportAllPlayersToStage():void=
-        TeamArray := GetPlayspace().GetTeamCollection().GetTeams()
+        TeamCollection := GetPlayspace().GetTeamCollection()
+        TeamArray := TeamCollection.GetTeams()
         for(Team:TeamArray):
             if(Members := TeamCollection.GetAgents[Team], StageTeleporters := TeamStageTelepotersMap[Team]):
                 for(Index->Member:Members):
@@ -247,22 +249,22 @@ game_manager_device := class(creative_device):
         FlagCaptured.Signal(FlagCapturedAgent)
 
     CheckRoundEnd():?team=
-        WinTeam:?team = false
+        var WinTeam:?team = false
 
         TeamCollection := GetPlayspace().GetTeamCollection()
-        TeamArray = TeamCollection.GetTeams()
+        TeamArray := TeamCollection.GetTeams()
 
-        if(TeamRemainingMap[TeamArray[0]].Length <= 0):
-            if. set WinTeam = option{TeamArray[1]}
-        else if(TeamRemainingMap[TeamArray[1]].Length <= 0):
-            if. set WinTeam = option{TeamArray[0]}
+        if(TeamRemainingMap[TeamArray[0]] <= 0):
+            set WinTeam = option{TeamArray[1]}
+        else if(TeamRemainingMap[TeamArray[1]] <= 0):
+            set WinTeam = option{TeamArray[0]}
 
-        reutrn WinTeam
+        return WinTeam
 
     # ゲーム全体の流れを実行する関数
     StartGameFlow()<suspends>:void=
         TeamCollection := GetPlayspace().GetTeamCollection()
-        TeamArray = TeamCollection.GetTeams()
+        TeamArray := TeamCollection.GetTeams()
 
         ### ステージ見学＋武器を選択するフェーズ -----------------------------------------------------------
         # 武器選択フェーズのカウントダウン開始
@@ -280,7 +282,7 @@ game_manager_device := class(creative_device):
                 FortCharacter.EliminatedEvent().Subscribe(OnPlayerEliminated)
 
         ### 試合をするフェーズ ----------------------------------------------------------------------------------
-        var RoundCount:float = 0
+        var RoundCount:int = 0
 
         TeleportAllPlayersToStage()
 
@@ -290,43 +292,51 @@ game_manager_device := class(creative_device):
             Print("ラウンド{RoundCount}!!")
 
             if(RoundCount = 1): # 最初のラウンドだけリスポーン位置を記録する
-                for(Agent:TeamArray[0]):
-                    if(FortCharacter := Agent.GetFortCharacter()):
-                        set ResDataRed += {
-                            Data:res_data = {
+                for(Agent:TeamCollection.GetAgents[TeamArray[0]]):
+                    if(FortCharacter := Agent.GetFortCharacter[]):
+                        set ResDataRed += array{
+                            res_data{
                                 Pos := FortCharacter.GetTransform().Translation,
-                                Res := FortCharacter.GetTransform().Rotation
+                                Rot := FortCharacter.GetTransform().Rotation
                             }
                         }
-                for(Agent:TeamArray[1]):
-                    if(FortCharacter := Agent.GetFortCharacter()):
-                        set ResDataBlue += {
-                            Data:res_data = {
+                for(Agent:TeamCollection.GetAgents[TeamArray[1]]):
+                    if(FortCharacter := Agent.GetFortCharacter[]):
+                        set ResDataBlue += array{
+                            res_data{
                                 Pos := FortCharacter.GetTransform().Translation,
-                                Res := FortCharacter.GetTransform().Rotation
+                                Rot := FortCharacter.GetTransform().Rotation
                             }
                         }
             else: # 2ラウンド以降はプレイヤーを強制リスポーンすることで陣営変更を実現する
             # 第1ラウンドはテレポーターでTeam0はRedにTeam1はBlueにワープしている
                 if(Mod[RoundCount, 2] = 0): # 偶数ラウンドの場合（2, 4, 6, ...）
-                    for(Index->Agent:TeamArray[0]):
-                        Agent.Respawn(ResDataBlue[Index].Pos, ResDataBlue[Index].Rot)
-                    for(Index->Agent:TeamArray[1]):
-                        Agent.Respawn(ResDataRed[Index].Pos, ResDataRed[Index].Rot)
+                    for(Index->Agent:TeamCollection.GetAgents[TeamArray[0]]):
+                        if. Agent.Respawn(ResDataBlue[Index].Pos, ResDataBlue[Index].Rot)
+                        else:
+                            Print("リスポーン関連のエラーが発生")
+                    for(Index->Agent:TeamCollection.GetAgents[TeamArray[1]]):
+                        if. Agent.Respawn(ResDataRed[Index].Pos, ResDataRed[Index].Rot)
+                        else:
+                            Print("リスポーン関連のエラーが発生")
                 else: # 奇数ラウンドの場合（3, 5, 7, ...）
-                    for(Index->Agent:TeamArray[1]):
-                        Agent.Respawn(ResDataBlue[Index].Pos, ResDataBlue[Index].Rot)
-                    for(Index->Agent:TeamArray[0]):
-                        Agent.Respawn(ResDataRed[Index].Pos, ResDataRed[Index].Rot)
+                    for(Index->Agent:TeamCollection.GetAgents[TeamArray[1]]):
+                        if. Agent.Respawn(ResDataBlue[Index].Pos, ResDataBlue[Index].Rot)
+                        else:
+                            Print("リスポーン関連のエラーが発生")
+                    for(Index->Agent:TeamCollection.GetAgents[TeamArray[0]]):
+                        if. Agent.Respawn(ResDataRed[Index].Pos, ResDataRed[Index].Rot)
+                        else:
+                            Print("リスポーン関連のエラーが発生")
 
             for(Team:TeamArray):
                 if(RemainingCount := TeamCollection.GetAgents[Team].Length):
-                    set TeamRemainingMap[team] = RemainingCount
+                    if. set TeamRemainingMap[Team] = RemainingCount
 
             # ラウンド開始時の各チームの初期人数を設定＋プレイヤーとチームのMapを初期化する（プレイヤーが退出したとき用に作成してる）
             var PlayerTeamMap:[player]team = map{}
             for(Team:TeamArray):
-                if(TeamAgents := TeamCollection.GetAgents[Team], set TeamRemainingMap[team] = TeamAgents.Length):
+                if(TeamAgents := TeamCollection.GetAgents[Team], set TeamRemainingMap[Team] = TeamAgents.Length):
                     for(Agent:TeamAgents):
                         if. (Player := player[Agent], set PlayerTeamMap[Player] = Team)
 
@@ -382,7 +392,7 @@ game_manager_device := class(creative_device):
                     FlagHud.Show()
                     FlagCapturedAgent := FlagCaptured.Await()
                     if(RoundWinTeam := TeamCollection.GetTeam[FlagCapturedAgent]):
-                        if. set TeamWinsMap[TrueWinTeam] += 1 
+                        if. set TeamWinsMap[RoundWinTeam] += 1 
                     else:
                         Print("フラッグに関するエラーが発生した。")
             
@@ -396,7 +406,7 @@ game_manager_device := class(creative_device):
             # プレイヤーを静止させる
             for(Player:GamePlayers):
                 if(FortCharacter := Player.GetFortCharacter[]):
-                    FortCharacter.PutInStasis(stasis_args{AllowTurning := false, AllowFalling := false, AllowEmotes := true})
+                    FortCharacter.PutInStasis(stasis_args{AllowTurning := true, AllowFalling := true, AllowEmotes := true})
         
         # ゲームを終了するフェーズ ------------------------------------------------------------------------
         if(TrueWinningTeam := WinningTeam?):

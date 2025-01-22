@@ -8,7 +8,7 @@ using { /Fortnite.com/Characters }
 using { /Fortnite.com/Game }
 using { /Fortnite.com/FortPlayerUtilities }
 
-stage_data := struct<concrete>:
+test_stage_data := struct<concrete>:
     @editable
     TeleportersRed:[]teleporter_device = array{}
     @editable
@@ -16,23 +16,20 @@ stage_data := struct<concrete>:
     @editable
     FlagPos:vector3 = vector3{}
 
-res_data := struct:
+test_res_data := struct:
     Pos:vector3
     Rot:rotation
 
-game_manager_device := class(creative_device):
+test_game_manager_device := class(creative_device):
     ### テスト用 -------------------------------------------------------
     @editable
     Trigger0:trigger_device = trigger_device{}
     @editable
     Trigger1:trigger_device = trigger_device{}
 
-    @editable
-    WeaponGranter:item_granter_device = item_granter_device{}
+    var RobbyAgents:[]agent = array{}
 
-    var Agents:[]agent = array{}
-
-    var GameAgents::[]agent = array{}
+    var GameAgents:[]agent = array{}
     ### -------------------------------------------------------------------
 
 
@@ -54,7 +51,7 @@ game_manager_device := class(creative_device):
     RoundTime:int = 300
 
     @editable
-    Stages:[]stage_data = array{}
+    Stages:[]test_stage_data = array{}
 
     # 武器エリアのテレポーターは、一応１チームの人数分用意しておく
     @editable
@@ -83,7 +80,7 @@ game_manager_device := class(creative_device):
 
     @editable
     WeaponGranter:item_granter_device = item_granter_device{} # 選択した武器を付与するデバイス
-
+    
     @editable
     ItemRemover:item_remover_device = item_remover_device{}
     # 武器を選択しなかった場合に与えられる武器
@@ -91,7 +88,7 @@ game_manager_device := class(creative_device):
     ### ------------------------------------------------------------
 
     ### ゲーム中に変動する変数 -------------------------------------
-    # var GamePlayers:[]player = array{} # ゲームに参加するプレイヤー
+    var GamePlayers:[]player = array{} # ゲームに参加するプレイヤー
 
     var TeamRemainingMap:[team]int = map{} # ラウンドごとの残りプレイヤーの数を保持するマップ
 
@@ -103,12 +100,12 @@ game_manager_device := class(creative_device):
     
     var TeamStageTelepotersMap:[team][]teleporter_device = map{}
 
-    var UseStage:stage_data = stage_data{}
+    var UseStage:test_stage_data = test_stage_data{}
 
     var WeaponPlayerMap:[player][]int = map{}
 
-    var ResDataRed:[]res_data = array{} # 赤チームのリスポーン位置の配列
-    var ResDataBlue:[]res_data = array{} # 青チームのリスポーン位置の配列
+    var ResDataRed:[]test_res_data = array{} # 赤チームのリスポーン位置の配列
+    var ResDataBlue:[]test_res_data = array{} # 青チームのリスポーン位置の配列
     ### ------------------------------------------------------------
 
     ### event() ----------------------------------------------------
@@ -132,11 +129,11 @@ game_manager_device := class(creative_device):
 
         Sleep(5.0)
         Players := GetPlayspace().GetPlayers()
-        if. set Agents += array{Players[0]}
+        if. set RobbyAgents += array{Players[0]}
 
         loop:
             ### Players := GetPlayspace().GetPlayers()
-            if(Agents.Length >= MatchPlayerNum): ### if(Players.Length >= MatchPlayerNum):
+            if(RobbyAgents.Length >= MatchPlayerNum): ### if(Players.Length >= MatchPlayerNum):
                 Print("プレイヤーが揃ったのでゲームを開始する")
                 var Count:int = StartDelay
                 loop:
@@ -147,7 +144,8 @@ game_manager_device := class(creative_device):
                         break
                 CountDownHud.Hide()
 
-                set GameAgents = Agents ### set GamePlayers = Players
+                set GameAgents = RobbyAgents ### set GamePlayers = Players
+                set GamePlayers = GetPlayspace().GetPlayers() ### テスト用に追加
 
                 # すべてのプレイヤーをダメージを受けない状態にする
                 for(Agent:GameAgents): ###for(Player:GamePlayers):
@@ -156,7 +154,7 @@ game_manager_device := class(creative_device):
 
                 StageSelect()
                 break
-            NeedPlayerNum:int = MatchPlayerNum - Agents.Length ### NeedPlayerNum:int = MatchPlayerNum - Players.Length
+            NeedPlayerNum:int = MatchPlayerNum - RobbyAgents.Length ### NeedPlayerNum:int = MatchPlayerNum - Players.Length
             MessageHud.Show(S2M("Waiting for {NeedPlayerNum} more players to join.")) # プレイヤー全員にHUDを表示
             Sleep(1.0)
 
@@ -317,7 +315,7 @@ game_manager_device := class(creative_device):
                 for(Agent:TeamCollection.GetAgents[TeamArray[0]]):
                     if(FortCharacter := Agent.GetFortCharacter[]):
                         set ResDataRed += array{
-                            res_data{
+                            test_res_data{
                                 Pos := FortCharacter.GetTransform().Translation,
                                 Rot := FortCharacter.GetTransform().Rotation
                             }
@@ -325,7 +323,7 @@ game_manager_device := class(creative_device):
                 for(Agent:TeamCollection.GetAgents[TeamArray[1]]):
                     if(FortCharacter := Agent.GetFortCharacter[]):
                         set ResDataBlue += array{
-                            res_data{
+                            test_res_data{
                                 Pos := FortCharacter.GetTransform().Translation,
                                 Rot := FortCharacter.GetTransform().Rotation
                             }
@@ -434,18 +432,18 @@ game_manager_device := class(creative_device):
         # ゲームを終了するフェーズ ------------------------------------------------------------------------
         if(TrueWinningTeam := WinningTeam?):
             for(Index->Team:TeamArray):
-                if(Team = WinningTeam)
+                if(Team = WinningTeam):
                     Print("チーム{Index}の勝利！！！！！！")
 
 
-### テスト用 --------------------------------------------
-OnTriggered0(OAgent:?agent):void=
-    if(Agent := OAgent?):
-        set Agents += array{Agent}
+    ### テスト用 --------------------------------------------
+    OnTriggered0(OAgent:?agent):void=
+        if(Agent := OAgent?):
+            set RobbyAgents += array{Agent}
 
-OnTriggered1(OAgent:?agent):void=
-    if(Agent := OAgent?):
-        set Agents += array{Agent}
+    OnTriggered1(OAgent:?agent):void=
+        if(Agent := OAgent?):
+            set RobbyAgents += array{Agent}
 
 # OnTriggered0(OAgent:?agent):void=
 #     TeamCollection := GetPlayspace().GetTeamCollection()

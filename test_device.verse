@@ -48,15 +48,12 @@ test_device:= class(creative_device):
 
 
     OnTriggered(OAgent:?agent):void=
-        TeamCollection := GetPlayspace().GetTeamCollection()
-        TeamArray := TeamCollection.GetTeams()
-
         if(Agent := OAgent?):
-            if. TeamCollection.AddToTeam[Agent, TeamArray[0]]
-
-        for(Index->Team:TeamArray):
-            if(Num := TeamCollection.GetAgents[Team].Length):
-                Print("チーム{Index}の人数: {Num}人")
+            Print("Agent := OAgent? は成功")
+            if(Player := player[Agent]):
+                Print("player型に変換可能")
+            else:
+                Print("NPCはplayer型に変換できない")
 
     
     OnTriggered1(OAgent:?agent):void=

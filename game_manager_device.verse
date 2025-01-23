@@ -24,7 +24,7 @@ game_manager_device := class(creative_device):
 
     ### @editable --------------------------------------------------
     @editable
-    MatchPlayerNum:int = 2
+    MatchPlayerNum:int = 2 # 偶数にする
 
     @editable
     WinningPoints:int = 3
@@ -64,7 +64,7 @@ game_manager_device := class(creative_device):
     @editable
     RemoconGranter:item_granter_device = item_granter_device{} # リモコンを付与するデバイス
     @editable
-    Remocon:signal_remote_manager_device = signal_remote_manager_device{}
+    SignalRemoteManager:signal_remote_manager_device = signal_remote_manager_device{}
 
     @editable
     WeaponGranter:item_granter_device = item_granter_device{} # 選択した武器を付与するデバイス
@@ -109,20 +109,21 @@ game_manager_device := class(creative_device):
         
         for(Teleporter:ToStageTeleporters):
             Teleporter.EnterEvent.Subscribe(OnTeleportToStage)
-        Remocon.PrimarySignalEvent.Subscribe(OnRemoconBoot)
-        Remocon.SecondarySignalEvent.Subscribe(OnRemoconBoot)
+        SignalRemoteManager.PrimarySignalEvent.Subscribe(OnRemoconBoot)
+        SignalRemoteManager.SecondarySignalEvent.Subscribe(OnRemoconBoot)
 
         loop:
             Players := GetPlayspace().GetPlayers()
             if(Players.Length >= MatchPlayerNum):
                 Print("プレイヤーが揃ったのでゲームを開始する")
                 var Count:int = StartDelay
+                CountDownHud.Show(S2M("Game starts in: {Count}"))
                 loop:
-                    CountDownHud.Show(S2M("Game starts in: {Count}"))
                     Sleep(1.0)
                     set Count -= 1
                     if(Count <= 0):
                         break
+                    CountDownHud.SetText(S2M("Game starts in: {Count}"))
                 CountDownHud.Hide()
 
                 set GamePlayers = Players
@@ -132,47 +133,47 @@ game_manager_device := class(creative_device):
                     if(FortCharacter := Player.GetFortCharacter[]):
                         FortCharacter.SetVulnerability(false)
 
-                StageSelect()
+                # 今回のセッションで使用するステージをランダムで選択する
+                if(RandomStage := Shuffle(Stages)[0]):
+                    set UseStage = RandomStage
+
+                SplitPlayersToTeams() # チーム分けをする
+                TeleportAllPlayersToWeaponErea() # すべてのプレイヤーを武器選択エリアにテレポートする
+                StartGameFlow() # ゲームを開始する
                 break
             NeedPlayerNum:int = MatchPlayerNum - Players.Length
             MessageHud.Show(S2M("Waiting for {NeedPlayerNum} more players to join.")) # プレイヤー全員にHUDを表示
             Sleep(1.0)
 
-    # ステージをランダムで選択して、その場所にプレイヤーをテレポートさせる関数
-    # チーム分けもする
-    StageSelect():void=
-        if(RandomStage := Shuffle(Stages)[0]):
-            set UseStage = RandomStage
-            Players := Shuffle(GamePlayers)
+    # チーム分けをする関数
+    SplitPlayersToTeams():void=
+        Players := Shuffle(GamePlayers)
+        if:
+            TeamPlayerNum := Int[MatchPlayerNum * 1.0 / 2.0]
+            T1 := Players.Slice[0, TeamPlayerNum]
+            T2 := Players.Slice[TeamPlayerNum]
+        then:
+            # 同じチーム同士はダメージを受けないようにするために、島設定のチーム機能を使う
+            TeamCollection := GetPlayspace().GetTeamCollection()
+            TeamArray := TeamCollection.GetTeams()
+            for(Player:T1):
+                if. TeamCollection.AddToTeam[Player, TeamArray[0]]
+            for(Player:T2):
+                if. TeamCollection.AddToTeam[Player, TeamArray[1]]
+
             if:
-                TeamPlayerNum := Int[MatchPlayerNum * 1.0 / 2.0]
-                T1 := Players.Slice[0, TeamPlayerNum - 1]
-                T2 := Players.Slice[TeamPlayerNum]
-            then:
-                # 同じチーム同士はダメージを受けないようにするために、島設定のチーム機能を使う
-                TeamCollection := GetPlayspace().GetTeamCollection()
-                TeamArray := TeamCollection.GetTeams()
-                for(Player:T1):
-                    if. TeamCollection.AddToTeam[Player, TeamArray[0]]
-                for(Player:T2):
-                    if. TeamCollection.AddToTeam[Player, TeamArray[1]]
+                # TeamWinsMapを初期化
+                set TeamWinsMap[TeamArray[0]] = 0
+                set TeamWinsMap[TeamArray[1]] = 0
+                
+                # TeamWeaponTelepotersMapを初期化
+                set TeamWeaponTelepotersMap[TeamArray[0]] = WeaponEreaTeleportersRed
+                set TeamWeaponTelepotersMap[TeamArray[1]] = WeaponEreaTeleportersBlue
 
-                if:
-                    # TeamWinsMapを初期化
-                    set TeamWinsMap[TeamArray[0]] = 0
-                    set TeamWinsMap[TeamArray[1]] = 0
-                    
-                    # TeamWeaponTelepotersMapを初期化
-                    set TeamWeaponTelepotersMap[TeamArray[0]] = WeaponEreaTeleportersRed
-                    set TeamWeaponTelepotersMap[TeamArray[1]] = WeaponEreaTeleportersBlue
+                # TeamStageTelepotersMapを初期化する
+                set TeamStageTelepotersMap[TeamArray[0]] = UseStage.TeleportersRed
+                set TeamStageTelepotersMap[TeamArray[1]] = UseStage.TeleportersBlue
 
-                    # TeamStageTelepotersMapを初期化する
-                    set TeamStageTelepotersMap[TeamArray[0]] = UseStage.TeleportersRed
-                    set TeamStageTelepotersMap[TeamArray[1]] = UseStage.TeleportersBlue
-
-                TeleportAllPlayersToWeaponErea()
-        else:
-            Print("ステージ選択の際にエラーが発生しました。")
 
     # 全員をチームごとに別の武器選択エリア上にテレポートする
     TeleportAllPlayersToWeaponErea():void=
@@ -269,12 +270,13 @@ game_manager_device := class(creative_device):
         ### ステージ見学＋武器を選択するフェーズ -----------------------------------------------------------
         # 武器選択フェーズのカウントダウン開始
         var Count:int = RoundReadyTime
+        CountDownHud.Show(S2M("Round starts in: {Count}"))
         loop:
-            CountDownHud.Show(S2M("Round starts in: {Count}"))
             Sleep(1.0)
             set Count -= 1
             if(Count <= 0):
                 break
+            CountDownHud.SetText(S2M("Round starts in: {Count}"))
         CountDownHud.Hide()
 
         for(Player:GamePlayers):
@@ -329,6 +331,16 @@ game_manager_device := class(creative_device):
                         else:
                             Print("リスポーン関連のエラーが発生")
 
+            # キルによってラウンドが終了した場合に、なぜかプレイヤーの静止が聞かなかった。
+            # 次のように一瞬の待機を設けたら直った。
+            # 多分リスポーン終了判定より先に静止処理が動いていたのだと思う。（静止中にリスポーンしたら静止は解除される）
+            Sleep(0.0)
+
+            # プレイヤーを静止させる
+            for(Player:GamePlayers):
+                if(FortCharacter := Player.GetFortCharacter[]):
+                    FortCharacter.PutInStasis(stasis_args{AllowTurning := true, AllowFalling := true, AllowEmotes := true})
+
             for(Team:TeamArray):
                 if(RemainingCount := TeamCollection.GetAgents[Team].Length):
                     if. set TeamRemainingMap[Team] = RemainingCount
@@ -348,12 +360,13 @@ game_manager_device := class(creative_device):
             
             # ラウンド開始前に数秒カウントダウンする
             set Count = StartDelay
+            StartDelayHud.Show(S2M("{Count}"))
             loop:
-                StartDelayHud.Show(S2M("{Count}"))
                 Sleep(1.0)
                 set Count -= 1
                 if(Count <= 0):
                     break
+                StartDelayHud.SetText(S2M("{Count}"))
             StartDelayHud.Hide()
 
             # プレイヤーの静止を解除する
@@ -369,7 +382,8 @@ game_manager_device := class(creative_device):
                     # ラウンド終了判定
                     WinTeam := CheckRoundEnd()
                     if(TrueWinTeam := WinTeam?):
-                        if. set TeamWinsMap[TrueWinTeam] += 1 
+                        if. set TeamWinsMap[TrueWinTeam] += 1
+                        RoundCoundDownHud.Hide()
                         break
                 loop: # 一方のチームの全滅待ち
                     EliminatedAgent := KillEvent.Await() # キルされたプレイヤー
@@ -377,17 +391,19 @@ game_manager_device := class(creative_device):
                     # ラウンド終了判定
                     WinTeam := CheckRoundEnd()
                     if(TrueWinTeam := WinTeam?):
-                        if. set TeamWinsMap[TrueWinTeam] += 1 
+                        if. set TeamWinsMap[TrueWinTeam] += 1
+                        RoundCoundDownHud.Hide()
                         break
                 block: # 制限時間終了し、旗が取られるの待ち
                     ### 旗の生成はキャプチャーエリアの仕掛けを使う
                     set Count = RoundTime
+                    RoundCoundDownHud.Show(S2M("{CalcElapsedTime(Count)}"))
                     loop:
-                        RoundCoundDownHud.Show(S2M("{CalcElapsedTime(Count)}"))
                         Sleep(1.0)
                         set Count -= 1
                         if(Count <= 0):
                             break
+                        RoundCoundDownHud.SetText(S2M("{CalcElapsedTime(Count)}"))
                     RoundCoundDownHud.Hide()
                     FlagHud.Show()
                     FlagCapturedAgent := FlagCaptured.Await()
@@ -402,11 +418,9 @@ game_manager_device := class(creative_device):
                 if(TeamWins >= WinningPoints):
                     set WinningTeam = option{Team}
                     break
-            
-            # プレイヤーを静止させる
-            for(Player:GamePlayers):
-                if(FortCharacter := Player.GetFortCharacter[]):
-                    FortCharacter.PutInStasis(stasis_args{AllowTurning := true, AllowFalling := true, AllowEmotes := true})
         
         # ゲームを終了するフェーズ ------------------------------------------------------------------------
         if(TrueWinningTeam := WinningTeam?):
+            for(Index->Team:TeamArray):
+                if(Team = WinningTeam):
+                    Print("チーム{Index}の勝利！！！！！！")

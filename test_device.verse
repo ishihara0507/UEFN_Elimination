@@ -19,50 +19,22 @@ using { /Fortnite.com/FortPlayerUtilities }
 test_device:= class(creative_device):
 
     @editable
-    Trigger:trigger_device = trigger_device{}
+    Trigger0:trigger_device = trigger_device{}
 
-    @editable
-    Trigger1:trigger_device = trigger_device{}
+    var RobbyAgents:[]agent = array{}
 
     OnBegin<override>()<suspends>:void=
-        # TeamCollection := GetPlayspace().GetTeamCollection()
-        # Players := GetPlayspace().GetPlayers()
-        # if(Team := TeamCollection.GetTeam[Players[0]], l := TeamCollection.GetAgents[Team].Length):
-        #     Print("プレイヤー退出前のチームの長さ: {l}")
-        # loop: # プレイヤー退出待ち
-        #     LeavingAgent := GetPlayspace().PlayerRemovedEvent().Await()
-        #     if(Team := TeamCollection.GetTeam[LeavingAgent], l2 := TeamCollection.GetAgents[Team].Length):
-        #         Print("プレイヤー退出後のチームの長さ: {l2}")
+        Trigger0.TriggeredEvent.Subscribe(OnTriggered0) ###
 
-        Trigger.TriggeredEvent.Subscribe(OnTriggered)
-        Trigger1.TriggeredEvent.Subscribe(OnTriggered1)
+        loop:
+            Sleep(3.0)
+            if(Fort := RobbyAgents[0].GetFortCharacter[]):
+                Pos:= Fort.GetTransform().Translation
+                Rot:= Fort.GetTransform().Rotation
 
-        TeamCollection := GetPlayspace().GetTeamCollection()
-        TeamArray := TeamCollection.GetTeams()
-    
-        Sleep(3.0)
-        for(Index->Team:TeamArray):
-            if(Num := TeamCollection.GetAgents[Team].Length):
-                Print("チーム{Index}の人数: {Num}人")
+                Print("NPCをリスポーン")
+                if. RobbyAgents[0].Respawn(Pos, Rot)
 
-
-
-    OnTriggered(OAgent:?agent):void=
+    OnTriggered0(OAgent:?agent):void=
         if(Agent := OAgent?):
-            Print("Agent := OAgent? は成功")
-            if(Player := player[Agent]):
-                Print("player型に変換可能")
-            else:
-                Print("NPCはplayer型に変換できない")
-
-    
-    OnTriggered1(OAgent:?agent):void=
-        TeamCollection := GetPlayspace().GetTeamCollection()
-        TeamArray := TeamCollection.GetTeams()
-
-        if(Agent := OAgent?):
-            if. TeamCollection.AddToTeam[Agent, TeamArray[1]]
-        
-        for(Index->Team:TeamArray):
-            if(Num := TeamCollection.GetAgents[Team].Length):
-                Print("チーム{Index}の人数: {Num}人")
+            set RobbyAgents += array{Agent}

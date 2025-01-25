@@ -41,6 +41,12 @@ game_manager_device := class(creative_device):
     @editable
     Stages:[]stage_data = array{}
 
+    @editable
+    PlayerMaxHealth:float = 100.0
+
+    @editable
+    PlayerMaxShield:float = 100.0
+
     # 武器エリアのテレポーターは、一応１チームの人数分用意しておく
     @editable
     WeaponEreaTeleportersRed:[]teleporter_device = array{} # チーム赤の武器エリアに設置するテレポーター
@@ -336,10 +342,12 @@ game_manager_device := class(creative_device):
             # 多分リスポーン終了判定より先に静止処理が動いていたのだと思う。（静止中にリスポーンしたら静止は解除される）
             Sleep(0.0)
 
-            # プレイヤーを静止させる
+            # プレイヤーを静止させる＋プレイヤーの体力・シールドを全回復する
             for(Player:GamePlayers):
                 if(FortCharacter := Player.GetFortCharacter[]):
                     FortCharacter.PutInStasis(stasis_args{AllowTurning := true, AllowFalling := true, AllowEmotes := true})
+                    FortCharacter.SetHealth(PlayerMaxHealth)
+                    FortCharacter.SetShield(PlayerMaxShield)
 
             for(Team:TeamArray):
                 if(RemainingCount := TeamCollection.GetAgents[Team].Length):

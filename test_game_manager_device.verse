@@ -58,6 +58,12 @@ test_game_manager_device := class(creative_device):
 
     @editable
     Stages:[]test_stage_data = array{}
+    
+    @editable
+    PlayerMaxHealth:float = 100.0
+
+    @editable
+    PlayerMaxShield:float = 100.0
 
     # 武器エリアのテレポーターは、一応１チームの人数分用意しておく
     @editable
@@ -380,6 +386,8 @@ test_game_manager_device := class(creative_device):
             for(Agent:GameAgents): ### for(Player:GamePlayers):
                 if(FortCharacter := Agent.GetFortCharacter[]): ### if(FortCharacter := Player.GetFortCharacter[]):
                     FortCharacter.PutInStasis(stasis_args{AllowTurning := true, AllowFalling := true, AllowEmotes := true})
+                    FortCharacter.SetHealth(PlayerMaxHealth)
+                    FortCharacter.SetShield(PlayerMaxShield)
 
             for(Team:TeamArray):
                 if(RemainingCount := TeamCollection.GetAgents[Team].Length):
@@ -505,7 +513,7 @@ test_game_manager_device := class(creative_device):
                     if(Team = T):
                         set Str += "チーム{Index}の勝利数: {Wins}\n"
 
-            Sleep(1.0)
+            Sleep(0.0)
             HudGameData.SetText(S2M(Str))
 
 # OnTriggered0(OAgent:?agent):void=

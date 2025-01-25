@@ -8,33 +8,13 @@ using { /Fortnite.com/Characters }
 using { /Fortnite.com/Game }
 using { /Fortnite.com/FortPlayerUtilities }
 
-### 試したいこと
-# LeavingAgent := GetPlayspace().PlayerRemovedEvent().Await()
-# if. (Team := TeamCollection.GetTeam[LeavingAgent], set TeamRemainingMap[Team] -= 1)
-# 退出したプレイヤーのTeamはちゃんと取得できるのか？
-# ↑ができなかったら、ラウンドが始まった瞬間にteamとplayerをmapとして別で管理すればおっけー
-
-
-
 test_device:= class(creative_device):
-
     @editable
-    Trigger0:trigger_device = trigger_device{}
-
-    var RobbyAgents:[]agent = array{}
+    Trigger:trigger_device = trigger_device{}
 
     OnBegin<override>()<suspends>:void=
-        Trigger0.TriggeredEvent.Subscribe(OnTriggered0) ###
-
-        loop:
-            Sleep(3.0)
-            if(Fort := RobbyAgents[0].GetFortCharacter[]):
-                Pos:= Fort.GetTransform().Translation
-                Rot:= Fort.GetTransform().Rotation
-
-                Print("NPCをリスポーン")
-                if. RobbyAgents[0].Respawn(Pos, Rot)
-
-    OnTriggered0(OAgent:?agent):void=
-        if(Agent := OAgent?):
-            set RobbyAgents += array{Agent}
+        Trigger.TriggeredEvent.Subscribe(HpHeal)
+        
+    HpHeal(OAgent:?agent):void=
+        if(Agent := OAgent?, F := Agent.GetFortCharacter[]):
+            F.SetHealth(1000.0)

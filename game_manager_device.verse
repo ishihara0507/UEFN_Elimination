@@ -46,12 +46,6 @@ game_manager_device := class(creative_device):
 
     @editable
     PlayerMaxShield:float = 100.0
-
-    # 武器エリアのテレポーターは、一応１チームの人数分用意しておく
-    @editable
-    WeaponEreaTeleportersRed:[]teleporter_device = array{} # チーム赤の武器エリアに設置するテレポーター
-    @editable
-    WeaponEreaTeleportersBlue:[]teleporter_device = array{} # チーム青の武器エリアに設置するテレポーター
     
     @editable
     MessageHud:hud_message_device = hud_message_device{}
@@ -63,14 +57,6 @@ game_manager_device := class(creative_device):
     RoundCoundDownHud:hud_message_device = hud_message_device{}
     @editable
     FlagHud:hud_message_device = hud_message_device{} # ラウンド制限時間が終了して、フラッグが発生したことを知らせるHUD
-
-    @editable
-    ToStageTeleporters:[]teleporter_device = array{} # 武器選択フェーズにおけるステージへのテレポーター
-
-    @editable
-    RemoconGranter:item_granter_device = item_granter_device{} # リモコンを付与するデバイス
-    @editable
-    SignalRemoteManager:signal_remote_manager_device = signal_remote_manager_device{}
 
     @editable
     WeaponGranter:item_granter_device = item_granter_device{} # 選択した武器を付与するデバイス
@@ -89,8 +75,6 @@ game_manager_device := class(creative_device):
     var TeamWinsMap:[team]int = map{}
 
     var WinningTeam:?team = false # ゲームに勝利したチーム
-
-    var TeamWeaponTelepotersMap:[team][]teleporter_device = map{}
     
     var TeamStageTelepotersMap:[team][]teleporter_device = map{}
 
@@ -112,11 +96,6 @@ game_manager_device := class(creative_device):
 
     # プレイヤーが揃うまで待機する関数
     OnBegin<override>()<suspends>:void=
-        
-        for(Teleporter:ToStageTeleporters):
-            Teleporter.EnterEvent.Subscribe(OnTeleportToStage)
-        SignalRemoteManager.PrimarySignalEvent.Subscribe(OnRemoconBoot)
-        SignalRemoteManager.SecondarySignalEvent.Subscribe(OnRemoconBoot)
 
         loop:
             Players := GetPlayspace().GetPlayers()
@@ -144,7 +123,6 @@ game_manager_device := class(creative_device):
                     set UseStage = RandomStage
 
                 SplitPlayersToTeams() # チーム分けをする
-                TeleportAllPlayersToWeaponErea() # すべてのプレイヤーを武器選択エリアにテレポートする
                 StartGameFlow() # ゲームを開始する
                 break
             NeedPlayerNum:int = MatchPlayerNum - Players.Length
@@ -171,26 +149,12 @@ game_manager_device := class(creative_device):
                 # TeamWinsMapを初期化
                 set TeamWinsMap[TeamArray[0]] = 0
                 set TeamWinsMap[TeamArray[1]] = 0
-                
-                # TeamWeaponTelepotersMapを初期化
-                set TeamWeaponTelepotersMap[TeamArray[0]] = WeaponEreaTeleportersRed
-                set TeamWeaponTelepotersMap[TeamArray[1]] = WeaponEreaTeleportersBlue
 
                 # TeamStageTelepotersMapを初期化する
                 set TeamStageTelepotersMap[TeamArray[0]] = UseStage.TeleportersRed
                 set TeamStageTelepotersMap[TeamArray[1]] = UseStage.TeleportersBlue
 
-
-    # 全員をチームごとに別の武器選択エリア上にテレポートする
-    TeleportAllPlayersToWeaponErea():void=
-        TeamCollection := GetPlayspace().GetTeamCollection()
-        TeamArray := TeamCollection.GetTeams()
-        for(Team:TeamArray):
-            if(Members := TeamCollection.GetAgents[Team], WeaponTeleporters := TeamWeaponTelepotersMap[Team]):
-                for(Index->Member:Members):
-                    if(WeaponTeleporter := WeaponTeleporters[Index]):
-                        WeaponTeleporter.Teleport(Member)
-
+    # 全員をチームごとにステージにテレポートする関数
     TeleportAllPlayersToStage():void=
         TeamCollection := GetPlayspace().GetTeamCollection()
         TeamArray := TeamCollection.GetTeams()
@@ -223,25 +187,6 @@ game_manager_device := class(creative_device):
 
         return "{Minutes_zero}{Minutes}:{Seconds_zero}{Seconds}"
 
-    # 武器選択フェーズ中に、ステージにテレポートした際に実行する関数
-    OnTeleportToStage(Agent:agent):void=
-        if(Player := player[Agent]):
-            ItemRemover.Remove(Player) # 所持アイテムの削除
-            RemoconGranter.GrantItem(Player)
-
-    OnRemoconBoot(Agent:agent):void=
-        TeamCollection := GetPlayspace().GetTeamCollection()
-        if(Player := player[Agent]):
-            # リモコンを起動したプレイヤーが所属しているチームに合わせて、テレポート先を変更する
-            if(Team := TeamCollection.GetTeam[Agent], Members := TeamCollection.GetAgents[Team], WeaponTeleporters := TeamWeaponTelepotersMap[Team]): # リモコンを起動したプレイヤーが所属しているチームを取得
-                for(Index->Member:Members):
-                    if(Player = Member, WeaponTeleporter := WeaponTeleporters[Index]):
-                        WeaponTeleporter.Teleport(Player)
-
-            ItemRemover.Remove(Player) # 所持アイテムの削除
-            for(WeaponIndex:WeaponPlayerMap[Player]):
-                WeaponGranter.GrantItemIndex(Player, WeaponIndex)
-
     OnPlayerEliminated(Result:elimination_result):void=
         Print("キル発生!!")
         EliminatedFort:fort_character = Result.EliminatedCharacter
@@ -272,25 +217,12 @@ game_manager_device := class(creative_device):
     StartGameFlow()<suspends>:void=
         TeamCollection := GetPlayspace().GetTeamCollection()
         TeamArray := TeamCollection.GetTeams()
-
-        ### ステージ見学＋武器を選択するフェーズ -----------------------------------------------------------
-        # 武器選択フェーズのカウントダウン開始
         var Count:int = RoundReadyTime
-        CountDownHud.Show(S2M("Round starts in: {Count}"))
-        loop:
-            Sleep(1.0)
-            set Count -= 1
-            if(Count <= 0):
-                break
-            CountDownHud.SetText(S2M("Round starts in: {Count}"))
-        CountDownHud.Hide()
+        var RoundCount:int = 0
 
         for(Player:GamePlayers):
             if(FortCharacter := Player.GetFortCharacter[]):
                 FortCharacter.EliminatedEvent().Subscribe(OnPlayerEliminated)
-
-        ### 試合をするフェーズ ----------------------------------------------------------------------------------
-        var RoundCount:int = 0
 
         TeleportAllPlayersToStage()
 

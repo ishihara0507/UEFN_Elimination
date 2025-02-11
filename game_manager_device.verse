@@ -46,7 +46,13 @@ game_manager_device := class(creative_device):
 
     @editable
     PlayerMaxShield:float = 100.0
-    
+
+    @editable
+    AddPenaltyTime:float = 600.0 # 試合中に退出した場合に付与されるペナルティ時間（秒）
+
+    @editable
+    PlayerSpawners:[]player_spawner_device = array{}
+
     @editable
     MessageHud:hud_message_device = hud_message_device{}
     @editable
@@ -67,6 +73,12 @@ game_manager_device := class(creative_device):
 
     ### ------------------------------------------------------------
 
+
+    ### 定数 -------------------------------------------------------
+    PlayerStatsManager:player_stats_manager = player_stats_manager{}
+    ### ------------------------------------------------------------
+    
+
     ### ゲーム中に変動する変数 -------------------------------------
     var GamePlayers:[]player = array{} # ゲームに参加するプレイヤー
 
@@ -86,16 +98,20 @@ game_manager_device := class(creative_device):
     var ResDataBlue:[]res_data = array{} # 青チームのリスポーン位置の配列
     ### ------------------------------------------------------------
 
+
     ### event() ----------------------------------------------------
     KillEvent:event(agent) = event(agent){} # キルの発生を管理するイベント
 
     FlagCaptured:event(agent) = event(agent){} # フラッグの取得を管理するイベント
     ### ------------------------------------------------------------
 
+
     S2M<localizes>(S:string):message = "{S}"
 
     # プレイヤーが揃うまで待機する関数
     OnBegin<override>()<suspends>:void=
+        for(PlayerSpawner:PlayerSpawners):
+            PlayerSpawner.SpawnedEvent.Subscribe(OnPlayerSpawn)
 
         loop:
             Players := GetPlayspace().GetPlayers()
@@ -128,6 +144,43 @@ game_manager_device := class(creative_device):
             NeedPlayerNum:int = MatchPlayerNum - Players.Length
             MessageHud.Show(S2M("Waiting for {NeedPlayerNum} more players to join.")) # プレイヤー全員にHUDを表示
             Sleep(1.0)
+
+    # プレイヤースポナーに対して設定する関数
+    OnPlayerSpawn(Agent:agent):void=
+        # 持続データの初期化（初めてのプレイだったら持続データをプレイヤーと結びつける）
+        PlayerStatsManager.InitializePlayerStat(Agent)
+
+        # ペナルティ関連の処理
+        # ペナルティ付与
+        OPlayerStat := PlayerStatsManager.GetPlayerStats(Agent)
+        if(PlayerStat := OPlayerStat?, PlayerStat.InMatch = true):
+            Print("ペナルティ付与対象のプレイヤーが参加しました。")
+            CurrentUnixTime := GetSecondsSinceEpoch()
+            PlayerStatsManager.UpdatePenaltyEndTimeStat(Agent, CurrentUnixTime + AddPenaltyTime)
+            PlayerStatsManager.UpdateInMatchStat(Agent, false)
+
+        # ペナルティが与えられているかを確認と、キックの実行
+        OPlayerStat2 := PlayerStatsManager.GetPlayerStats(Agent) # 直前の処理でペナルティが付与されたかもしれないから、取得しなおす
+        if(PlayerStat := OPlayerStat2?):
+            PenaltyPeriod := PlayerStat.PenaltyEndTime - GetSecondsSinceEpoch()
+            if(PenaltyPeriod <= 0.0):
+                Print("ペナルティ終了済み")
+                PlayerStatsManager.UpdatePenaltyEndTimeStat(Agent, -1.0) # ペナルティを初期値に設定
+            else:
+                Print("ペナルティ期間中")
+                spawn{KickPenaltyPlayer(Agent, PenaltyPeriod)}
+
+    # プレイヤーをキックする関数
+    KickPenaltyPlayer(Agent:agent, PenaltyPeriod:float)<suspends>:void=
+        var Minutes:int = 0 # ペナルティが解除されるまでの時間（分）。秒は切り上げ
+        if(S := Int[PenaltyPeriod], M := Ceil(S / 60)):
+            set Minutes = M
+
+        if(Player := player[Agent]):
+            MessageHud.Show(Agent, S2M("前回のプレイが正常に終了しなかったので、\n{Minutes}分後にもう一度お試しください。"))
+            Sleep(5.0)
+            MessageHud.Hide(Agent)
+            Player.SendToLobby() # 強制的にロビーに戻す
 
     # チーム分けをする関数
     SplitPlayersToTeams():void=
@@ -219,6 +272,13 @@ game_manager_device := class(creative_device):
         TeamArray := TeamCollection.GetTeams()
         var Count:int = RoundReadyTime
         var RoundCount:int = 0
+
+        # 持続データの初期化（プレイヤースポナーでも行ってるけど、念のためもう一度行う）
+        PlayerStatsManager.InitializeAllPlayers(GamePlayers)
+
+        # 持続データのプレイヤーが試合に参加したという情報を true にする
+        for(Player:GamePlayers):
+            PlayerStatsManager.UpdateInMatchStat(Player, true)
 
         for(Player:GamePlayers):
             if(FortCharacter := Player.GetFortCharacter[]):
@@ -360,6 +420,10 @@ game_manager_device := class(creative_device):
                     break
         
         # ゲームを終了するフェーズ ------------------------------------------------------------------------
+        # 持続データのプレイヤーが試合に参加したという情報を false にする
+        for(Player:GamePlayers):
+            PlayerStatsManager.UpdateInMatchStat(Player, false)
+            
         if(TrueWinningTeam := WinningTeam?):
             for(Index->Team:TeamArray):
                 if(Team = WinningTeam):

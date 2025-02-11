@@ -8,13 +8,30 @@ using { /Fortnite.com/Characters }
 using { /Fortnite.com/Game }
 using { /Fortnite.com/FortPlayerUtilities }
 
-test_device:= class(creative_device):
+aaa := class:
+    
+    Version:int = 0 # 現在の統計テーブルのバージョン
+    TotalWins:int = 0
+    TotalLosses:int = 0
+
+MakeUpdatedPlayerStat2<constructor>(OldStats:aaa)<transacts> := aaa:
+    Version := OldStats.Version
+    TotalWins := OldStats.TotalWins
+    TotalLosses := OldStats.TotalLosses
+
+test_device := class(creative_device):
     @editable
-    Trigger:trigger_device = trigger_device{}
+    Seconds:[]float = {180.0, 180.7, 181.1}
+    
 
     OnBegin<override>()<suspends>:void=
-        Trigger.TriggeredEvent.Subscribe(HpHeal)
-        
-    HpHeal(OAgent:?agent):void=
-        if(Agent := OAgent?, F := Agent.GetFortCharacter[]):
-            F.SetHealth(1000.0)
+        Sleep(3.0)
+
+        for(Second:Seconds):
+            if(S := Int[Second]):
+                Print("int[] 結果:{S}")
+                if(M := Ceil(S / 60)):
+                    Print("Ceil 結果: {M}")
+                if(M := Floor(S / 60)):
+                    Print("Floor 結果: {M}")
+            

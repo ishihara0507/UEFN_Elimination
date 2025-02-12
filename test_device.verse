@@ -20,18 +20,48 @@ MakeUpdatedPlayerStat2<constructor>(OldStats:aaa)<transacts> := aaa:
     TotalLosses := OldStats.TotalLosses
 
 test_device := class(creative_device):
+    # 爆弾系
     @editable
-    Seconds:[]float = {180.0, 180.7, 181.1}
-    
+    ExplosiveDevicesA:[]explosive_device = array{}
+    @editable
+    ExplosiveDevicesB:[]explosive_device = array{}
+    @editable
+    LimitDevice:timed_objective_device = timed_objective_device{}
+
+    @editable
+    Trigger:trigger_device = trigger_device{}
+    @editable
+    Trigger2:trigger_device = trigger_device{}
+    @editable
+    Trigger3:trigger_device = trigger_device{}
+    @editable
+    Trigger4:trigger_device = trigger_device{}
+    @editable
+    Trigger5:trigger_device = trigger_device{}
+
+    BombEvent:event() = event(){}
+    Event:event() = event(){}
+
 
     OnBegin<override>()<suspends>:void=
-        Sleep(3.0)
+        Sleep(5.0)
+        Print("無効か")
+        if(Player := GetPlayspace().GetPlayers()[0]):
+            LimitDevice.Disable(Player)
+    
 
-        for(Second:Seconds):
-            if(S := Int[Second]):
-                Print("int[] 結果:{S}")
-                if(M := Ceil(S / 60)):
-                    Print("Ceil 結果: {M}")
-                if(M := Floor(S / 60)):
-                    Print("Floor 結果: {M}")
-            
+    
+    # OnTriggered(OAgent:?agent):void=
+    #     TeamCollection := GetPlayspace().GetTeamCollection()
+    #     TeamArray := TeamCollection.GetTeams()
+    #     if:
+    #         Agent := OAgent?
+    #         Player := player[Agent]
+    #         CurrentTeam := TeamCollection.GetTeam[Player]
+    #     then:
+    #         for(Index->Team:TeamArray):
+    #             if(not Team = CurrentTeam):
+    #                 if(TeamCollection.AddToTeam[Player, Team]):
+    #                     Print("チーム{Index}に切り替えました")
+                
+

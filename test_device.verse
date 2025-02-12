@@ -42,13 +42,19 @@ test_device := class(creative_device):
     BombEvent:event() = event(){}
     Event:event() = event(){}
 
+    @editable
+    ResourceChecker:conditional_button_device = conditional_button_device{}
 
     OnBegin<override>()<suspends>:void=
         Sleep(5.0)
-        Print("無効か")
+        Print("準備完了")
+        Trigger.TriggeredEvent.Subscribe(AAA)
+        
+                
+    AAA(OAgent:?agent):void=
         if(Player := GetPlayspace().GetPlayers()[0]):
-            LimitDevice.Disable(Player)
-    
+            Print("ゴールドの数：{ResourceChecker.GetItemCount(Player, 0)}")
+            Print("あああ")
 
     
     # OnTriggered(OAgent:?agent):void=

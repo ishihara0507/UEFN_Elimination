@@ -472,12 +472,9 @@ game_manager_device := class(creative_device):
                     # ラウンド終了判定
                     OWinTeam := CheckRoundEnd()
                     if(WinTeam := OWinTeam?):
-                        if(IsBombActivated?, DefenseTeam := ODefenseTeam?, WinTeam = DefenseTeam):
-                            Print("爆弾が解除されるまで負けではない")
-                        else:
-                            if. set TeamWinsMap[WinTeam] += 1
-                            RoundCoundDownHud.Hide()
-                            break
+                        if. set TeamWinsMap[WinTeam] += 1
+                        RoundCoundDownHud.Hide()
+                        break
                 loop: # 一方のチームの全滅待ち
                     EliminatedAgent := KillEvent.Await() # キルされたプレイヤー
                     if. (Team := TeamCollection.GetTeam[EliminatedAgent], set TeamRemainingMap[Team] -= 1)
@@ -486,6 +483,7 @@ game_manager_device := class(creative_device):
                     if(WinTeam := OWinTeam?):
                         if(IsBombActivated?, DefenseTeam := ODefenseTeam?, WinTeam = DefenseTeam):
                             Print("爆弾が解除されるまで負けではない")
+                            Sleep(1000.0) # キル待ちをなくす（おそらくキルは発生しないが）
                         else:
                             if. set TeamWinsMap[WinTeam] += 1
                             RoundCoundDownHud.Hide()
@@ -493,17 +491,24 @@ game_manager_device := class(creative_device):
                 block: # 制限時間終了（守備チームの勝利）
                     set Count = RoundTime
                     RoundCoundDownHud.Show(S2M("{CalcElapsedTime(Count)}"))
-                    loop:
-                        Sleep(1.0)
-                        set Count -= 1
-                        if(Count <= 0):
-                            break
-                        RoundCoundDownHud.SetText(S2M("{CalcElapsedTime(Count)}"))
 
-                    OWinTeam := ODefenseTeam
-                    if(WinTeam := OWinTeam?):
-                        if. set TeamWinsMap[WinTeam] += 1
-                        RoundCoundDownHud.Hide()
+                    race:
+                        loop:
+                            Sleep(1.0)
+                            set Count -= 1
+                            if(Count <= 0):
+                                break
+                            RoundCoundDownHud.SetText(S2M("{CalcElapsedTime(Count)}"))
+                        block:
+                            BombStartEvent.Await()
+                            
+                    RoundCoundDownHud.Hide()
+                    if(IsBombActivated?):
+                        Sleep(1000.0) # 制限時間処理はなくす（30秒より長く停止させればいい）
+                    else:
+                        OWinTeam := ODefenseTeam
+                        if(WinTeam := OWinTeam?):
+                            if. set TeamWinsMap[WinTeam] += 1
                 block: # 爆弾設置
                     BombStartEvent.Await()
                     var OWinTeam:?team = false

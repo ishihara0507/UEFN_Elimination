@@ -16,7 +16,7 @@ player_stat := class<final><persistable>:
     InMatch:logic = false # 試合中か否かを保持。試合中に抜けたらこれが true のままロビーに参加してくることになる。
     PenaltyEndTime:float = -1.0 # ペナルティが解除される日時
 
-    WeaponPresets:[][]int = array{} # 武器のプリセット登録を保存
+    WeaponPresets:[][]weapon_enum = array{} # 武器のプリセット登録を保存
 
 # 前の player_stats_table と同じ値を持つ新しい player_stats_table を作成するコンストラクタ関数
 MakeUpdatedPlayerStat<constructor>(OldStats:player_stat)<transacts> := player_stat:

@@ -98,7 +98,7 @@ game_manager_device := class(creative_device):
 
     var UseStage:stage_data = stage_data{}
 
-    var WeaponPlayerMap:[player][]int = map{}
+    var WeaponPlayerMap:[player][]weapon_enum = map{}
 
     var ResDataRed:[]res_data = array{} # 赤チームのリスポーン位置の配列
     var ResDataBlue:[]res_data = array{} # 青チームのリスポーン位置の配列
@@ -435,7 +435,7 @@ game_manager_device := class(creative_device):
             for(Player:GamePlayers):
                 ItemRemover.Remove(Player) # 所持アイテムの削除
                 for(WeaponIndex:WeaponPlayerMap[Player]):
-                    WeaponGranter.GrantItemIndex(Player, WeaponIndex)
+                    # WeaponGranter.GrantItemIndex(Player, WeaponIndex)
 
             # そのラウンドの目標をHUDで表示する
             if(AttackTeam := OAttackTeam?, Agents := TeamCollection.GetAgents[AttackTeam]):

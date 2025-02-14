@@ -90,10 +90,10 @@ player_stats_manager := class():
 
     # WeaponPresets, 引数：int, []int
     # WeaponPresets の SetIndex 番目の要素を SetPreset に変更する
-    UpdateWeaponPresetsStat(Agent:agent, SetIndex:int, SetPreset:[]int):void=
+    UpdateWeaponPresetsStat(Agent:agent, SetIndex:int, SetPreset:[]weapon_enum):void=
         if(Player := player[Agent], CurrentPlayerStat := PlayerStatMap[Player]):
 
-            var NewWeaponPresets:[][]int = array{}
+            var NewWeaponPresets:[][]weapon_enum = array{}
             CurrentWeaponPresets := CurrentPlayerStat.WeaponPresets
             for(Index->Preset:CurrentWeaponPresets):
                 if(Index = SetIndex):

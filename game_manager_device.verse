@@ -8,6 +8,8 @@ using { /Fortnite.com/Characters }
 using { /Fortnite.com/Game }
 using { /Fortnite.com/FortPlayerUtilities }
 
+S2M<localizes>(S:string):message = "{S}"
+
 stage_data := struct<concrete>:
     @editable
     TeleportersRed:[]teleporter_device = array{}
@@ -112,9 +114,6 @@ game_manager_device := class(creative_device):
     BombStopEvent:event() = event(){} # 爆弾を停止したときに発火するイベント
     BombEndEvent:event() = event(){} # 爆弾が爆発したときに発火するイベント
     ### ------------------------------------------------------------
-
-
-    S2M<localizes>(S:string):message = "{S}"
 
     OnBegin<override>()<suspends>:void=
         # デバイスにイベントを登録する

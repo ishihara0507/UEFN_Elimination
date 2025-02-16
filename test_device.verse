@@ -10,15 +10,24 @@ using { /Fortnite.com/FortPlayerUtilities }
 
 test_device := class(creative_device):
 
+    @editable
+    Trigger:trigger_device = trigger_device{}
+
+    Event:event() = event(){}
+
     OnBegin<override>()<suspends>:void=
-        a:int = 0
-        b:int = 1
+        Sleep(5.0)
+        Trigger.TriggeredEvent.Subscribe(OnTriggered)
 
-        var c:int = b
+        race:
+            Event.Await()
+            loop:
+                Print("ddd")
+                Sleep(0.0)
 
-        set c = 100
-
-        Print("bの値: {b}")
+    OnTriggered(OAgent:?agent):void=
+        Print("トリガー")
+        Event.Signal()
     
                 
 

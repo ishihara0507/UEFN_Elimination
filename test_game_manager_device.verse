@@ -126,8 +126,6 @@ test_game_manager_device := class(creative_device):
     FlagCaptured:event(agent) = event(agent){} # フラッグの取得を管理するイベント
     ### ------------------------------------------------------------
 
-    S2M<localizes>(S:string):message = "{S}"
-
     # プレイヤーが揃うまで待機する関数
     OnBegin<override>()<suspends>:void=
         Trigger0.TriggeredEvent.Subscribe(OnTriggered0) ###

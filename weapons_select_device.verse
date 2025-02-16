@@ -16,21 +16,19 @@ weapon_enum := enum<persistable>:
     DMR_L4
     DMR_L5
 
-# (WE:weapon_enum).ToTexture():texture= #フォルダ名.テクスチャ名
-#     case(WE):
-#         candidate_enum.Oranges=>Textures.OrangeVote
-#         candidate_enum.Coconuts=>Textures.CoconutVote
-#         candidate_enum.Bananas=>Textures.BananaVote
-#         candidate_enum.AR=>NamedFolder.NamedTexture
+(WE:weapon_enum).ToTexture():texture= #フォルダ名.テクスチャ名
+    case(WE):
+        weapon_enum.DMR_L1 => Textures.DMR_L1
+        _ => Textures.DMR_L1
 
 # weapon_enumの文字列をstringに変換して返すプロパティ（デバッグ用）
 (WE:weapon_enum).ToString():string=
     case(WE):
-        weapon_enum.DMR_L1=>"DMR_L1"
-        weapon_enum.DMR_L2=>"DMR_L2"
-        weapon_enum.DMR_L3=>"DMR_L3"
-        weapon_enum.DMR_L4=>"DMR_L4"
-        weapon_enum.DMR_L5=>"DMR_L5"
+        weapon_enum.DMR_L1 => "DMR_L1"
+        weapon_enum.DMR_L2 => "DMR_L2"
+        weapon_enum.DMR_L3 => "DMR_L3"
+        weapon_enum.DMR_L4 => "DMR_L4"
+        weapon_enum.DMR_L5 => "DMR_L5"
 
 weapon_data := class<concrete>:
     @editable

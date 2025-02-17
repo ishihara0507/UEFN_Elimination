@@ -9,6 +9,10 @@ using { /Fortnite.com/Game }
 using { /Fortnite.com/FortPlayerUtilities }
 using { /Verse.org/Assets }
 
+#########################################################
+### 武器の購入や返却、手持ちの武器などを管理するプログラム ###
+#########################################################
+
 weapon_enum := enum<persistable>:
     DMR_L1
     DMR_L2
@@ -110,7 +114,7 @@ weapons_select_device := class(creative_device):
     @editable
     DebugTrigger:trigger_device = trigger_device{}
     
-    var WeaponsPlayerMap:[player][]weapon_enum = map{} # 各プレイヤーが現在保持している武器を記憶しておくmap記憶しておくmap
+    var WeaponsPlayerMap:[player][]weapon_enum = map{} # 各プレイヤーが現在保持している武器を記憶しておくmap
 
     OnBegin<override>()<suspends>:void=
         for(WeaponData:WeaponDatas):

@@ -23,6 +23,10 @@ player_stats_manager := class():
             Player := player[Agent]
             not PlayerStatMap[Player]
             set PlayerStatMap[Player] = player_stat{}
+        then:
+            Print("新しく持続データを紐づけた")
+        else:
+            Print("すでに持続データが紐づいている")
 
     ### 更新関数 -------------------------------------------------------
     # Version, 引数：なし
@@ -92,22 +96,19 @@ player_stats_manager := class():
     # WeaponPresets の SetIndex 番目の要素を SetPreset に変更する
     UpdateWeaponPresetsStat(Agent:agent, SetIndex:int, SetPreset:[]weapon_enum):void=
         if(Player := player[Agent], CurrentPlayerStat := PlayerStatMap[Player]):
-
             var NewWeaponPresets:[][]weapon_enum = array{}
             CurrentWeaponPresets := CurrentPlayerStat.WeaponPresets
+
             for(Index->Preset:CurrentWeaponPresets):
                 if(Index = SetIndex):
-                    set NewWeaponPresets += array{
-                        SetPreset
-                    }
+                    set NewWeaponPresets += array{SetPreset}
                 else:
-                    set NewWeaponPresets += array{
-                        Preset
-                    }
+                    set NewWeaponPresets += array{Preset}
 
             NewStat := player_stat:
                 MakeUpdatedPlayerStat<constructor>(CurrentPlayerStat)
                 WeaponPresets := NewWeaponPresets
+
             if. set PlayerStatMap[Player] = NewStat
 
     # プレイヤーの統計データを初期値にリセットする関数
@@ -116,3 +117,16 @@ player_stats_manager := class():
             Player := player[Agent]
             PlayerStatMap[Player]
             set PlayerStatMap[Player] = player_stat{}
+
+
+
+    ### デバッグ用 ------------------------------------------------------------------------------------
+    # WeaponPresetsの中身を表示する関数
+    ShowPresets(OAgent:?agent):void=
+        if(Agent := OAgent?, Player := player[Agent], CurrentPlayerStat := PlayerStatMap[Player]):
+            for(Index->Preset:CurrentPlayerStat.WeaponPresets):
+                Print("プリセット{Index}:")
+                for(Index2->Weapon:Preset):
+                    Print("{Index2}番目: {Weapon.ToString()}")
+        else:
+            Print("持続データが見つからない")

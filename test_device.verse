@@ -16,20 +16,18 @@ test_device := class(creative_device):
     Event:event() = event(){}
 
     OnBegin<override>()<suspends>:void=
-        Sleep(5.0)
-        Trigger.TriggeredEvent.Subscribe(OnTriggered)
+        var A:AA = AA{}
+        var B:int = A.a
 
-        race:
-            Event.Await()
-            loop:
-                Print("ddd")
-                Sleep(0.0)
+        set B = 100000000
+        Print("A.a: {A.a}, B: {B}")
 
     OnTriggered(OAgent:?agent):void=
         Print("トリガー")
         Event.Signal()
     
-                
+AA := class:
+    var a:int = 10
 
     
     # OnTriggered(OAgent:?agent):void=

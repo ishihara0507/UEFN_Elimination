@@ -16,11 +16,7 @@ test_device := class(creative_device):
     Event:event() = event(){}
 
     OnBegin<override>()<suspends>:void=
-        var A:AA = AA{}
-        var B:int = A.a
-
-        set B = 100000000
-        Print("A.a: {A.a}, B: {B}")
+        Print("")
 
     OnTriggered(OAgent:?agent):void=
         Print("トリガー")

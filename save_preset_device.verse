@@ -62,6 +62,7 @@ presets_ui := class:
 
     var Widget:widget = canvas{}
 
+    # インスタンス作成時に設定する
     Player:player
     HoldingWeapons:[]weapon_enum
     PlayerStatsManager:player_stats_manager
@@ -72,7 +73,7 @@ presets_ui := class:
     WeaponSlotsNum:int = 5
     var Presets:[][]weapon_enum = array{} # 持続データに登録されているプリセットを保持する
 
-    # ボタン系
+    # ウィジェット
     var BackBtn:button_loud = button_loud{}
     var SaveBtn:button_loud = button_loud{}
     var NextBtn:button_loud = button_loud{}
@@ -84,6 +85,7 @@ presets_ui := class:
     var HoldingWeaponTextures:[]texture_block = array{}
     var PresetWeaponTextures:[]texture_block = array{}
 
+    # イベント
     KillEvent:event() = event(){}
     UpdateEvent:event() = event(){}
 

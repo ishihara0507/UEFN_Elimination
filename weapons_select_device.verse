@@ -25,6 +25,14 @@ weapon_enum := enum<persistable>:
         weapon_enum.DMR_L1 => Textures.DMR_L1
         _ => Textures.DMR_L1
 
+(WE:weapon_enum).ToIndex():int= #フォルダ名.テクスチャ名
+    case(WE):
+        weapon_enum.DMR_L1 => 0
+        weapon_enum.DMR_L2 => 1
+        weapon_enum.DMR_L3 => 2
+        weapon_enum.DMR_L4 => 3
+        _ => 4
+
 # weapon_enumの文字列をstringに変換して返すプロパティ（デバッグ用）
 (WE:weapon_enum).ToString():string=
     case(WE):

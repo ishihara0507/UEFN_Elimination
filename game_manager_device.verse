@@ -3,10 +3,10 @@ using { /Verse.org/Simulation }
 using { /UnrealEngine.com/Temporary/Diagnostics }
 using { /UnrealEngine.com/Temporary/SpatialMath }
 using { /Verse.org/Random }
-using { /Verse.org/Simulation }
 using { /Fortnite.com/Characters }
 using { /Fortnite.com/Game }
 using { /Fortnite.com/FortPlayerUtilities }
+using { /UnrealEngine.com/Temporary/UI }
 
 S2M<localizes>(S:string):message = "{S}"
 
@@ -40,6 +40,19 @@ game_manager_device := class(creative_device):
     @editable
     PlayerSpawners:[]player_spawner_device = array{}
 
+    @editable
+    WeaponGranter:item_granter_device = item_granter_device{} # 選択した武器を付与するデバイス
+
+    @editable
+    ItemRemover:item_remover_device = item_remover_device{}
+    
+    # 自作デバイス
+    @editable
+    SavePresetDevice:save_preset_device = save_preset_device{}
+
+    @editable
+    SelectPresetDevice:select_preset_device = select_preset_device{}
+
     # 爆弾系
     @editable
     ExplosiveDevicesA:[]explosive_device = array{}
@@ -58,17 +71,7 @@ game_manager_device := class(creative_device):
     @editable
     StartDelayHud:hud_message_device = hud_message_device{} # 試合開始直前のカウントダウンを表示するHUD（数字を大きめにしたいから別で用意）
     @editable
-    RoundCoundDownHud:hud_message_device = hud_message_device{}
-    @editable
     FlagHud:hud_message_device = hud_message_device{} # ラウンド制限時間が終了して、フラッグが発生したことを知らせるHUD
-
-    @editable
-    WeaponGranter:item_granter_device = item_granter_device{} # 選択した武器を付与するデバイス
-
-    @editable
-    ItemRemover:item_remover_device = item_remover_device{}
-    # 武器を選択しなかった場合に与えられる武器
-
     ### ------------------------------------------------------------
 
 
@@ -100,8 +103,6 @@ game_manager_device := class(creative_device):
 
     var UseStage:stage_data = stage_data{}
 
-    var WeaponPlayerMap:[player][]weapon_enum = map{}
-
     var ResDataRed:[]res_data = array{} # 赤チームのリスポーン位置の配列
     var ResDataBlue:[]res_data = array{} # 青チームのリスポーン位置の配列
     ### ------------------------------------------------------------
@@ -113,6 +114,8 @@ game_manager_device := class(creative_device):
     BombStartEvent:event() = event(){} # 爆弾を起動したときに発火するイベント
     BombStopEvent:event() = event(){} # 爆弾を停止したときに発火するイベント
     BombEndEvent:event() = event(){} # 爆弾が爆発したときに発火するイベント
+
+    KillRoundUIEvent:event() = event(){} # ラウンドUIを削除するイベント
     ### ------------------------------------------------------------
 
     OnBegin<override>()<suspends>:void=
@@ -302,6 +305,11 @@ game_manager_device := class(creative_device):
         else:
             Print("キルに関するエラーが発生した。")
 
+    # 引数秒たったら、プリセット選択UIを削除する関数
+    DeleteSelectPresetUIs(Limit:float)<suspends>:void=
+        Sleep(Limit)
+        SelectPresetDevice.KillAllPresetsUI()
+
     # 各チームの残りプレイヤー数を確認して、ラウンドが終了するか否かを判定し、そのラウンドの勝利チームを決定する
     CheckRoundEnd():?team=
         var WinTeam:?team = false
@@ -326,6 +334,8 @@ game_manager_device := class(creative_device):
         var OAttackTeam:?team = false
         var ODefenseTeam:?team = false
 
+        var RoundStateUI:round_state_ui = round_state_ui{GameManagerDevice := Self, TeamCollection := TeamCollection}
+
         # 持続データの初期化（プレイヤースポナーでも行ってるけど、念のためもう一度行う）
         PlayerStatsManager.InitializeAllPlayers(GamePlayers)
 
@@ -337,7 +347,11 @@ game_manager_device := class(creative_device):
             if(FortCharacter := Player.GetFortCharacter[]):
                 FortCharacter.EliminatedEvent().Subscribe(OnPlayerEliminated)
 
+        SavePresetDevice.KillAllPresetsUI() # プリセット登録UIを全プレイヤーから削除する
+        
         TeleportAllPlayersToStage()
+
+        RoundStateUI.Init() # ラウンドUIを表示
 
         loop:
             set RoundCount += 1
@@ -387,6 +401,8 @@ game_manager_device := class(creative_device):
             # 多分リスポーン終了判定より先に静止処理が動いていたのだと思う。（静止中にリスポーンしたら静止は解除される）
             Sleep(0.0)
 
+            RoundStateUI.UpdateUI()
+
             # プレイヤーを静止させる＋プレイヤーの体力・シールドを全回復する
             for(Player:GamePlayers):
                 if(FortCharacter := Player.GetFortCharacter[]):
@@ -430,11 +446,10 @@ game_manager_device := class(creative_device):
                     for(Agent:TeamAgents):
                         if. (Player := player[Agent], set PlayerTeamMap[Player] = Team)
 
-            # 武器を付与する
+            # 武器を付与する（自作デバイスを使って実装した）
             for(Player:GamePlayers):
-                ItemRemover.Remove(Player) # 所持アイテムの削除
-                for(WeaponIndex:WeaponPlayerMap[Player]):
-                    # WeaponGranter.GrantItemIndex(Player, WeaponIndex)
+                SelectPresetDevice.MakePresetsUI(Player)
+            spawn{DeleteSelectPresetUIs(30.0)} # 30秒たったら自動的に消えるようにする
 
             # そのラウンドの目標をHUDで表示する
             if(AttackTeam := OAttackTeam?, Agents := TeamCollection.GetAgents[AttackTeam]):
@@ -468,15 +483,16 @@ game_manager_device := class(creative_device):
                 loop: # プレイヤー退出待ち
                     LeavingPlayer:player = GetPlayspace().PlayerRemovedEvent().Await()
                     if. (Team := PlayerTeamMap[LeavingPlayer], set TeamRemainingMap[Team] -= 1)
+                    RoundStateUI.UpdateUI()
                     # ラウンド終了判定
                     OWinTeam := CheckRoundEnd()
                     if(WinTeam := OWinTeam?):
                         if. set TeamWinsMap[WinTeam] += 1
-                        RoundCoundDownHud.Hide()
                         break
                 loop: # 一方のチームの全滅待ち
                     EliminatedAgent := KillEvent.Await() # キルされたプレイヤー
                     if. (Team := TeamCollection.GetTeam[EliminatedAgent], set TeamRemainingMap[Team] -= 1)
+                    RoundStateUI.UpdateUI()
                     # ラウンド終了判定
                     OWinTeam := CheckRoundEnd()
                     if(WinTeam := OWinTeam?):
@@ -485,23 +501,21 @@ game_manager_device := class(creative_device):
                             Sleep(1000.0) # キル待ちをなくす（おそらくキルは発生しないが）
                         else:
                             if. set TeamWinsMap[WinTeam] += 1
-                            RoundCoundDownHud.Hide()
                             break
                 block: # 制限時間終了（守備チームの勝利）
                     set Count = RoundTime
-                    RoundCoundDownHud.Show(S2M("{CalcElapsedTime(Count)}"))
+                    RoundStateUI.UpdateTimeText(S2M("{CalcElapsedTime(Count)}"))
 
                     race:
                         loop:
                             Sleep(1.0)
                             set Count -= 1
+                            RoundStateUI.UpdateTimeText(S2M("{CalcElapsedTime(Count)}"))
                             if(Count <= 0):
                                 break
-                            RoundCoundDownHud.SetText(S2M("{CalcElapsedTime(Count)}"))
                         block:
                             BombStartEvent.Await()
                             
-                    RoundCoundDownHud.Hide()
                     if(IsBombActivated?):
                         Sleep(1000.0) # 制限時間処理はなくす（30秒より長く停止させればいい）
                     else:
@@ -522,7 +536,6 @@ game_manager_device := class(creative_device):
                             Print("爆弾が爆発しました")
                     if(WinTeam := OWinTeam?):
                         if. set TeamWinsMap[WinTeam] += 1
-                        RoundCoundDownHud.Hide()
             
             ### ラウンド終了処理
             # ゲーム終了判定
@@ -532,6 +545,8 @@ game_manager_device := class(creative_device):
                     break
         
         # ゲームを終了するフェーズ ------------------------------------------------------------------------
+        RoundStateUI.DeleteAllUI() # ラウンドUIを削除
+
         # 持続データのプレイヤーが試合に参加したという情報を false にする
         for(Player:GamePlayers):
             PlayerStatsManager.UpdateInMatchStat(Player, false)

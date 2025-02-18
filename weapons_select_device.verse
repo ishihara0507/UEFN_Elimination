@@ -22,8 +22,8 @@ weapon_enum := enum<persistable>:
 
 (WE:weapon_enum).ToTexture():texture= #フォルダ名.テクスチャ名
     case(WE):
-        weapon_enum.DMR_L1 => Textures.DMR_L1
-        _ => Textures.DMR_L1
+        weapon_enum.DMR_L1 => WeaponTextures.DMR_L1
+        _ => WeaponTextures.DMR_L1
 
 (WE:weapon_enum).ToIndex():int= #フォルダ名.テクスチャ名
     case(WE):

@@ -7,8 +7,15 @@ using { /Verse.org/Simulation }
 using { /Fortnite.com/Characters }
 using { /Fortnite.com/Game }
 using { /Fortnite.com/FortPlayerUtilities }
+using { /UnrealEngine.com/Temporary/UI }
 
 test_device := class(creative_device):
+
+    @editable
+    UITringger:trigger_device = trigger_device{}
+
+    @editable
+    HudDevice:hud_message_device = hud_message_device{}
 
     @editable
     Trigger:trigger_device = trigger_device{}
@@ -17,13 +24,13 @@ test_device := class(creative_device):
 
     OnBegin<override>()<suspends>:void=
         Print("")
+        UITringger.TriggeredEvent.Subscribe(OnUITriggered)
 
-    OnTriggered(OAgent:?agent):void=
-        Print("トリガー")
-        Event.Signal()
-    
-AA := class:
-    var a:int = 10
+
+    OnUITriggered(OAgent:?agent):void=
+        if(Agent := OAgent?):
+            HudDevice.Show(Agent)
+
 
     
     # OnTriggered(OAgent:?agent):void=

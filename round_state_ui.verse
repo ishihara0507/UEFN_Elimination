@@ -15,9 +15,9 @@ round_state_ui := class():
     GameManagerDevice:game_manager_device
     TeamCollection:fort_team_collection
     
-    var TeamPlayerNum:int = 4
+    var TeamPlayerNum:int = 0
 
-    var TeamWidgets:[]widget = array{}
+    var TeamWidgets:[]widget = array{canvas{}, canvas{}}
 
     # ウィジェット
     var MyTeamTextures:[][]texture_block = array{}
@@ -137,7 +137,7 @@ round_state_ui := class():
                             Slots := for(Index2 := 0 .. TeamPlayerNum - 1):
                                 var PaddingLeft:float = -10.0
                                 var Texture:texture_block = texture_block{DefaultImage := Textures.Human_Red}
-                                if(Index = 0):
+                                if(Index2 = 0):
                                     set PaddingLeft = 0.0
                                 if(T := EnemyTeamTexture[Index2]):
                                     set Texture = T
@@ -171,46 +171,54 @@ round_state_ui := class():
 
         # 味方チームの生存者リストを更新
         for(Index->MyTeamTexture:MyTeamTextures):
-            # プレイヤーのテクスチャ自体を表示するかしないかを設定
             var PlayerNum:int = 0
+
+            # プレイヤーのテクスチャ自体を表示するかしないかを設定
             if(Num := TeamCollection.GetAgents[TeamArray[Index]].Length):
                 set PlayerNum = Num
-                for(Texture:MyTeamTexture, PlayerNum <= 0):
-                    Texture.SetVisibility(widget_visibility.Hidden)
-                    set PlayerNum -= 1
+                var HiddenNum:int = TeamPlayerNum - PlayerNum
+                for(Texture:MyTeamTexture):
+                    if(HiddenNum > 0):
+                        Texture.SetVisibility(widget_visibility.Hidden)
+                        set HiddenNum -= 1
+                    else:
+                        Texture.SetVisibility(widget_visibility.Visible)
 
-            # プレイヤーがキルされているかいかなを設定
+            # プレイヤーがキルされているかいなかを設定
             var DeathPlayerNum:int = 0
             if(RemainingNum := TeamRemainingMap[TeamArray[Index]]):
                 set DeathPlayerNum = PlayerNum - RemainingNum
                 for(Texture:MyTeamTexture):
                     if(DeathPlayerNum > 0):
-                        Texture.SetImage(Textures.Human_Red)
+                        Texture.SetImage(Textures.Human_Dark)
                         set DeathPlayerNum -= 1
                     else:
                         Texture.SetImage(Textures.Human_Blue)
 
         # 敵チームの生存者リストを更新
-        for(Index->MyTeamTexture:MyTeamTextures):
+        for(Index->EnemyTeamTexture:EnemyTeamTextures):
             for(Index2 := 0 .. 1):
                 # プレイヤーのテクスチャ自体を表示するかしないかを設定
                 var PlayerNum:int = 0
                 if(not Index = Index2, Num := TeamCollection.GetAgents[TeamArray[Index2]].Length):
                     set PlayerNum = Num
-                    for(Texture:MyTeamTexture, PlayerNum <= 0):
-                        Texture.SetVisibility(widget_visibility.Hidden)
-                        set PlayerNum -= 1
+                    for(Texture:EnemyTeamTexture):
+                        if(PlayerNum > 0):
+                            Texture.SetVisibility(widget_visibility.Visible)
+                            set PlayerNum -= 1
+                        else:
+                            Texture.SetVisibility(widget_visibility.Hidden)
 
                 # プレイヤーがキルされているかいかなを設定
                 var RemainingNum:int = 0
                 if(not Index = Index2, Num := TeamRemainingMap[TeamArray[Index2]]):
                     set RemainingNum = Num
-                    for(Texture:MyTeamTexture):
+                    for(Texture:EnemyTeamTexture):
                         if(RemainingNum > 0):
-                            Texture.SetImage(Textures.Human_Blue)
+                            Texture.SetImage(Textures.Human_Red)
                             set RemainingNum -= 1
                         else:
-                            Texture.SetImage(Textures.Human_Red)
+                            Texture.SetImage(Textures.Human_Dark)
 
     # 制限時間は頻繁に更新するので別関数として用意
     UpdateTimeText(Message:message):void=

@@ -1,4 +1,3 @@
-using { /Fortnite.com/Devices }
 using { /Verse.org/Simulation }
 using { /UnrealEngine.com/Temporary/SpatialMath }
 using { /Fortnite.com/UI }
@@ -9,6 +8,8 @@ using { /Fortnite.com/Teams }
 ####################################################
 ### ラウンドの進行状況を表すUIを管理するためのクラス ###
 ####################################################
+
+# UIの見た目は W_RoundState を元に作っている
 
 round_state_ui := class():
 
@@ -29,9 +30,10 @@ round_state_ui := class():
     var TimeText:text_block = text_block{}
 
     Init()<suspends>:void=
-        # ウィジェットの初期化
         if(Num := Quotient[GameManagerDevice.MatchPlayerNum, 2]):
             set TeamPlayerNum = Num
+            
+        # ウィジェットの初期化
 
         set MyTeamTextures = for(Index := 0 .. 1):
             for(Index2 := 0 .. TeamPlayerNum - 1):

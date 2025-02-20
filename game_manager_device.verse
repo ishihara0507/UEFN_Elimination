@@ -9,6 +9,7 @@ using { /Fortnite.com/FortPlayerUtilities }
 using { /UnrealEngine.com/Temporary/UI }
 
 S2M<localizes>(S:string):message = "{S}"
+GetAgentName<localizes>(Agent:agent):message="{Agent}"
 
 stage_data := struct<concrete>:
     @editable
@@ -105,6 +106,10 @@ game_manager_device := class(creative_device):
 
     var ResDataRed:[]res_data = array{} # 赤チームのリスポーン位置の配列
     var ResDataBlue:[]res_data = array{} # 青チームのリスポーン位置の配列
+
+    var PlayerKillMap:[player]int = map{} # 各プレイヤーのキル数を保持
+    var PlayerDeathMap:[player]int = map{} # 各プレイヤーのデス数を保持
+    var PlayerBombMap:[player]int = map{} # 各プレイヤーの爆弾起動数を保持
     ### ------------------------------------------------------------
 
 
@@ -241,7 +246,7 @@ game_manager_device := class(creative_device):
     SplitPlayersToTeams():void=
         Players := Shuffle(GamePlayers)
         if:
-            TeamPlayerNum := Int[MatchPlayerNum * 1.0 / 2.0]
+            TeamPlayerNum := Quotient[MatchPlayerNum, 2]
             T1 := Players.Slice[0, TeamPlayerNum]
             T2 := Players.Slice[TeamPlayerNum]
         then:

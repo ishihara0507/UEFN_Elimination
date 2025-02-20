@@ -15,10 +15,10 @@ select_preset_device := class(creative_device):
     WeaponGranter:item_granter_device = item_granter_device{} # 選択した武器を付与するデバイス
 
     @editable
-    ItemRemover:item_remover_device = item_remover_device{}
+    ItemRemover:item_remover_device = item_remover_device{} # 手持ちアイテムを削除するためのデバイス
 
     @editable
-    Trigger:trigger_device = trigger_device{}
+    Trigger:trigger_device = trigger_device{} # このトリガーを起動したらプリセット選択が行える
 
     var PlayerUIMap:[player]select_preset_ui = map{}
 
@@ -28,9 +28,7 @@ select_preset_device := class(creative_device):
         if(Agent := OAgent?, Player := player[Agent]):
             spawn{MakePresetsUI(Player)}
 
-
     OnBegin<override>()<suspends>:void=
-        Print("")
         Trigger.TriggeredEvent.Subscribe(OnTriggered)
 
     # プリセット選択UIを作成する関数        

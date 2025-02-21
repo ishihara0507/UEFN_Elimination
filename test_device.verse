@@ -17,31 +17,35 @@ test_device := class(creative_device):
     @editable
     UITringger:trigger_device = trigger_device{}
 
-    @editable
-    HudDevice:hud_message_device = hud_message_device{}
-    @editable
-    HudDevice2:hud_message_device = hud_message_device{}
 
     @editable
     Trigger:trigger_device = trigger_device{}
     @editable
     Trigger2:trigger_device = trigger_device{}
-    @editable
-    Trigger3:trigger_device = trigger_device{}
 
     Event:event() = event(){}
 
+    var Map:[agent]int = map{}
+
     OnBegin<override>()<suspends>:void=
         Trigger.TriggeredEvent.Subscribe(OnTriggered)
-        Trigger.TriggeredEvent.Subscribe(OnTriggered2)
+        Trigger2.TriggeredEvent.Subscribe(OnTriggered2)
 
     OnTriggered(OAgent:?agent):void=
         if(Agent := OAgent?):
-            HudDevice.Show(Agent, S2M("3  2"))
-            HudDevice2.Show(Agent)
+            if. set Map[Agent] = 0
+            else. Print("初期化error")
+
+            if(Value := Map[Agent]):
+                Print("Map :{Value}")
             
     OnTriggered2(OAgent:?agent):void=
-        return
+        if(Agent := OAgent?):
+            if. set Map[Agent] += 1
+            else. Print("加算error")
+
+            if(Value := Map[Agent]):
+                Print("Map :{Value}")
 
     # ChangeTeam(OAgent:?agent):void=
     #     TeamCollection := GetPlayspace().GetTeamCollection()

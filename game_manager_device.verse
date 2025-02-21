@@ -19,7 +19,7 @@ stage_data := struct<concrete>:
     @editable
     FlagPos:vector3 = vector3{}
 
-res_data := struct:
+respawn_data := struct:
     Pos:vector3
     Rot:rotation
 
@@ -46,6 +46,11 @@ game_manager_device := class(creative_device):
 
     @editable
     ItemRemover:item_remover_device = item_remover_device{}
+
+    @editable
+    FinishEriaPositions:[]vector3 = array{} # 試合終了後にリスポーンさせる場所。一応8人分用意する
+    @editable
+    FinishEriaRotation:rotation = rotation{} # 試合終了後エリアでのリスポーン時の向き
     
     # 自作デバイス
     @editable
@@ -73,6 +78,10 @@ game_manager_device := class(creative_device):
     StartDelayHud:hud_message_device = hud_message_device{} # 試合開始直前のカウントダウンを表示するHUD（数字を大きめにしたいから別で用意）
     # @editable
     # FlagHud:hud_message_device = hud_message_device{} # ラウンド制限時間が終了して、フラッグが発生したことを知らせるHUD
+    @editable
+    VictoryHudDevice:hud_message_device = hud_message_device{}
+    @editable
+    DefeatHudDevice:hud_message_device = hud_message_device{}
     @editable
     WinLoseHudDevice:hud_message_device = hud_message_device{}
     @editable
@@ -108,8 +117,8 @@ game_manager_device := class(creative_device):
 
     var UseStage:stage_data = stage_data{}
 
-    var ResDataRed:[]res_data = array{} # 赤チームのリスポーン位置の配列
-    var ResDataBlue:[]res_data = array{} # 青チームのリスポーン位置の配列
+    var ResDataRed:[]respawn_data = array{} # 赤チームのリスポーン位置の配列
+    var ResDataBlue:[]respawn_data = array{} # 青チームのリスポーン位置の配列
 
     var PlayerKillsMap:[player]int = map{} # 各プレイヤーのキル数を保持
     var PlayerDeathsMap:[player]int = map{} # 各プレイヤーのデス数を保持
@@ -181,12 +190,19 @@ game_manager_device := class(creative_device):
         for(LimitDevice:LimitDevicesB):
             for(Player:GamePlayers):
                 LimitDevice.Disable(Player)
+                
+        if(Player := player[Agent]):
+            if. set PlayerBombsMap[Player] += 1
+        
     OnLimitDeviceBStart(Agent:agent):void=
         BombStartEvent.Signal()
         set IsBombActivated = true
         for(LimitDevice:LimitDevicesA):
             for(Player:GamePlayers):
                 LimitDevice.Disable(Player)
+                
+        if(Player := player[Agent]):
+            if. set PlayerBombsMap[Player] += 1
 
     # 時限式爆破オブジェクトが解除されたら実行される関数
     OnLimitDeviceStop(Agent:agent):void=
@@ -306,13 +322,15 @@ game_manager_device := class(creative_device):
 
     OnPlayerEliminated(Result:elimination_result):void=
         Print("キル発生!!")
-        EliminatedFort:fort_character = Result.EliminatedCharacter
-        if:
-            EliminatedAgent := EliminatedFort.GetAgent[]
-        then:
+        EliminatedFort:fort_character = Result.EliminatedCharacter # デスしたプレイヤー
+        OEliminatorFort:?fort_character = Result.EliminatingCharacter # キルしたプレイヤー
+
+        if(EliminatorFort := OEliminatorFort?, EliminatorPlayer := player[EliminatorFort.GetAgent[]]):
+            if. set PlayerKillsMap[EliminatorPlayer] += 1
+
+        if(EliminatedAgent := EliminatedFort.GetAgent[], EliminatedPlayer := player[EliminatedAgent]):
+            if. set PlayerDeathsMap[EliminatedPlayer] += 1
             KillEvent.Signal(EliminatedAgent)
-        else:
-            Print("キルに関するエラーが発生した。")
 
     # 引数秒たったら、プリセット選択UIを削除する関数
     DeleteSelectPresetUIs(Limit:float)<suspends>:void=
@@ -345,6 +363,13 @@ game_manager_device := class(creative_device):
 
         var RoundStateUI:round_state_ui = round_state_ui{GameManagerDevice := Self, TeamCollection := TeamCollection}
 
+        # キル・デス・ボム設置マップを初期化
+        for(Player:GamePlayers):
+            if:
+                set PlayerKillsMap[Player] = 0
+                set PlayerDeathsMap[Player] = 0
+                set PlayerBombsMap[Player] = 0
+
         # 持続データの初期化（プレイヤースポナーでも行ってるけど、念のためもう一度行う）
         PlayerStatsManager.InitializeAllPlayers(GamePlayers)
 
@@ -371,7 +396,7 @@ game_manager_device := class(creative_device):
                 for(Agent:TeamCollection.GetAgents[TeamArray[0]]):
                     if(FortCharacter := Agent.GetFortCharacter[]):
                         set ResDataRed += array{
-                            res_data{
+                            respawn_data{
                                 Pos := FortCharacter.GetTransform().Translation,
                                 Rot := FortCharacter.GetTransform().Rotation
                             }
@@ -379,7 +404,7 @@ game_manager_device := class(creative_device):
                 for(Agent:TeamCollection.GetAgents[TeamArray[1]]):
                     if(FortCharacter := Agent.GetFortCharacter[]):
                         set ResDataBlue += array{
-                            res_data{
+                            respawn_data{
                                 Pos := FortCharacter.GetTransform().Translation,
                                 Rot := FortCharacter.GetTransform().Rotation
                             }
@@ -561,9 +586,16 @@ game_manager_device := class(creative_device):
             PlayerStatsManager.UpdateInMatchStat(Player, false)
             
         if(TrueWinningTeam := WinningTeam?):
-            for(Index->Team:TeamArray):
+            for(Index->Team:TeamArray, Agents := TeamCollection.GetAgents[Team]):
                 if(Team = WinningTeam):
-                    Print("チーム{Index}の勝利！！！！！！")
+                    Print("チーム{Index}が勝った")
+                    for(Agent:Agents):
+                        VictoryHudDevice.Show(Agent)
+                else:
+                    Print("チーム{Index}が負けた")
+                    for(Agent:Agents):
+                        DefeatHudDevice.Show(Agent)
+        Sleep(5.0)
 
         # 試合結果の表示と、持続データへの反映
         GameResult := game_result{GameManagerDevice := Self, WinLoseHudDevice := WinLoseHudDevice, LoseWinHudDevice := LoseWinHudDevice}
@@ -571,3 +603,5 @@ game_manager_device := class(creative_device):
         GameResult.SavePlayersResult()
 
         # 試合終了後エリアへワープさせる
+        for(Index->Player:GamePlayers, RespawnPos := FinishEriaPositions[Index]):
+            Player.Respawn(RespawnPos, FinishEriaRotation)

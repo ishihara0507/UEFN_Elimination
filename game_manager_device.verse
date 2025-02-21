@@ -71,8 +71,12 @@ game_manager_device := class(creative_device):
     CountDownHud:hud_message_device = hud_message_device{}
     @editable
     StartDelayHud:hud_message_device = hud_message_device{} # 試合開始直前のカウントダウンを表示するHUD（数字を大きめにしたいから別で用意）
+    # @editable
+    # FlagHud:hud_message_device = hud_message_device{} # ラウンド制限時間が終了して、フラッグが発生したことを知らせるHUD
     @editable
-    FlagHud:hud_message_device = hud_message_device{} # ラウンド制限時間が終了して、フラッグが発生したことを知らせるHUD
+    WinLoseHudDevice:hud_message_device = hud_message_device{}
+    @editable
+    LoseWinHudDevice:hud_message_device = hud_message_device{}
     ### ------------------------------------------------------------
 
 
@@ -85,7 +89,7 @@ game_manager_device := class(creative_device):
     
     StartDelay:int = 3 # テレポート前やゲーム直前などに設ける時間
 
-    PlayerStatsManager:player_stats_manager = player_stats_manager{} # 持続データを更新するときに使うクラス
+    PlayerStatsManager:player_stat_manager = player_stat_manager{} # 持続データを更新するときに使うクラス
     ### ------------------------------------------------------------
     
 
@@ -96,7 +100,7 @@ game_manager_device := class(creative_device):
 
     var IsBombActivated:logic = false # 爆弾が起動しているのかを記憶する（攻撃側が全員キルされても終わらないように）
 
-    var TeamWinsMap:[team]int = map{}
+    var TeamWinsMap:[team]int = map{} # ラウンドの勝利回数を保持
 
     var WinningTeam:?team = false # ゲームに勝利したチーム
     
@@ -107,9 +111,9 @@ game_manager_device := class(creative_device):
     var ResDataRed:[]res_data = array{} # 赤チームのリスポーン位置の配列
     var ResDataBlue:[]res_data = array{} # 青チームのリスポーン位置の配列
 
-    var PlayerKillMap:[player]int = map{} # 各プレイヤーのキル数を保持
-    var PlayerDeathMap:[player]int = map{} # 各プレイヤーのデス数を保持
-    var PlayerBombMap:[player]int = map{} # 各プレイヤーの爆弾起動数を保持
+    var PlayerKillsMap:[player]int = map{} # 各プレイヤーのキル数を保持
+    var PlayerDeathsMap:[player]int = map{} # 各プレイヤーのデス数を保持
+    var PlayerBombsMap:[player]int = map{} # 各プレイヤーの爆弾起動数を保持
     ### ------------------------------------------------------------
 
 
@@ -560,3 +564,10 @@ game_manager_device := class(creative_device):
             for(Index->Team:TeamArray):
                 if(Team = WinningTeam):
                     Print("チーム{Index}の勝利！！！！！！")
+
+        # 試合結果の表示と、持続データへの反映
+        GameResult := game_result{GameManagerDevice := Self, WinLoseHudDevice := WinLoseHudDevice, LoseWinHudDevice := LoseWinHudDevice}
+        GameResult.AddGameResultUI()
+        GameResult.SavePlayersResult()
+
+        # 試合終了後エリアへワープさせる

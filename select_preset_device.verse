@@ -22,7 +22,7 @@ select_preset_device := class(creative_device):
 
     var PlayerUIMap:[player]select_preset_ui = map{}
 
-    PlayerStatsManager:player_stats_manager = player_stats_manager{}
+    PlayerStatsManager:player_stat_manager = player_stat_manager{}
 
     OnTriggered(OAgent:?agent):void=
         if(Agent := OAgent?, Player := player[Agent]):

@@ -29,7 +29,7 @@ save_preset_device := class(creative_device):
 
     var PlayerPresetsUIMap:[player]presets_ui = map{}
 
-    PlayerStatsManager:player_stats_manager = player_stats_manager{}
+    PlayerStatsManager:player_stat_manager = player_stat_manager{}
 
     OnBegin<override>()<suspends>:void=
         Trigger.TriggeredEvent.Subscribe(OnTriggered)
@@ -65,7 +65,7 @@ presets_ui := class:
     # インスタンス作成時に設定する
     Player:player
     HoldingWeapons:[]weapon_enum
-    PlayerStatsManager:player_stats_manager
+    PlayerStatsManager:player_stat_manager
     
     var MaxPage:int = 3 # プリセット登録できる最大値
     var PageNum:int = 0 # 最初のページを０ページ目と考える

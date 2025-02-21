@@ -11,6 +11,7 @@ player_stat := class<final><persistable>:
     TotalLosses:int = 0
     TotalKills:int = 0
     TotalDeaths:int = 0
+    TotalBombs:int = 0
 
     # ペナルティ系
     InMatch:logic = false # 試合中か否かを保持。試合中に抜けたらこれが true のままロビーに参加してくることになる。
@@ -28,6 +29,7 @@ MakeUpdatedPlayerStat<constructor>(OldStats:player_stat)<transacts> := player_st
     TotalLosses := OldStats.TotalLosses
     TotalKills := OldStats.TotalKills
     TotalDeaths := OldStats.TotalDeaths
+    TotalBombs := OldStats.TotalBombs
     PenaltyEndTime := OldStats.PenaltyEndTime
     WeaponPresets := OldStats.WeaponPresets
 

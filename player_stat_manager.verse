@@ -3,7 +3,7 @@ using { /Verse.org/Simulation }
 using { /UnrealEngine.com/Temporary/Diagnostics }
 
 # 統計データを更新するためのクラス
-player_stats_manager := class():
+player_stat_manager := class():
 
     # プレイヤーの統計データを返す関数（オプション型を返す）
     GetPlayerStats(Agent:agent):?player_stat=
@@ -72,6 +72,15 @@ player_stats_manager := class():
             NewStat := player_stat:
                 MakeUpdatedPlayerStat<constructor>(CurrentPlayerStat)
                 TotalDeaths := CurrentPlayerStat.TotalDeaths + AddValue
+            if. set PlayerStatMap[Player] = NewStat
+
+    # TotalBombs, 引数：int
+    # TotalBombs に AddValue の値を加算する
+    UpdateTotalBombsStat(Agent:agent, AddValue:int):void=
+        if(Player := player[Agent], CurrentPlayerStat := PlayerStatMap[Player]):
+            NewStat := player_stat:
+                MakeUpdatedPlayerStat<constructor>(CurrentPlayerStat)
+                TotalBombs := CurrentPlayerStat.TotalBombs + AddValue
             if. set PlayerStatMap[Player] = NewStat
 
     # InMatch, 引数：logic

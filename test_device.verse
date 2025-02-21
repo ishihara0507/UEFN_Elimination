@@ -19,6 +19,8 @@ test_device := class(creative_device):
 
     @editable
     HudDevice:hud_message_device = hud_message_device{}
+    @editable
+    HudDevice2:hud_message_device = hud_message_device{}
 
     @editable
     Trigger:trigger_device = trigger_device{}
@@ -31,30 +33,15 @@ test_device := class(creative_device):
 
     OnBegin<override>()<suspends>:void=
         Trigger.TriggeredEvent.Subscribe(OnTriggered)
+        Trigger.TriggeredEvent.Subscribe(OnTriggered2)
 
     OnTriggered(OAgent:?agent):void=
-        Widget := canvas:
-            Slots := array:
-                canvas_slot:
-                    Anchors := anchors{Minimum:=vector2{X:=0.5,Y:=0.0},Maximum:=vector2{X:=0.5,Y:=0.0}}
-                    Offsets := margin{Left := 0.0, Top := 600.0, Right := -0.0, Bottom := -0.0}
-                    Alignment := vector2{X:=0.5,Y:=0.5}
-                    SizeToContent := true
-                    Widget := color_block{DefaultColor := color{R := 1.0, G := 1.0, B := 1.0}, DefaultDesiredSize := vector2{X := 128.0, Y := 54.0}}
-
-        if(Agent := OAgent?, PlayerUI := GetPlayerUI[player[Agent]]):
-            PlayerUI.AddWidget(Widget)
-        else:
-            Print("失敗")
-        Print("追加した")
-
-        
         if(Agent := OAgent?):
-            HudDevice.Show(Agent)
-        
+            HudDevice.Show(Agent, S2M("3  2"))
+            HudDevice2.Show(Agent)
             
-
-
+    OnTriggered2(OAgent:?agent):void=
+        return
 
     # ChangeTeam(OAgent:?agent):void=
     #     TeamCollection := GetPlayspace().GetTeamCollection()

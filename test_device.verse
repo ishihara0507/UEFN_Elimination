@@ -15,7 +15,10 @@ using { /Fortnite.com/Teams }
 test_device := class(creative_device):
 
     @editable
-    RoundResultDevice:round_ui_device = round_ui_device{}
+    GameManagerDevice:game_manager_device = game_manager_device{}
+
+    @editable
+    RoundUIDevice:round_ui_device = round_ui_device{}
 
     @editable
     UITringger:trigger_device = trigger_device{}
@@ -27,6 +30,8 @@ test_device := class(creative_device):
     Trigger:trigger_device = trigger_device{}
     @editable
     Trigger2:trigger_device = trigger_device{}
+    @editable
+    Trigger3:trigger_device = trigger_device{}
 
     @editable
     MaxGoldsGranter:item_granter_device = item_granter_device{} # ゴールドを初期値に戻すため
@@ -38,43 +43,46 @@ test_device := class(creative_device):
     var Map:[agent]int = map{}
 
     OnBegin<override>()<suspends>:void=
-        Trigger.TriggeredEvent.Subscribe(OnTriggered)
+        Trigger.TriggeredEvent.Subscribe(ChangeTeam)
         Trigger2.TriggeredEvent.Subscribe(OnTriggered2)
+        Trigger3.TriggeredEvent.Subscribe(OnTriggered3)
         
 
     OnTriggered(OAgent:?agent):void=
-        TeamCollection := GetPlayspace().GetTeamCollection()
-        TeamArray := TeamCollection.GetTeams()
-
-        var TeamWinsMap:[team]int = map{}
-        RoundCount := 1
-        ORoundWinTeam := option{TeamArray[0]}
-
-        for(Index->Team:TeamArray):
-            if(Index = 0):
-                if. set TeamWinsMap[Team] = 3
-            else:
-                if. set TeamWinsMap[Team] = 0
-
         return
 
             
     OnTriggered2(OAgent:?agent):void=
-        if(Agent := OAgent?):
-            if(Hud := RoundResultDevice.WinMTHudDevices[0]):
-                # Hud.SetDisplayTime(10.0)
-                Hud.Show(Agent)
-            return
+        TeamCollection := GetPlayspace().GetTeamCollection()
+        TeamArray := TeamCollection.GetTeams()
 
-    # ChangeTeam(OAgent:?agent):void=
-    #     TeamCollection := GetPlayspace().GetTeamCollection()
-    #     TeamArray := TeamCollection.GetTeams()
-    #     if:
-    #         Agent := OAgent?
-    #         Player := player[Agent]
-    #         CurrentTeam := TeamCollection.GetTeam[Player]
-    #     then:
-    #         for(Index->Team:TeamArray):
-    #             if(not Team = CurrentTeam):
-    #                 if(TeamCollection.AddToTeam[Player, Team]):
-    #                     Print("チーム{Index}に切り替えました")
+        RoundCount := 1
+        ORoundWinTeam := option{TeamArray[0]}
+
+        var TeamWinsMap:[team]int = map{}
+        for(Index->Team:TeamArray):
+            if(Index = 0):
+                if. set TeamWinsMap[Team] = 2
+            else:
+                if. set TeamWinsMap[Team] = 0
+        set GameManagerDevice.TeamWinsMap = TeamWinsMap
+
+        RoundUIDevice.ShowBackground(GameManagerDevice)
+        spawn{RoundUIDevice.ShowRoundResult(GameManagerDevice, RoundCount, ORoundWinTeam)}
+        
+         
+    OnTriggered3(OAgent:?agent):void=
+        return
+
+    ChangeTeam(OAgent:?agent):void=
+        TeamCollection := GetPlayspace().GetTeamCollection()
+        TeamArray := TeamCollection.GetTeams()
+        if:
+            Agent := OAgent?
+            Player := player[Agent]
+            CurrentTeam := TeamCollection.GetTeam[Player]
+        then:
+            for(Index->Team:TeamArray):
+                if(not Team = CurrentTeam):
+                    if(TeamCollection.AddToTeam[Player, Team]):
+                        Print("チーム{Index}に切り替えました")

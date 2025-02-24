@@ -7,9 +7,6 @@ using { /Verse.org/Colors }
 using { /Fortnite.com/Teams }
 
 round_ui_device := class(creative_device):
-    
-    @editable
-    GameManagerDevice:game_manager_device = game_manager_device{}
 
     # ラウンドの進行結果を表示するUI用---------------------------------------------------------------------------------
     var TeamPlayerNum:int = 0
@@ -60,12 +57,27 @@ round_ui_device := class(creative_device):
     #  -------------------------------------------------------------------------------------------------------------
 
     OnBegin<override>()<suspends>:void=
-        # ラウンドの進行結果を表示するUI用 --------------------------------------------------
+        # ラウンド結果を表示するUI用 -------------------------------------------------------
+        for(HudDevice:WinMTHudDevices):
+            HudDevice.SetDisplayTime(DisplayTime)
+
+        for(HudDevice:WinETHudDevices):
+            HudDevice.SetDisplayTime(DisplayTime)
+
+        for(HudDevice:LoseMTHudDevices):
+            HudDevice.SetDisplayTime(DisplayTime)
+
+        for(HudDevice:LoseETHudDevices):
+            HudDevice.SetDisplayTime(DisplayTime)
+
+        RoundCountHudDevice.SetDisplayTime(DisplayTime)
+
+    # ラウンドの進行状況を表すUIを全プレイヤーに付与する関数
+    AddRoundStateUI(GameManagerDevice:game_manager_device):void=
         if(Num := Quotient[GameManagerDevice.MatchPlayerNum, 2]):
             set TeamPlayerNum = Num
             
         # ウィジェットの初期化
-
         set MyTeamTextures = for(Index := 0 .. 1):
             for(Index2 := 0 .. TeamPlayerNum - 1):
                 texture_block{DefaultImage := Textures.Human_Blue, DefaultDesiredSize := vector2{X := 54.0, Y := 54.0}}
@@ -81,25 +93,8 @@ round_ui_device := class(creative_device):
             text_block{DefaultText:=S2M("0")}
 
         set TimeText = text_block{DefaultText:=S2M("00:00")}
-        
-        # ラウンド結果を表示するUI用 -------------------------------------------------------
-        for(HudDevice:WinMTHudDevices):
-            HudDevice.SetDisplayTime(DisplayTime)
 
-        for(HudDevice:WinETHudDevices):
-            HudDevice.SetDisplayTime(DisplayTime)
-
-        for(HudDevice:LoseMTHudDevices):
-            HudDevice.SetDisplayTime(DisplayTime)
-
-        for(HudDevice:LoseMTHudDevices):
-            HudDevice.SetDisplayTime(DisplayTime)
-
-        RoundCountHudDevice.SetDisplayTime(DisplayTime)
-
-    # ラウンドの進行状況を表すUIを全プレイヤーに付与する関数
-    AddRoundStateUI():void=
-        CreateRoundStateUI()
+        CreateRoundStateUI(GameManagerDevice)
 
         TeamCollection := GetPlayspace().GetTeamCollection()
         TeamArray := TeamCollection.GetTeams()
@@ -118,7 +113,7 @@ round_ui_device := class(creative_device):
                     PlayerUI.RemoveWidget(Widget)
                     
     # ラウンドの進行状況を表すUIを作成する関数
-    CreateRoundStateUI():void=
+    CreateRoundStateUI(GameManagerDevice:game_manager_device):void=
         for(Index := 0 .. 1):
             var NewSlots:[]canvas_slot = array{}
 
@@ -203,7 +198,7 @@ round_ui_device := class(creative_device):
 
             if. set TeamWidgets[Index] = canvas{Slots := NewSlots}
 
-        UpdateRoundStateUI() # 表示・非表示を設定する
+        UpdateRoundStateUI(GameManagerDevice) # 表示・非表示を設定する
 
     # ラウンドの進行状況を表すUIを更新する関数（制限時間部分のみ）
     # 制限時間は頻繁に更新するので別関数として用意
@@ -211,7 +206,7 @@ round_ui_device := class(creative_device):
         TimeText.SetText(Message)
 
     # ラウンドの進行状況を表すUIを更新する関数（制限時間部分は除く）
-    UpdateRoundStateUI():void=
+    UpdateRoundStateUI(GameManagerDevice:game_manager_device):void=
         TeamWinsMap := GameManagerDevice.TeamWinsMap
         TeamRemainingMap := GameManagerDevice.TeamRemainingMap
 
@@ -281,7 +276,7 @@ round_ui_device := class(creative_device):
                             Texture.SetImage(Textures.Human_Dark)
 
     # ラウンド結果を表示するUIを全プレイヤーに付与する関数
-    ShowRoundResult(RoundCount:int, ORoundWinTeam:?team)<suspends>:void=
+    ShowRoundResult(GameManagerDevice:game_manager_device, RoundCount:int, ORoundWinTeam:?team)<suspends>:void=
         TeamCollection := GetPlayspace().GetTeamCollection()
         TeamArray := TeamCollection.GetTeams()
         TeamWinsMap := GameManagerDevice.TeamWinsMap
@@ -310,15 +305,15 @@ round_ui_device := class(creative_device):
         Sleep(DisplayTime)
 
     # 黒半透明の背景を全プレイヤーに表示する関数
-    ShowBackground():void=
+    ShowBackground(GameManagerDevice:game_manager_device):void=
         for(Player:GameManagerDevice.GamePlayers):
             BackgroundHudDevice.Show(Player)
 
-    HideBackground():void=
+    HideBackground(GameManagerDevice:game_manager_device):void=
         for(Player:GameManagerDevice.GamePlayers):
             BackgroundHudDevice.Hide(Player)
 
-    ShowHideSideSwitch()<suspends>:void=
+    ShowHideSideSwitch(GameManagerDevice:game_manager_device)<suspends>:void=
         for(Player:GameManagerDevice.GamePlayers):
             SideSwitchHudDevice.Show(Player)
 
@@ -328,7 +323,7 @@ round_ui_device := class(creative_device):
             SideSwitchHudDevice.Hide(Player)
 
     # ラウンド開始前に各プレイヤーに今何陣営かを表示する関数
-    ShowHideSide(OAttackTeam:?team, ODefenseTeam:?team)<suspends>:void=
+    ShowHideSide(GameManagerDevice:game_manager_device, OAttackTeam:?team, ODefenseTeam:?team)<suspends>:void=
         TeamCollection := GetPlayspace().GetTeamCollection()
         TeamArray := TeamCollection.GetTeams()
 

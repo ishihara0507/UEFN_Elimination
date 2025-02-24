@@ -391,7 +391,7 @@ game_manager_device := class(creative_device):
         
         TeleportAllPlayersToStage()
 
-        RoundUIDevice.AddRoundStateUI() # ラウンドUIを表示
+        RoundUIDevice.AddRoundStateUI(Self) # ラウンドUIを表示
 
         loop:
             set RoundCount += 1
@@ -443,7 +443,7 @@ game_manager_device := class(creative_device):
             # 多分リスポーン終了判定より先に静止処理が動いていたのだと思う。（静止中にリスポーンしたら静止は解除される）
             Sleep(0.0)
 
-            RoundUIDevice.UpdateRoundStateUI()
+            RoundUIDevice.UpdateRoundStateUI(Self)
 
             # プレイヤーを静止させる＋プレイヤーの体力・シールドを全回復する
             for(Player:GamePlayers):
@@ -462,7 +462,7 @@ game_manager_device := class(creative_device):
                 Tmp := OAttackTeam
                 set OAttackTeam = ODefenseTeam
                 set ODefenseTeam = Tmp
-            RoundUIDevice.ShowHideSide(OAttackTeam, ODefenseTeam) # 陣営を表示する
+            RoundUIDevice.ShowHideSide(Self, OAttackTeam, ODefenseTeam) # 陣営を表示する
 
             # 有効にする時限式爆破オブジェクトを切り替える
             set IsBombActivated = false # 爆弾起動保持変数リセット
@@ -526,7 +526,7 @@ game_manager_device := class(creative_device):
                 loop: # プレイヤー退出待ち
                     LeavingPlayer:player = GetPlayspace().PlayerRemovedEvent().Await()
                     if. (Team := PlayerTeamMap[LeavingPlayer], set TeamRemainingMap[Team] -= 1)
-                    RoundUIDevice.UpdateRoundStateUI()
+                    RoundUIDevice.UpdateRoundStateUI(Self)
                     # ラウンド終了判定
                     OWinTeam := CheckRoundEnd()
                     if(WinTeam := OWinTeam?):
@@ -536,7 +536,7 @@ game_manager_device := class(creative_device):
                 loop: # 一方のチームの全滅待ち
                     EliminatedAgent := KillEvent.Await() # キルされたプレイヤー
                     if. (Team := TeamCollection.GetTeam[EliminatedAgent], set TeamRemainingMap[Team] -= 1)
-                    RoundUIDevice.UpdateRoundStateUI()
+                    RoundUIDevice.UpdateRoundStateUI(Self)
                     # ラウンド終了判定
                     OWinTeam := CheckRoundEnd()
                     if(WinTeam := OWinTeam?):
@@ -586,11 +586,11 @@ game_manager_device := class(creative_device):
             
             ### ラウンド終了処理
             # ラウンド結果UIの表示
-            RoundUIDevice.ShowBackground()
-            RoundUIDevice.ShowRoundResult(RoundCount, RoundWinTeam) # 4.0秒くらいここで処理が止まる
+            RoundUIDevice.ShowBackground(Self)
+            RoundUIDevice.ShowRoundResult(Self, RoundCount, RoundWinTeam) # 4.0秒くらいここで処理が止まる
             if(Mod[RoundCount, SideSwitchNum] = 1): # 3ラウンドごとに「SideSwitch」と表示する
-                RoundUIDevice.ShowHideSideSwitch()
-            RoundUIDevice.HideBackground()
+                RoundUIDevice.ShowHideSideSwitch(Self)
+            RoundUIDevice.HideBackground(Self)
 
             # ゲーム終了判定
             for(Team->TeamWins:TeamWinsMap):

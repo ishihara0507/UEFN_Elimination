@@ -15,13 +15,23 @@ using { /Fortnite.com/Teams }
 test_device := class(creative_device):
 
     @editable
+    RoundResultDevice:round_ui_device = round_ui_device{}
+
+    @editable
     UITringger:trigger_device = trigger_device{}
 
+    @editable
+    HudDevice:hud_message_device = hud_message_device{}
 
     @editable
     Trigger:trigger_device = trigger_device{}
     @editable
     Trigger2:trigger_device = trigger_device{}
+
+    @editable
+    MaxGoldsGranter:item_granter_device = item_granter_device{} # ゴールドを初期値に戻すため
+    @editable
+    GoldCondBtn:conditional_button_device = conditional_button_device{} # プレイヤーの所持ゴールドの枚数を取得するための条件付きボタン
 
     Event:event() = event(){}
 
@@ -30,22 +40,31 @@ test_device := class(creative_device):
     OnBegin<override>()<suspends>:void=
         Trigger.TriggeredEvent.Subscribe(OnTriggered)
         Trigger2.TriggeredEvent.Subscribe(OnTriggered2)
+        
 
     OnTriggered(OAgent:?agent):void=
-        if(Agent := OAgent?):
-            if. set Map[Agent] = 0
-            else. Print("初期化error")
+        TeamCollection := GetPlayspace().GetTeamCollection()
+        TeamArray := TeamCollection.GetTeams()
 
-            if(Value := Map[Agent]):
-                Print("Map :{Value}")
+        var TeamWinsMap:[team]int = map{}
+        RoundCount := 1
+        ORoundWinTeam := option{TeamArray[0]}
+
+        for(Index->Team:TeamArray):
+            if(Index = 0):
+                if. set TeamWinsMap[Team] = 3
+            else:
+                if. set TeamWinsMap[Team] = 0
+
+        return
+
             
     OnTriggered2(OAgent:?agent):void=
         if(Agent := OAgent?):
-            if. set Map[Agent] += 1
-            else. Print("加算error")
-
-            if(Value := Map[Agent]):
-                Print("Map :{Value}")
+            if(Hud := RoundResultDevice.WinMTHudDevices[0]):
+                # Hud.SetDisplayTime(10.0)
+                Hud.Show(Agent)
+            return
 
     # ChangeTeam(OAgent:?agent):void=
     #     TeamCollection := GetPlayspace().GetTeamCollection()

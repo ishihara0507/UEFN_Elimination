@@ -53,9 +53,12 @@ weapon_data := class<concrete>:
     VendingMachine:vending_machine_device = vending_machine_device{}
 
     @editable
-    CondBtn:conditional_button_device = conditional_button_device{}
+    WeaponCondBtn:conditional_button_device = conditional_button_device{}
 
-    var FiveGoldsGranter:item_granter_device = item_granter_device{}
+    var GoldCondBtn:conditional_button_device = conditional_button_device{} # ゴールドの枚数を取得するためのやつ
+    var GoldHudDevice:hud_message_device = hud_message_device{}
+
+    var GoldsGranter:item_granter_device = item_granter_device{} # 武器返却時にゴールドを返すためのグランター
 
     var WeaponsSelectDevice:weapons_select_device = weapons_select_device{}
 
@@ -68,6 +71,7 @@ weapon_data := class<concrete>:
                 if. set WeaponsSelectDevice.WeaponsPlayerMap[Player] += array{Weapon}
 
             WeaponsSelectDevice.ChangePlayerClass(Agent)
+            spawn{ShowGoldHud(Agent)}
     
     # WeaponsSelectDeviceのWeaponPlayerMapから、このインスタンスの武器を削除する関数
     RemoveWeaponsPlayerMap(Agent:agent):void=
@@ -85,13 +89,20 @@ weapon_data := class<concrete>:
 
     # プレイヤーにゴールドを返す関数
     ReturnGolds(Agent:agent):void=
-        for(Index := 1..Quotient[RequireGolds, 5]): # RequireGolds = 10 だったら2回ループする（10ゴールド増やす）
-            FiveGoldsGranter.GrantItem(Agent)
+        if(Index := Quotient[RequireGolds, 5] - 1):
+            GoldsGranter.GrantItemIndex(Agent, Index)
+            
+    # プレイヤーのゴールド枚数を表示・更新する関数
+    ShowGoldHud(Agent:agent)<suspends>:void=
+        Sleep(0.0)
+        GoldNum := GoldCondBtn.GetItemCount(Agent, 0)
+        GoldHudDevice.Show(Agent, S2M("{GoldNum}"))
 
-    # CondBtnが押されたときに実行する処理（上の２つの関数）をひとつにまとめた関数
+    # CondBtnが押されたときに実行する処理（上の３つの関数）をひとつにまとめた関数
     ActivateCondBtn(Agent:agent):void=
         ReturnGolds(Agent)
         RemoveWeaponsPlayerMap(Agent)
+        spawn{ShowGoldHud(Agent)}
 
 weapons_select_device := class(creative_device):
 
@@ -105,7 +116,7 @@ weapons_select_device := class(creative_device):
     AllWeaponsReturnTriggers:[]trigger_device = array{} # すべての武器を返却するためのトリガー
 
     @editable
-    FiveGoldsGranter:item_granter_device = item_granter_device{} # ゴールドを５枚与えるために使用する
+    GoldsGranter:item_granter_device = item_granter_device{} # 武器返却時にゴールドを返すためのグランター
 
     @editable
     MaxGoldsGranter:item_granter_device = item_granter_device{} # ゴールドを初期値に戻すため
@@ -120,15 +131,27 @@ weapons_select_device := class(creative_device):
     OneClassSelector:class_and_team_selector_device = class_and_team_selector_device{} # 「クラス１」に変更するクラスセレクター（クラス１は自販機を実行できない）
 
     @editable
-    DebugTrigger:trigger_device = trigger_device{}
+    GoldHudDevice:hud_message_device = hud_message_device{} # 所持ゴールドの枚数を表示するHUDデバイス
+    @editable
+    GoldCondBtn:conditional_button_device = conditional_button_device{} # プレイヤーの所持ゴールドの枚数を取得するための条件付きボタン
+    
+    @editable
+    Mutator:mutator_zone_device = mutator_zone_device{} # 武器選択エリアの入口兼出口に設置するミューテーターゾーン
+
+    @editable
+    DebugTrigger:trigger_device = trigger_device{} # ログでそのプレイヤーのWeaponsPlayerMapの値を表示するトリガー
     
     var WeaponsPlayerMap:[player][]weapon_enum = map{} # 各プレイヤーが現在保持している武器を記憶しておくmap
+    
+    var PlayerInEreaMap:[player]logic = map{} # プレイヤーが武器選択エリアに入っているかいなかを保持するmap
 
     OnBegin<override>()<suspends>:void=
         for(WeaponData:WeaponDatas):
-            set WeaponData.FiveGoldsGranter = FiveGoldsGranter
+            set WeaponData.GoldCondBtn = GoldCondBtn
+            set WeaponData.GoldHudDevice = GoldHudDevice
+            set WeaponData.GoldsGranter = GoldsGranter
             set WeaponData.WeaponsSelectDevice = Self
-            WeaponData.CondBtn.ActivatedEvent.Subscribe(WeaponData.ActivateCondBtn)
+            WeaponData.WeaponCondBtn.ActivatedEvent.Subscribe(WeaponData.ActivateCondBtn)
             WeaponData.VendingMachine.ItemSpawnedEvent.Subscribe(WeaponData.AddWeaponsPlayerMap)
 
         for(HoldingWeaponReturnTrigger:HoldingWeaponReturnTriggers):
@@ -137,13 +160,34 @@ weapons_select_device := class(creative_device):
         for(AllWeaponsReturnTrigger:AllWeaponsReturnTriggers):
             AllWeaponsReturnTrigger.TriggeredEvent.Subscribe(AllWeaponsReturn)
 
+        Mutator.AgentEntersEvent.Subscribe(EnterMutator)
+
         DebugTrigger.TriggeredEvent.Subscribe(OnDebugTriggered) # デバッグ用
+
+    # 入口兼出口のミューテーターゾーンに入ったときに実行する関数
+    EnterMutator(Agent:agent):void=
+        if(Player := player[Agent]):
+            if(InErea := PlayerInEreaMap[Player], InErea?): # すでに入っていたら（出るとき）
+                GoldHudDevice.Hide(Agent)
+                ItemRemover.Remove(Agent)
+                if. set PlayerInEreaMap[Player] = false
+            else: # まだ入っていなかったら（入るとき）
+                ItemRemover.Remove(Agent)
+                MaxGoldsGranter.GrantItem(Agent)
+                spawn{ShowGoldHud(Agent)}
+                if. set PlayerInEreaMap[Player] = true
+
+    # プレイヤーのゴールド枚数を表示・更新する関数
+    ShowGoldHud(Agent:agent)<suspends>:void=
+        Sleep(0.0) # 一瞬待たないとGrantItemの処理が完了するまえに以下の処理が実行されちゃう
+        GoldNum := GoldCondBtn.GetItemCount(Agent, 0)
+        GoldHudDevice.Show(Agent, S2M("{GoldNum}"))
 
     # 特定の武器（プレイヤーが手に持っている武器）を返却するための関数
     HoldingWeaponReturn(OAgent:?agent):void=
         if(Agent := OAgent?):
             for(WeaponData:WeaponDatas):
-                WeaponData.CondBtn.Activate(Agent)
+                WeaponData.WeaponCondBtn.Activate(Agent)
 
     # プレイヤーが持っているすべての武器を返却する関数
     AllWeaponsReturn(OAgent:?agent):void=
@@ -151,6 +195,7 @@ weapons_select_device := class(creative_device):
             ItemRemover.Remove(Agent)
             MaxGoldsGranter.GrantItem(Agent)
             if. set WeaponsPlayerMap[Player] = array{}
+            spawn{ShowGoldHud(Agent)}
             
             ChangePlayerClass(Agent)
 

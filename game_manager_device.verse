@@ -78,22 +78,33 @@ game_manager_device := class(creative_device):
     # HUD
     @editable
     MessageHud:hud_message_device = hud_message_device{}
+
     @editable
     CountDownHud:hud_message_device = hud_message_device{}
+
     @editable
     StartDelayHud:hud_message_device = hud_message_device{} # 試合開始直前のカウントダウンを表示するHUD（数字を大きめにしたいから別で用意）
-    # @editable
-    # FlagHud:hud_message_device = hud_message_device{} # ラウンド制限時間が終了して、フラッグが発生したことを知らせるHUD
+
     @editable
     VictoryHudDevice:hud_message_device = hud_message_device{}
+
     @editable
     DefeatHudDevice:hud_message_device = hud_message_device{}
+
     @editable
     WinLoseHudDevice:hud_message_device = hud_message_device{}
+
     @editable
     LoseWinHudDevice:hud_message_device = hud_message_device{}
+
     @editable
     ThankYouHudDevice:hud_message_device = hud_message_device{}
+
+    @editable
+    VsMTHudDevice:hud_message_device = hud_message_device{}
+
+    @editable
+    VsETHudDevice:hud_message_device = hud_message_device{}
     ### ------------------------------------------------------------
 
 
@@ -358,7 +369,48 @@ game_manager_device := class(creative_device):
             set WinTeam = option{TeamArray[0]}
 
         return WinTeam
+    
+    # messageを結合する関数（間に改行を挟む）
+    CombineMsg<localizes>(Msg:message, Msg2:message):message="{Msg}\n{Msg2}"
 
+    # 各チームのプレイヤーネームテキストを作成する関数
+    GenPlayerNamesMsg():[team]message=
+        TeamCollection := GetPlayspace().GetTeamCollection()
+        TeamArray := TeamCollection.GetTeams()
+        var TeamMsgMap:[team]message = map{}
+
+        for(Team:TeamArray, Agents := TeamCollection.GetAgents[Team]):
+            for(Index->Agent:Agents):
+                PlayerName := GetAgentName(Agent)
+                if(Index = 0):
+                    if. set TeamMsgMap[Team] = PlayerName
+                else if(DeforeMsg := TeamMsgMap[Team]):
+                    AfterMsg := CombineMsg(DeforeMsg, PlayerName)
+                    if. set TeamMsgMap[Team] = AfterMsg
+
+        return TeamMsgMap
+
+    # 試合開始前に各チームのプレイヤーの名前を表示するUIを付与する関数
+    ShowVsUI()<suspends>:void=
+        TeamCollection := GetPlayspace().GetTeamCollection()
+        TeamArray := TeamCollection.GetTeams()
+
+        TeamMsgMap := GenPlayerNamesMsg()
+
+        for(Team:TeamArray, Agents := TeamCollection.GetAgents[Team]):
+            for(Agent:Agents):
+                for(Team2->Msg:TeamMsgMap):
+                    if(Team2 = Team):
+                        VsMTHudDevice.Show(Agent, Msg)
+                    else:
+                        VsETHudDevice.Show(Agent, Msg)
+
+        Sleep(5.0)
+
+        for(Player:GamePlayers):
+            VsMTHudDevice.Hide(Player)
+            VsETHudDevice.Hide(Player)
+                
     # ゲーム全体の流れを実行する関数
     StartGameFlow()<suspends>:void=
         TeamCollection := GetPlayspace().GetTeamCollection()
@@ -391,7 +443,11 @@ game_manager_device := class(creative_device):
         
         TeleportAllPlayersToStage()
 
-        RoundUIDevice.AddRoundStateUI(Self) # ラウンドUIを表示
+        Sleep(1.0) # 一応ちょっと待つ
+
+        ShowVsUI() # 対戦相手を表示するUIを付与して、一定時間後に削除
+
+        RoundUIDevice.AddRoundStateUI(Self) # ラウンドUIを初期化して表示
 
         loop:
             set RoundCount += 1

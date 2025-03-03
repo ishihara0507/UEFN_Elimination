@@ -11,14 +11,6 @@ using { /UnrealEngine.com/Temporary/UI }
 S2M<localizes>(S:string):message = "{S}"
 GetAgentName<localizes>(Agent:agent):message="{Agent}"
 
-stage_data := struct<concrete>:
-    @editable
-    TeleportersRed:[]teleporter_device = array{}
-    @editable
-    TeleportersBlue:[]teleporter_device = array{}
-    @editable
-    FlagPos:vector3 = vector3{}
-
 respawn_data := struct:
     Pos:vector3
     Rot:rotation
@@ -26,35 +18,6 @@ respawn_data := struct:
 game_manager_device := class(creative_device):
 
     ### @editable --------------------------------------------------
-    @editable
-    MatchPlayerNum:int = 2 # 偶数にする
-
-    @editable
-    SideSwitchNum:int = 3 # 陣営変更するラウンド数
-
-    @editable
-    WinningPoints:int = 3
-
-    @editable
-    RoundTime:int = 300
-
-    @editable
-    Stages:[]stage_data = array{}
-
-    @editable
-    PlayerSpawners:[]player_spawner_device = array{}
-
-    @editable
-    WeaponGranter:item_granter_device = item_granter_device{} # 選択した武器を付与するデバイス
-
-    @editable
-    ItemRemover:item_remover_device = item_remover_device{}
-
-    @editable
-    FinishEriaPositions:[]vector3 = array{} # 試合終了後にリスポーンさせる場所。一応8人分用意する
-    @editable
-    FinishEriaRotation:rotation = rotation{} # 試合終了後エリアでのリスポーン時の向き
-    
     # 自作デバイス
     @editable
     SavePresetDevice:save_preset_device = save_preset_device{}
@@ -65,15 +28,40 @@ game_manager_device := class(creative_device):
     @editable
     RoundUIDevice:round_ui_device = round_ui_device{}
 
-    # 爆弾系
+    # いろいろ
     @editable
-    ExplosiveDevicesA:[]explosive_device = array{}
+    MatchPlayerNum:int = 2 # 偶数にする
+
     @editable
-    ExplosiveDevicesB:[]explosive_device = array{}
+    SideSwitchNum:int = 2 # 陣営変更するラウンド数
+
     @editable
-    LimitDevicesA:[]timed_objective_device = array{} # 0:チーム１が起動する側, 1:チーム２が起動する側
+    WinningPoints:int = 3
+
     @editable
-    LimitDevicesB:[]timed_objective_device = array{} # 0:チーム１が起動する側, 1:チーム２が起動する側
+    RoundTime:int = 300
+
+    @editable
+    PlayerSpawners:[]player_spawner_device = array{} # 持続データの初期化とペナルティ用に使う
+
+    @editable
+    AttackTeamTeleporters:[]teleporter_device = array{}
+    @editable
+    DefenceTeamTeleporters:[]teleporter_device = array{}
+
+    @editable
+    AttackClassSelector:class_and_team_selector_device = class_and_team_selector_device{} # 攻撃側のクラス（バリスティックの仕掛けを使用できる）
+    @editable
+    DefenceClassSelector:class_and_team_selector_device = class_and_team_selector_device{} # 守備側のクラス（バリスティックの仕掛けは使用できない）
+    
+    @editable
+    BarrierZones:[]barrier_device = array{} # ラウンド開始前の待機する場所
+
+    @editable
+    RiftPointVolumes:[]rift_point_volume_device = array{}
+
+    @editable
+    ExplosiveDevices:[]explosive_device = array{}
 
     # HUD
     @editable
@@ -84,6 +72,12 @@ game_manager_device := class(creative_device):
 
     @editable
     StartDelayHud:hud_message_device = hud_message_device{} # 試合開始直前のカウントダウンを表示するHUD（数字を大きめにしたいから別で用意）
+    
+    @editable
+    VsMTHudDevice:hud_message_device = hud_message_device{}
+
+    @editable
+    VsETHudDevice:hud_message_device = hud_message_device{}
 
     @editable
     VictoryHudDevice:hud_message_device = hud_message_device{}
@@ -99,12 +93,6 @@ game_manager_device := class(creative_device):
 
     @editable
     ThankYouHudDevice:hud_message_device = hud_message_device{}
-
-    @editable
-    VsMTHudDevice:hud_message_device = hud_message_device{}
-
-    @editable
-    VsETHudDevice:hud_message_device = hud_message_device{}
     ### ------------------------------------------------------------
 
 
@@ -125,7 +113,7 @@ game_manager_device := class(creative_device):
     var GamePlayers:[]player = array{} # ゲームに参加するプレイヤー
 
     var TeamRemainingMap:[team]int = map{} # ラウンドごとの残りプレイヤーの数を保持するマップ
-
+    
     var IsBombActivated:logic = false # 爆弾が起動しているのかを記憶する（攻撃側が全員キルされても終わらないように）
 
     var TeamWinsMap:[team]int = map{} # ラウンドの勝利回数を保持
@@ -134,14 +122,13 @@ game_manager_device := class(creative_device):
     
     var TeamStageTelepotersMap:[team][]teleporter_device = map{}
 
-    var UseStage:stage_data = stage_data{}
-
-    var ResDataRed:[]respawn_data = array{} # 赤チームのリスポーン位置の配列
-    var ResDataBlue:[]respawn_data = array{} # 青チームのリスポーン位置の配列
+    var Team0ResDatas:[]respawn_data = array{} # 赤チームのリスポーン位置の配列
+    var Team1ResDatas:[]respawn_data = array{} # 青チームのリスポーン位置の配列
 
     var PlayerKillsMap:[player]int = map{} # 各プレイヤーのキル数を保持
     var PlayerDeathsMap:[player]int = map{} # 各プレイヤーのデス数を保持
-    var PlayerBombsMap:[player]int = map{} # 各プレイヤーの爆弾起動数を保持
+    var PlayerStartBombsMap:[player]int = map{} # 各プレイヤーの爆弾起動回数を保持
+    var PlayerStopBombsMap:[player]int = map{} # 各プレイヤーの爆弾解除回数を保持
     ### ------------------------------------------------------------
 
 
@@ -159,15 +146,12 @@ game_manager_device := class(creative_device):
         # デバイスにイベントを登録する
         for(PlayerSpawner:PlayerSpawners):
             PlayerSpawner.SpawnedEvent.Subscribe(OnPlayerSpawn)
-        
-        for(LimitDevice:LimitDevicesA):
-            LimitDevice.BeganEvent.Subscribe(OnLimitDeviceAStart)
-            LimitDevice.PausedEvent.Subscribe(OnLimitDeviceStop)
-            LimitDevice.CompletedEvent.Subscribe(OnLimitDeviceATimeOut)
-        for(LimitDevice:LimitDevicesB):
-            LimitDevice.BeganEvent.Subscribe(OnLimitDeviceBStart)
-            LimitDevice.PausedEvent.Subscribe(OnLimitDeviceStop)
-            LimitDevice.CompletedEvent.Subscribe(OnLimitDeviceBTimeOut)
+
+        # バリスティックの仕掛けにイベントを登録する
+        for(RiftPointVolume : RiftPointVolumes):
+            RiftPointVolume.PlantEvent.Subscribe(RiftPlant)
+            RiftPointVolume.DefuseEvent.Subscribe(RiftDefuse)
+            RiftPointVolume.DetonateEvent.Subscribe(RiftDetonate)
 
         # プレイヤーが揃うまで待機する
         loop:
@@ -186,15 +170,6 @@ game_manager_device := class(creative_device):
 
                 set GamePlayers = Players
 
-                # すべてのプレイヤーをダメージを受けない状態にする
-                for(Player:GamePlayers):
-                    if(FortCharacter := Player.GetFortCharacter[]):
-                        FortCharacter.SetVulnerability(false)
-
-                # 今回のセッションで使用するステージをランダムで選択する
-                if(RandomStage := Shuffle(Stages)[0]):
-                    set UseStage = RandomStage
-
                 SplitPlayersToTeams() # チーム分けをする
                 StartGameFlow() # ゲームを開始する
                 break
@@ -202,46 +177,28 @@ game_manager_device := class(creative_device):
             MessageHud.Show(S2M("Waiting for {NeedPlayerNum} more players to join.")) # プレイヤー全員にHUDを表示
             Sleep(1.0)
 
-    # 時限式爆破オブジェクトが起動されたら実行される関数
-    OnLimitDeviceAStart(Agent:agent):void=
+    # バリスティックの仕掛けを起動したときに実行する関数
+    RiftPlant(Agent:agent):void=
         BombStartEvent.Signal()
         set IsBombActivated = true
-        for(LimitDevice:LimitDevicesB):
-            for(Player:GamePlayers):
-                LimitDevice.Disable(Player)
-
+        for(RiftPointVolume:RiftPointVolumes):
+            RiftPointVolume.Disable()
         if(Player := player[Agent]):
-            if. set PlayerBombsMap[Player] += 1
+            if. set PlayerStartBombsMap[Player] += 1
         
-    OnLimitDeviceBStart(Agent:agent):void=
-        BombStartEvent.Signal()
-        set IsBombActivated = true
-        for(LimitDevice:LimitDevicesA):
-            for(Player:GamePlayers):
-                LimitDevice.Disable(Player)
-                
-        if(Player := player[Agent]):
-            if. set PlayerBombsMap[Player] += 1
-
-    # 時限式爆破オブジェクトが解除されたら実行される関数
-    OnLimitDeviceStop(Agent:agent):void=
+    # バリスティックの仕掛けを解除したときに実行する関数
+    RiftDefuse(Agent:agent):void=
         BombStopEvent.Signal()
-            
-    # 時限式爆破オブジェクトのカウントが０になったら実行される関数
-    OnLimitDeviceATimeOut(Agent:agent):void=
-        for(ExplosiveDevice:ExplosiveDevicesA):
-            ExplosiveDevice.Explode(Agent)
-        BombEndEvent.Signal()
-    OnLimitDeviceBTimeOut(Agent:agent):void=
-        for(ExplosiveDevice:ExplosiveDevicesB):
-            ExplosiveDevice.Explode(Agent)
-        BombEndEvent.Signal()
+        if(Player := player[Agent]):
+            if. set PlayerStopBombsMap[Player] += 1
 
+    # バリスティックの仕掛けを爆破したときに実行する関数
+    RiftDetonate(Agent:agent):void=
+        BombEndEvent.Signal()
+        
     # 爆発したボムを復活させる関数
     ResetBombs():void=
-        for(ExplosiveDevice:ExplosiveDevicesA):
-            ExplosiveDevice.Reset()
-        for(ExplosiveDevice:ExplosiveDevicesB):
+        for(ExplosiveDevice:ExplosiveDevices):
             ExplosiveDevice.Reset()
 
     # プレイヤースポナーに対して設定する関数
@@ -303,8 +260,8 @@ game_manager_device := class(creative_device):
                 set TeamWinsMap[TeamArray[1]] = 0
 
                 # TeamStageTelepotersMapを初期化する
-                set TeamStageTelepotersMap[TeamArray[0]] = UseStage.TeleportersRed
-                set TeamStageTelepotersMap[TeamArray[1]] = UseStage.TeleportersBlue
+                set TeamStageTelepotersMap[TeamArray[0]] = AttackTeamTeleporters
+                set TeamStageTelepotersMap[TeamArray[1]] = DefenceTeamTeleporters
 
     # 全員をチームごとにステージにテレポートする関数
     TeleportAllPlayersToStage():void=
@@ -426,7 +383,8 @@ game_manager_device := class(creative_device):
             if:
                 set PlayerKillsMap[Player] = 0
                 set PlayerDeathsMap[Player] = 0
-                set PlayerBombsMap[Player] = 0
+                set PlayerStartBombsMap[Player] = 0
+                set PlayerStopBombsMap[Player] = 0
 
         # 持続データの初期化（プレイヤースポナーでも行ってるけど、念のためもう一度行う）
         PlayerStatsManager.InitializeAllPlayers(GamePlayers)
@@ -456,10 +414,14 @@ game_manager_device := class(creative_device):
 
             Print("ラウンド{RoundCount}!!")
 
+            # バリアを有効化
+            for(BarrierZone:BarrierZones):
+                BarrierZone.Enable()
+
             if(RoundCount = 1): # 最初のラウンドだけリスポーン位置を記録する
                 for(Agent:TeamCollection.GetAgents[TeamArray[0]]):
                     if(FortCharacter := Agent.GetFortCharacter[]):
-                        set ResDataRed += array{
+                        set Team0ResDatas += array{
                             respawn_data{
                                 Pos := FortCharacter.GetTransform().Translation,
                                 Rot := FortCharacter.GetTransform().Rotation
@@ -467,7 +429,7 @@ game_manager_device := class(creative_device):
                         }
                 for(Agent:TeamCollection.GetAgents[TeamArray[1]]):
                     if(FortCharacter := Agent.GetFortCharacter[]):
-                        set ResDataBlue += array{
+                        set Team1ResDatas += array{
                             respawn_data{
                                 Pos := FortCharacter.GetTransform().Translation,
                                 Rot := FortCharacter.GetTransform().Rotation
@@ -477,20 +439,20 @@ game_manager_device := class(creative_device):
             # 第1ラウンドはテレポーターでTeam0はRedにTeam1はBlueにワープしている
                 if(Mod[RoundCount, 2] = 0): # 偶数ラウンドの場合（2, 4, 6, ...）
                     for(Index->Agent:TeamCollection.GetAgents[TeamArray[0]]):
-                        if. Agent.Respawn(ResDataBlue[Index].Pos, ResDataBlue[Index].Rot)
+                        if. Agent.Respawn(Team1ResDatas[Index].Pos, Team1ResDatas[Index].Rot)
                         else:
                             Print("リスポーン関連のエラーが発生")
                     for(Index->Agent:TeamCollection.GetAgents[TeamArray[1]]):
-                        if. Agent.Respawn(ResDataRed[Index].Pos, ResDataRed[Index].Rot)
+                        if. Agent.Respawn(Team0ResDatas[Index].Pos, Team0ResDatas[Index].Rot)
                         else:
                             Print("リスポーン関連のエラーが発生")
                 else: # 奇数ラウンドの場合（3, 5, 7, ...）
                     for(Index->Agent:TeamCollection.GetAgents[TeamArray[1]]):
-                        if. Agent.Respawn(ResDataBlue[Index].Pos, ResDataBlue[Index].Rot)
+                        if. Agent.Respawn(Team1ResDatas[Index].Pos, Team1ResDatas[Index].Rot)
                         else:
                             Print("リスポーン関連のエラーが発生")
                     for(Index->Agent:TeamCollection.GetAgents[TeamArray[0]]):
-                        if. Agent.Respawn(ResDataRed[Index].Pos, ResDataRed[Index].Rot)
+                        if. Agent.Respawn(Team0ResDatas[Index].Pos, Team0ResDatas[Index].Rot)
                         else:
                             Print("リスポーン関連のエラーが発生")
 
@@ -501,39 +463,38 @@ game_manager_device := class(creative_device):
 
             RoundUIDevice.UpdateRoundStateUI(Self)
 
-            # プレイヤーを静止させる＋プレイヤーの体力・シールドを全回復する
-            for(Player:GamePlayers):
-                if(FortCharacter := Player.GetFortCharacter[]):
-                    FortCharacter.PutInStasis(stasis_args{AllowTurning := true, AllowFalling := true, AllowEmotes := true})
-                    FortCharacter.SetHealth(PlayerMaxHealth)
-                    FortCharacter.SetShield(PlayerMaxShield)
+            # プレイヤーの体力・シールドを全回復する
+            for(Player:GamePlayers, FortCharacter := Player.GetFortCharacter[]):
+                FortCharacter.SetHealth(PlayerMaxHealth)
+                FortCharacter.SetShield(PlayerMaxShield)
 
-            # ラウンド１は、チーム１を攻撃チームに、チーム２を守備チームに設定する
-            if(RoundCount = 1, Team1 := TeamArray[0], Team2 := TeamArray[1]):
-                set OAttackTeam = option{Team1}
-                set ODefenseTeam = option{Team2}
+            # 攻撃チームと守備チームの設定を行う
+            if(RoundCount = 1 or Mod[RoundCount, SideSwitchNum] = 1):
+                if(RoundCount = 1): # ラウンド１は、チーム１を攻撃チームに、チーム２を守備チームに設定する
+                    if(Team1 := TeamArray[0], Team2 := TeamArray[1]):
+                        set OAttackTeam = option{Team1}
+                        set ODefenseTeam = option{Team2}
+                else if(Mod[RoundCount, SideSwitchNum] = 1): # ３ラウンドごとに攻守を入れ替える
+                    Tmp := OAttackTeam
+                    set OAttackTeam = ODefenseTeam
+                    set ODefenseTeam = Tmp
+
+                # クラスを切り替える＋陣営をHUDで表示する
+                if(AttackTeam := OAttackTeam?, Agents := TeamCollection.GetAgents[AttackTeam]):
+                    for(Agent:Agents):
+                        AttackClassSelector.ChangeClass(Agent)
+                if(DefenseTeam := ODefenseTeam?, Agents := TeamCollection.GetAgents[DefenseTeam]):
+                    for(Agent:Agents):
+                        DefenceClassSelector.ChangeClass(Agent)
+
+            # そのラウンドの陣営を表示する
+            RoundUIDevice.ShowHideSide(Self, OAttackTeam, ODefenseTeam)
+
+            # バリスティックの仕掛けを有効化する
+            for(RiftPointVolume:RiftPointVolumes):
+                RiftPointVolume.Enable()
                 
-            # ３ラウンドごとに攻守を入れ替える
-            if(Mod[RoundCount, SideSwitchNum] = 1):
-                Tmp := OAttackTeam
-                set OAttackTeam = ODefenseTeam
-                set ODefenseTeam = Tmp
-            RoundUIDevice.ShowHideSide(Self, OAttackTeam, ODefenseTeam) # 陣営を表示する
-
-            # 有効にする時限式爆破オブジェクトを切り替える
-            set IsBombActivated = false # 爆弾起動保持変数リセット
-            for(LimitDevice:LimitDevicesA + LimitDevicesB): # 一旦全部無効化する
-                LimitDevice.Hide()
-                for(Player:GamePlayers):
-                    LimitDevice.Disable(Player)
-            for(Index->Team:TeamArray): # 攻撃側に合わせて有効化する時限式を決める
-                if(AttackTeam := OAttackTeam?, Team = AttackTeam):
-                    if(LimitDeviceA := LimitDevicesA[Index], LimitDeviceB := LimitDevicesB[Index]):
-                        LimitDeviceA.Show()
-                        LimitDeviceB.Show()
-                        for(Player:GamePlayers):
-                            LimitDeviceA.Enable(Player)
-                            LimitDeviceB.Enable(Player)
+            set IsBombActivated = false # 爆弾の起動判定をオフにする
         
             # 爆発したボムを復活させる
             ResetBombs()
@@ -549,14 +510,6 @@ game_manager_device := class(creative_device):
             for(Player:GamePlayers):
                 SelectPresetDevice.MakePresetsUI(Player)
             spawn{DeleteSelectPresetUIs(30.0)} # 30秒たったら自動的に消えるようにする
-
-            # そのラウンドの目標をHUDで表示する
-            if(AttackTeam := OAttackTeam?, Agents := TeamCollection.GetAgents[AttackTeam]):
-                for(Agent:Agents):
-                    MessageHud.Show(Agent, S2M("あなたは攻撃チームです。\n制限時間以内に爆弾を設置して爆破すると勝利です。"))
-            if(DefenseTeam := ODefenseTeam?, Agents := TeamCollection.GetAgents[DefenseTeam]):
-                for(Agent:Agents):
-                    MessageHud.Show(Agent, S2M("あなたは守備チームです。\n敵を全滅させるか、制限時間内に爆破されなかったら勝利です。"))
             
             # ラウンド開始前に数秒カウントダウンする
             set Count = StartDelay
@@ -568,30 +521,15 @@ game_manager_device := class(creative_device):
                     break
                 StartDelayHud.SetText(S2M("{Count}"))
             StartDelayHud.Hide()
-
-            # ラウンドの目標HUDを非表示にする
-            MessageHud.Hide()
-
-            # プレイヤーの静止を解除する
-            for(Player:GamePlayers):
-                if(FortCharacter := Player.GetFortCharacter[]):
-                    FortCharacter.SetVulnerability(true) # ダメージを受けるようにする
-                    FortCharacter.ReleaseFromStasis()
+            
+            # バリアを無効化
+            for(BarrierZone:BarrierZones):
+                BarrierZone.Disable()
 
             race:
                 loop: # プレイヤー退出待ち
                     LeavingPlayer:player = GetPlayspace().PlayerRemovedEvent().Await()
                     if. (Team := PlayerTeamMap[LeavingPlayer], set TeamRemainingMap[Team] -= 1)
-                    RoundUIDevice.UpdateRoundStateUI(Self)
-                    # ラウンド終了判定
-                    OWinTeam := CheckRoundEnd()
-                    if(WinTeam := OWinTeam?):
-                        if. set TeamWinsMap[WinTeam] += 1
-                        set RoundWinTeam = OWinTeam
-                        break
-                loop: # 一方のチームの全滅待ち
-                    EliminatedAgent := KillEvent.Await() # キルされたプレイヤー
-                    if. (Team := TeamCollection.GetTeam[EliminatedAgent], set TeamRemainingMap[Team] -= 1)
                     RoundUIDevice.UpdateRoundStateUI(Self)
                     # ラウンド終了判定
                     OWinTeam := CheckRoundEnd()
@@ -603,19 +541,26 @@ game_manager_device := class(creative_device):
                             if. set TeamWinsMap[WinTeam] += 1
                             set RoundWinTeam = OWinTeam
                             break
+                loop: # 一方のチームの全滅待ち
+                    EliminatedAgent := KillEvent.Await() # キルされたプレイヤー
+                    if. (Team := TeamCollection.GetTeam[EliminatedAgent], set TeamRemainingMap[Team] -= 1)
+                    RoundUIDevice.UpdateRoundStateUI(Self)
+                    # ラウンド終了判定
+                    OWinTeam := CheckRoundEnd()
+                    if(WinTeam := OWinTeam?):
+                        if. set TeamWinsMap[WinTeam] += 1
+                        set RoundWinTeam = OWinTeam
+                        break
                 block: # 制限時間終了（守備チームの勝利）
                     set Count = RoundTime
                     RoundUIDevice.UpdateRoundStateUITimeText(S2M("{CalcElapsedTime(Count)}"))
 
-                    race:
-                        loop:
-                            Sleep(1.0)
-                            set Count -= 1
-                            RoundUIDevice.UpdateRoundStateUITimeText(S2M("{CalcElapsedTime(Count)}"))
-                            if(Count <= 0):
-                                break
-                        block:
-                            BombStartEvent.Await()
+                    loop:
+                        Sleep(1.0)
+                        set Count -= 1
+                        RoundUIDevice.UpdateRoundStateUITimeText(S2M("{CalcElapsedTime(Count)}"))
+                        if(Count <= 0):
+                            break
                             
                     if(IsBombActivated?):
                         Sleep(1000.0) # 制限時間処理はなくす（30秒より長く停止させればいい）
@@ -644,7 +589,7 @@ game_manager_device := class(creative_device):
             # ラウンド結果UIの表示
             RoundUIDevice.ShowBackground(Self)
             RoundUIDevice.ShowRoundResult(Self, RoundCount, RoundWinTeam) # 4.0秒くらいここで処理が止まる
-            if(Mod[RoundCount, SideSwitchNum] = 1): # 3ラウンドごとに「SideSwitch」と表示する
+            if(Mod[RoundCount, SideSwitchNum] = 1): # 陣営を切り替える際に「SideSwitch」と表示する
                 RoundUIDevice.ShowHideSideSwitch(Self)
             RoundUIDevice.HideBackground(Self)
 
@@ -680,6 +625,5 @@ game_manager_device := class(creative_device):
 
         # 試合終了後エリアへワープさせる
         ThankYouHudDevice.SetDisplayTime(6.0)
-        for(Index->Player:GamePlayers, RespawnPos := FinishEriaPositions[Index]):
-            Player.Respawn(RespawnPos, FinishEriaRotation)
+        for(Index->Player:GamePlayers):
             ThankYouHudDevice.Show(Player)

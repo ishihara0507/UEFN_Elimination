@@ -18,7 +18,7 @@ select_preset_device := class(creative_device):
     ItemRemover:item_remover_device = item_remover_device{} # 手持ちアイテムを削除するためのデバイス
 
     @editable
-    Trigger:trigger_device = trigger_device{} # このトリガーを起動したらプリセット選択が行える
+    PresetTrigger:trigger_device = trigger_device{} # このトリガーを起動したらプリセット選択が行える
 
     var PlayerUIMap:[player]select_preset_ui = map{}
 
@@ -29,7 +29,7 @@ select_preset_device := class(creative_device):
             spawn{MakePresetsUI(Player)}
 
     OnBegin<override>()<suspends>:void=
-        Trigger.TriggeredEvent.Subscribe(OnTriggered)
+        PresetTrigger.TriggeredEvent.Subscribe(OnTriggered)
 
     # プリセット選択UIを作成する関数        
     MakePresetsUI(Player:player)<suspends>:void=

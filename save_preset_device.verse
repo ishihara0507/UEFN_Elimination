@@ -22,18 +22,18 @@ save_preset_device := class(creative_device):
     WeaponsSelectDevice:weapons_select_device = weapons_select_device{}
 
     @editable
-    Trigger:trigger_device = trigger_device{} # プリセット登録を行うUIを付与するトリガー
+    SaveTrigger:trigger_device = trigger_device{} # プリセット登録を行うUIを付与するトリガー
 
     @editable
-    Trigger2:trigger_device = trigger_device{} # デバッグ用
+    DebugTrigger:trigger_device = trigger_device{} # デバッグ用
 
     var PlayerPresetsUIMap:[player]presets_ui = map{}
 
     PlayerStatsManager:player_stat_manager = player_stat_manager{}
 
     OnBegin<override>()<suspends>:void=
-        Trigger.TriggeredEvent.Subscribe(OnTriggered)
-        Trigger2.TriggeredEvent.Subscribe(PlayerStatsManager.ShowPresets) # デバッグ用
+        SaveTrigger.TriggeredEvent.Subscribe(OnTriggered)
+        DebugTrigger.TriggeredEvent.Subscribe(PlayerStatsManager.ShowPresets) # デバッグ用
 
     OnTriggered(OAgent:?agent):void=
         if(Agent := OAgent?, Player := player[Agent]):

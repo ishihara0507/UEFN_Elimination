@@ -114,6 +114,9 @@ weapons_select_device := class(creative_device):
     
     @editable
     AllWeaponsReturnTriggers:[]trigger_device = array{} # すべての武器を返却するためのトリガー
+    
+    @editable
+    Mutator:mutator_zone_device = mutator_zone_device{} # 武器選択エリアの入口兼出口に設置するミューテーターゾーン
 
     @editable
     GoldsGranter:item_granter_device = item_granter_device{} # 武器返却時にゴールドを返すためのグランター
@@ -135,9 +138,6 @@ weapons_select_device := class(creative_device):
     @editable
     GoldCondBtn:conditional_button_device = conditional_button_device{} # プレイヤーの所持ゴールドの枚数を取得するための条件付きボタン
     
-    @editable
-    Mutator:mutator_zone_device = mutator_zone_device{} # 武器選択エリアの入口兼出口に設置するミューテーターゾーン
-
     @editable
     DebugTrigger:trigger_device = trigger_device{} # ログでそのプレイヤーのWeaponsPlayerMapの値を表示するトリガー
     

@@ -31,8 +31,10 @@ game_result := class:
                 if. set ValueMap["Kill"] = Kill
             if(Death := GameManagerDevice.PlayerDeathsMap[Player]):
                 if. set ValueMap["Death"] = Death
-            if(Bomb := GameManagerDevice.PlayerBombsMap[Player]):
-                if. set ValueMap["Bomb"] = Bomb
+            if(StartBomb := GameManagerDevice.PlayerStartBombsMap[Player]):
+                if. set ValueMap["StartBomb"] = StartBomb
+            if(StopBomb := GameManagerDevice.PlayerStopBombsMap[Player]):
+                if. set ValueMap["StopBomb"] = StopBomb
 
             if. set PlayerResultMap[Player] = ValueMap
 
@@ -60,8 +62,10 @@ game_result := class:
                 PlayerStatManager.UpdateTotalKillsStat(Player, AddKills)
             if(AddDeaths := ResultMap["Deaths"]):
                 PlayerStatManager.UpdateTotalDeathsStat(Player, AddDeaths)
-            if(AddBombs := ResultMap["Bombs"]):
-                PlayerStatManager.UpdateTotalBombsStat(Player, AddBombs)
+            if(AddStartBombs := ResultMap["StartBombs"]):
+                PlayerStatManager.UpdateTotalStartBombsStat(Player, AddStartBombs)
+            if(AddStopBombs := ResultMap["StopBombs"]):
+                PlayerStatManager.UpdateTotalStopBombsStat(Player, AddStopBombs)
 
             # 勝利数または敗北数を更新
             if(TrueWinningTeam := GameManagerDevice.WinningTeam?, PlayerTeam := GameManagerDevice.GetPlayspace().GetTeamCollection().GetTeam[Player]):
@@ -198,18 +202,21 @@ game_result_ui := class:
                 var PlayerName:message = S2M("----------")
                 var Kill:string = "--"
                 var Death:string = "--"
-                var Bomb:string = "--"
+                var StartBomb:string = "--"
+                var StopBomb:string = "--"
 
                 if:
                     Player := TeamPlayers[TeamOrder[StackIndex]][Index2]
                     K := PlayerResultMap[Player]["Kills"]
                     D := PlayerResultMap[Player]["Deaths"]
-                    B := PlayerResultMap[Player]["Bombs"]
+                    StartB := PlayerResultMap[Player]["StartBombs"]
+                    StopB := PlayerResultMap[Player]["StopBombs"]
                 then:
                     set PlayerName = GetAgentName(Player)
                     set Kill = "{K}"
                     set Death = "{D}"
-                    set Bomb = "{B}"
+                    set StartBomb = "{StartB}"
+                    set StopBomb = "{StopB}"
                     
                 stack_box_slot:
                     HorizontalAlignment := horizontal_alignment.Fill
@@ -246,7 +253,9 @@ game_result_ui := class:
                                         # デス数の追加
                                         CreateStackBoxSlot(Death)
                                         # ボム数の追加
-                                        CreateStackBoxSlot(Bomb)
+                                        CreateStackBoxSlot(StartBomb)
+                                        # ボム数の追加
+                                        CreateStackBoxSlot(StopBomb)
 
                                 
         # キャンバスに味方と敵の表を横に並べるスタックボックスを追加

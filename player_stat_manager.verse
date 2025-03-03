@@ -29,7 +29,6 @@ player_stat_manager := class():
             Print("すでに持続データが紐づいている")
 
     ### 更新関数 -------------------------------------------------------
-    # Version, 引数：なし
     # Version を１加算する
     UpdateVersionStat(Agent:agent):void=
         if(Player := player[Agent], CurrentPlayerStat := PlayerStatMap[Player]):
@@ -38,7 +37,6 @@ player_stat_manager := class():
                 Version := CurrentPlayerStat.Version + 1
             if. set PlayerStatMap[Player] = NewStat
 
-    # TotalWins, 引数：なし
     # TotalWins を１加算する
     UpdateTotalWinsStat(Agent:agent):void=
         if(Player := player[Agent], CurrentPlayerStat := PlayerStatMap[Player]):
@@ -47,7 +45,6 @@ player_stat_manager := class():
                 TotalWins := CurrentPlayerStat.TotalWins + 1
             if. set PlayerStatMap[Player] = NewStat
     
-    # TotalLosses, 引数：なし
     # TotalLosses を１加算する
     UpdateTotalLossesStat(Agent:agent):void=
         if(Player := player[Agent], CurrentPlayerStat := PlayerStatMap[Player]):
@@ -56,7 +53,6 @@ player_stat_manager := class():
                 TotalLosses := CurrentPlayerStat.TotalLosses + 1
             if. set PlayerStatMap[Player] = NewStat
 
-    # TotalKills, 引数：int
     # TotalKills に AddValue の値を加算する
     UpdateTotalKillsStat(Agent:agent, AddValue:int):void=
         if(Player := player[Agent], CurrentPlayerStat := PlayerStatMap[Player]):
@@ -65,7 +61,6 @@ player_stat_manager := class():
                 TotalKills := CurrentPlayerStat.TotalKills + AddValue
             if. set PlayerStatMap[Player] = NewStat
     
-    # TotalDeaths, 引数：int
     # TotalDeaths に AddValue の値を加算する
     UpdateTotalDeathsStat(Agent:agent, AddValue:int):void=
         if(Player := player[Agent], CurrentPlayerStat := PlayerStatMap[Player]):
@@ -74,16 +69,22 @@ player_stat_manager := class():
                 TotalDeaths := CurrentPlayerStat.TotalDeaths + AddValue
             if. set PlayerStatMap[Player] = NewStat
 
-    # TotalBombs, 引数：int
-    # TotalBombs に AddValue の値を加算する
-    UpdateTotalBombsStat(Agent:agent, AddValue:int):void=
+    # TotalStartBombs に AddValue の値を加算する
+    UpdateTotalStartBombsStat(Agent:agent, AddValue:int):void=
         if(Player := player[Agent], CurrentPlayerStat := PlayerStatMap[Player]):
             NewStat := player_stat:
                 MakeUpdatedPlayerStat<constructor>(CurrentPlayerStat)
-                TotalBombs := CurrentPlayerStat.TotalBombs + AddValue
+                TotalStartBombs := CurrentPlayerStat.TotalStartBombs + AddValue
+            if. set PlayerStatMap[Player] = NewStat
+    
+    # TotalStopBombs に AddValue の値を加算する
+    UpdateTotalStopBombsStat(Agent:agent, AddValue:int):void=
+        if(Player := player[Agent], CurrentPlayerStat := PlayerStatMap[Player]):
+            NewStat := player_stat:
+                MakeUpdatedPlayerStat<constructor>(CurrentPlayerStat)
+                TotalStopBombs := CurrentPlayerStat.TotalStopBombs + AddValue
             if. set PlayerStatMap[Player] = NewStat
 
-    # InMatch, 引数：logic
     # InMatch を Flag に変更する
     UpdateInMatchStat(Agent:agent, Flag:logic):void=
         if(Player := player[Agent], CurrentPlayerStat := PlayerStatMap[Player]):
@@ -92,7 +93,6 @@ player_stat_manager := class():
                 InMatch := Flag
             if. set PlayerStatMap[Player] = NewStat
 
-    # PenaltyEndTime, 引数：float
     # PenaltyEndTime を EndTime に変更する
     UpdatePenaltyEndTimeStat(Agent:agent, EndTime:float):void=
         if(Player := player[Agent], CurrentPlayerStat := PlayerStatMap[Player]):
@@ -101,7 +101,6 @@ player_stat_manager := class():
                 PenaltyEndTime := EndTime
             if. set PlayerStatMap[Player] = NewStat
 
-    # WeaponPresets, 引数：int, []int
     # WeaponPresets の SetIndex 番目の要素を SetPreset に変更する
     UpdateWeaponPresetsStat(Agent:agent, SetIndex:int, SetPreset:[]weapon_enum):void=
         if(Player := player[Agent], CurrentPlayerStat := PlayerStatMap[Player]):

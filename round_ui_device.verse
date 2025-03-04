@@ -21,6 +21,8 @@ round_ui_device := class(creative_device):
     var EnemyPointTexts:[]text_block = array{}
 
     var TimeText:text_block = text_block{}
+
+    var BallisticTexture:texture_block = texture_block{DefaultImage := Textures.Ballistic, DefaultDesiredSize := vector2{X := 100.0, Y := 100.0}}
     # --------------------------------------------------------------------------------------------------------------
 
     # ラウンド結果を表示するUI用 --------------------------------------------------------------------------------------
@@ -124,13 +126,22 @@ round_ui_device := class(creative_device):
                     Offsets := margin{Left := 0.0, Top := 60.0, Right := -0.0, Bottom := -0.0}
                     Alignment := vector2{X:=0.5,Y:=0.5}
                     SizeToContent := true
+                    ZOrder := 0
                     Widget := color_block{DefaultColor := color{R := 1.0, G := 1.0, B := 1.0}, DefaultDesiredSize := vector2{X := 128.0, Y := 54.0}}
                 canvas_slot:
                     Anchors := anchors{Minimum:=vector2{X:=0.5,Y:=0.0},Maximum:=vector2{X:=0.5,Y:=0.0}}
                     Offsets := margin{Left := 0.0, Top := 60.0, Right := -0.0, Bottom := -0.0}
                     Alignment := vector2{X:=0.5,Y:=0.5}
                     SizeToContent := true
+                    ZOrder := 1
                     Widget := TimeText
+                canvas_slot:
+                    Anchors := anchors{Minimum:=vector2{X:=0.5,Y:=0.0},Maximum:=vector2{X:=0.5,Y:=0.0}}
+                    Offsets := margin{Left := 0.0, Top := 60.0, Right := -0.0, Bottom := -0.0}
+                    Alignment := vector2{X:=0.5,Y:=0.5}
+                    SizeToContent := true
+                    ZOrder := 1
+                    Widget := BallisticTexture
 
             # ラウンド勝利数を追加
             if(MyPointText := MyPointTexts[Index], EnemyPointText := EnemyPointTexts[Index]):
@@ -198,12 +209,24 @@ round_ui_device := class(creative_device):
 
             if. set TeamWidgets[Index] = canvas{Slots := NewSlots}
 
+        UpdateRoundStateUIBallistic(false)
         UpdateRoundStateUI(GameManagerDevice) # 表示・非表示を設定する
+
+    # バリスティックの仕掛けの画像の表示・非表示を変更する関数
+    UpdateRoundStateUIBallistic(State:logic):void=
+        if(State?): # State = true
+            BallisticTexture.SetVisibility(widget_visibility.Visible)
+        else:
+            BallisticTexture.SetVisibility(widget_visibility.Hidden)
 
     # ラウンドの進行状況を表すUIを更新する関数（制限時間部分のみ）
     # 制限時間は頻繁に更新するので別関数として用意
     UpdateRoundStateUITimeText(Message:message):void=
         TimeText.SetText(Message)
+
+    # 制限時間のテキストを非表示にする関数
+    HideRoundStateUITimeText():void=
+        TimeText.SetVisibility(widget_visibility.Hidden)
 
     # ラウンドの進行状況を表すUIを更新する関数（制限時間部分は除く）
     UpdateRoundStateUI(GameManagerDevice:game_manager_device):void=

@@ -183,12 +183,17 @@ game_manager_device := class(creative_device):
         set IsBombActivated = true
         for(RiftPointVolume:RiftPointVolumes):
             RiftPointVolume.Disable()
+
+        RoundUIDevice.HideRoundStateUITimeText() # 制限時間のテキストを非表示にする
+        RoundUIDevice.UpdateRoundStateUIBallistic(true) # バリスティックの仕掛けの画像を表示
+
         if(Player := player[Agent]):
             if. set PlayerStartBombsMap[Player] += 1
         
     # バリスティックの仕掛けを解除したときに実行する関数
     RiftDefuse(Agent:agent):void=
         BombStopEvent.Signal()
+        
         if(Player := player[Agent]):
             if. set PlayerStopBombsMap[Player] += 1
 
@@ -559,11 +564,11 @@ game_manager_device := class(creative_device):
                         Sleep(1.0)
                         set Count -= 1
                         RoundUIDevice.UpdateRoundStateUITimeText(S2M("{CalcElapsedTime(Count)}"))
-                        if(Count <= 0):
+                        if(Count <= 0, IsBombActivated?):
                             break
                             
                     if(IsBombActivated?):
-                        Sleep(1000.0) # 制限時間処理はなくす（30秒より長く停止させればいい）
+                        Sleep(1000.0) # 制限時間処理はなくす（45秒より長く停止させればいい）
                     else:
                         OWinTeam := ODefenseTeam
                         if(WinTeam := OWinTeam?):

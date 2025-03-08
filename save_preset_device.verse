@@ -43,7 +43,7 @@ save_preset_device := class(creative_device):
     MakePresetsUI(Player:player)<suspends>:void=
         Print("UI作成")
         if(HoldingWeapons := WeaponsSelectDevice.WeaponsPlayerMap[Player]):
-            NewPresetsUI := presets_ui{Player := Player, HoldingWeapons := HoldingWeapons, PlayerStatsManager := PlayerStatsManager}
+            NewPresetsUI := presets_ui{Player := Player, WeaponsSelectDevice := WeaponsSelectDevice, HoldingWeapons := HoldingWeapons, PlayerStatsManager := PlayerStatsManager}
             NewPresetsUI.Init()
 
             if(set PlayerPresetsUIMap[Player] = NewPresetsUI, PlayerUI := GetPlayerUI[Player]):
@@ -64,10 +64,11 @@ presets_ui := class:
 
     # インスタンス作成時に設定する
     Player:player
+    WeaponsSelectDevice:weapons_select_device
     HoldingWeapons:[]weapon_enum
     PlayerStatsManager:player_stat_manager
     
-    var MaxPage:int = 3 # プリセット登録できる最大値
+    var MaxPage:int = 0 # プリセット登録できる最大値
     var PageNum:int = 0 # 最初のページを０ページ目と考える
 
     WeaponSlotsNum:int = 5
@@ -98,6 +99,8 @@ presets_ui := class:
         if(PlayerStat := OPlayerStat?):
             set Presets = PlayerStat.WeaponPresets # 武器プリセットの取得
 
+        set MaxPage = Presets.Length # 最大ページ数を設定
+
         # 各ウィジェットの設定
         set BackBtn = button_loud{DefaultText:=S2M("Back")}
         set SaveBtn = button_loud{DefaultText:=S2M("Save")}
@@ -107,8 +110,8 @@ presets_ui := class:
             set PagiNationBorders += array{color_block{DefaultColor := color{R := 0.8, G := 0.0, B := 0.0}, DefaultDesiredSize := vector2{X := 50.0, Y := 50.0}}} # 赤
             set PagiNationBlocks += array{color_block{DefaultColor := color{R := 1.0, G := 1.0, B := 1.0}, DefaultDesiredSize := vector2{X := 38.0, Y := 38.0}}} # 白 
         for(Index := 0 .. WeaponSlotsNum - 1):
-            set HoldingWeaponTextures += array{texture_block{DefaultImage := weapon_enum.DMR_L1.ToTexture(), DefaultDesiredSize := vector2{X := 150.0, Y := 150.0}}}
-            set PresetWeaponTextures += array{texture_block{DefaultImage := weapon_enum.DMR_L1.ToTexture(), DefaultDesiredSize := vector2{X := 150.0, Y := 150.0}}}
+            set HoldingWeaponTextures += array{texture_block{DefaultImage := weapon_enum.PumpShotgun_L1.ToTexture(), DefaultDesiredSize := vector2{X := 150.0, Y := 150.0}}}
+            set PresetWeaponTextures += array{texture_block{DefaultImage := weapon_enum.PumpShotgun_L1.ToTexture(), DefaultDesiredSize := vector2{X := 150.0, Y := 150.0}}}
 
         CreateUI()
         spawn{HandleBtn()}
@@ -204,7 +207,7 @@ presets_ui := class:
                             Widget := stack_box:
                                 Orientation := orientation.Horizontal
                                 Slots := for(Index := 0 .. WeaponSlotsNum - 1):
-                                    var WeaponTexture:texture_block = texture_block{DefaultImage := weapon_enum.DMR_L1.ToTexture()}
+                                    var WeaponTexture:texture_block = texture_block{DefaultImage := weapon_enum.PumpShotgun_L1.ToTexture()}
                                     var PaddingLeft:float = 0.0
 
                                     if(Texture := HoldingWeaponTextures[Index]):
@@ -249,7 +252,7 @@ presets_ui := class:
                             Widget := stack_box:
                                 Orientation := orientation.Horizontal
                                 Slots := for(Index := 0 .. WeaponSlotsNum - 1):
-                                    var WeaponTexture:texture_block = texture_block{DefaultImage := weapon_enum.DMR_L1.ToTexture()}
+                                    var WeaponTexture:texture_block = texture_block{DefaultImage := weapon_enum.PumpShotgun_L1.ToTexture()}
                                     var PaddingLeft:float = 0.0
 
                                     if(Texture := PresetWeaponTextures[Index]):
@@ -357,14 +360,23 @@ presets_ui := class:
                     spawn{ShowSaveConfirmation(SaveEvent)}
                     SaveConfirmed := SaveEvent.Await()
                     if(SaveConfirmed?):
-                        PlayerStatsManager.UpdateWeaponPresetsStat(Player, PageNum, HoldingWeapons) # セーブ処理
+                        # 手持ちの武器がゴールドの最大枚数を超えていないかを確認（不正がないかを確認）
+                        var Sum:int = 0
+                        for(HoldingWeapon:HoldingWeapons):
+                            for(WeaponData:WeaponsSelectDevice.WeaponDatas, HoldingWeapon = WeaponData.Weapon):
+                                set Sum += WeaponData.RequireGolds
+                        Print("合計ゴールド枚数: {Sum}")
+                        if(Sum <= WeaponsSelectDevice.MaxGolds):
+                            PlayerStatsManager.UpdateWeaponPresetsStat(Player, PageNum, HoldingWeapons) # セーブ処理
+                            Print("セーブしました")
+                        else:
+                            Print("不正な武器プリセットを検知")
 
                         # 直前で持続データを更新したので取り直す
                         OPlayerStat := PlayerStatsManager.GetPlayerStats(Player)
                         if(PlayerStat := OPlayerStat?):
                             set Presets = PlayerStat.WeaponPresets # 武器プリセットの取得
 
-                        Print("セーブしました")
                     else:
                         Print("セーブがキャンセルされました")
                 else if(SelectedBtn = "Next"):
@@ -382,7 +394,7 @@ presets_ui := class:
 
     # 「本当に保存しますか？」というUIを表示する関数（Saveボタンを押したときに呼び出す）
     ShowSaveConfirmation(SaveEvent:event(logic))<suspends>:void=
-        ConfirmText := text_block{DefaultText:=S2M("Are you sure you want to overwrite the save?")}
+        ConfirmText := text_block{DefaultText:=S2M("このプリセットに上書きしてもよろしいですか？\nAre you sure you want to overwrite the save?")}
         SaveYesBtn := button_loud{DefaultText:=S2M("Yes")}
         SaveNoBtn := button_loud{DefaultText:=S2M("No")}
 

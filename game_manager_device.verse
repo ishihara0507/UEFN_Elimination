@@ -50,9 +50,9 @@ game_manager_device := class(creative_device):
     DefenceTeamTeleporters:[]teleporter_device = array{}
 
     @editable
-    AttackClassSelector:class_and_team_selector_device = class_and_team_selector_device{} # 攻撃側のクラス（バリスティックの仕掛けを使用できる）
+    AttackClassSelector:class_and_team_selector_device = class_and_team_selector_device{} # 攻撃側のクラス（バリスティックの仕掛けを使用できる）。クラス2
     @editable
-    DefenceClassSelector:class_and_team_selector_device = class_and_team_selector_device{} # 守備側のクラス（バリスティックの仕掛けは使用できない）
+    DefenceClassSelector:class_and_team_selector_device = class_and_team_selector_device{} # 守備側のクラス（バリスティックの仕掛けは使用できない）クラス3
     
     @editable
     BarrierZones:[]barrier_device = array{} # ラウンド開始前の待機する場所
@@ -93,6 +93,10 @@ game_manager_device := class(creative_device):
 
     @editable
     ThankYouHudDevice:hud_message_device = hud_message_device{}
+
+    # ムービーシーケンス
+    @editable
+    StageCinemaDevice:cinematic_sequence_device = cinematic_sequence_device{}
     ### ------------------------------------------------------------
 
 
@@ -153,6 +157,10 @@ game_manager_device := class(creative_device):
             RiftPointVolume.DefuseEvent.Subscribe(RiftDefuse)
             RiftPointVolume.DetonateEvent.Subscribe(RiftDetonate)
 
+        # バリアを無効化
+        for(BarrierZone:BarrierZones):
+            BarrierZone.Disable()
+
         # プレイヤーが揃うまで待機する
         loop:
             Players := GetPlayspace().GetPlayers()
@@ -193,7 +201,7 @@ game_manager_device := class(creative_device):
     # バリスティックの仕掛けを解除したときに実行する関数
     RiftDefuse(Agent:agent):void=
         BombStopEvent.Signal()
-        
+
         if(Player := player[Agent]):
             if. set PlayerStopBombsMap[Player] += 1
 
@@ -404,11 +412,27 @@ game_manager_device := class(creative_device):
 
         SavePresetDevice.KillAllPresetsUI() # プリセット登録UIを全プレイヤーから削除する
         
-        TeleportAllPlayersToStage()
+        # バリアを有効化（OnBeginで無効化してるから）
+        for(BarrierZone:BarrierZones):
+            BarrierZone.Enable()
+
+        # プレイヤーを静止状態にする
+        for(Player : GamePlayers, Fort := Player.GetFortCharacter[]):
+            Fort.PutInStasis(stasis_args{AllowTurning := false, AllowFalling := true, AllowEmotes := true})
+        
+        TeleportAllPlayersToStage() # ステージにワープさせる
 
         Sleep(1.0) # 一応ちょっと待つ
 
         ShowVsUI() # 対戦相手を表示するUIを付与して、一定時間後に削除
+
+        StageCinemaDevice.Play() # ステージのムービーを見せる
+
+        StageCinemaDevice.StoppedEvent.Await() # ムービーが終了するまで待機する
+ 
+        # プレイヤーの静止状態を解除する
+        for(Player : GamePlayers, Fort := Player.GetFortCharacter[]):
+            Fort.ReleaseFromStasis()
 
         RoundUIDevice.AddRoundStateUI(Self) # ラウンドUIを初期化して表示
 
@@ -484,7 +508,7 @@ game_manager_device := class(creative_device):
                     set OAttackTeam = ODefenseTeam
                     set ODefenseTeam = Tmp
 
-                # クラスを切り替える＋陣営をHUDで表示する
+                # クラスを切り替える
                 if(AttackTeam := OAttackTeam?, Agents := TeamCollection.GetAgents[AttackTeam]):
                     for(Agent:Agents):
                         AttackClassSelector.ChangeClass(Agent)

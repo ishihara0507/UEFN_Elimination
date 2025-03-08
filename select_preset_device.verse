@@ -68,7 +68,7 @@ select_preset_ui := class:
 
     var PageNum:int = 0 # 最初のページを０ページ目と考える
 
-    MaxPage:int = 3
+    var MaxPage:int = 0
     WeaponSlotsNum:int = 5
 
     # ウィジェット
@@ -86,6 +86,8 @@ select_preset_ui := class:
     UpdateEvent:event() = event(){}
 
     Init():void=
+        set MaxPage = Presets.Length
+
         # 各ウィジェットの設定
         set BackBtn = button_loud{DefaultText:=S2M("Back")}
         set SelectBtn = button_loud{DefaultText:=S2M("Select")}
@@ -95,7 +97,7 @@ select_preset_ui := class:
             set PagiNationBlocks += array{color_block{DefaultColor := color{R := 1.0, G := 1.0, B := 1.0}, DefaultDesiredSize := vector2{X := 38.0, Y := 38.0}}} # 白 
 
         for(Index := 0 .. WeaponSlotsNum - 1):
-            set PresetWeaponTextures += array{texture_block{DefaultImage := weapon_enum.DMR_L1.ToTexture(), DefaultDesiredSize := vector2{X := 150.0, Y := 150.0}}}
+            set PresetWeaponTextures += array{texture_block{DefaultImage := weapon_enum.PumpShotgun_L1.ToTexture(), DefaultDesiredSize := vector2{X := 150.0, Y := 150.0}}}
 
         CreateUI()
         spawn{HandleBtn()}
@@ -184,7 +186,7 @@ select_preset_ui := class:
                             Widget := stack_box:
                                 Orientation := orientation.Horizontal
                                 Slots := for(Index := 0 .. WeaponSlotsNum - 1):
-                                    var WeaponTexture:texture_block = texture_block{DefaultImage := weapon_enum.DMR_L1.ToTexture()}
+                                    var WeaponTexture:texture_block = texture_block{DefaultImage := weapon_enum.PumpShotgun_L1.ToTexture()}
                                     var PaddingLeft:float = 0.0
 
                                     if(Texture := PresetWeaponTextures[Index]):

@@ -3,7 +3,6 @@ using { /Verse.org/Simulation }
 using { /UnrealEngine.com/Temporary/Diagnostics }
 using { /UnrealEngine.com/Temporary/SpatialMath }
 using { /Verse.org/Random }
-using { /Verse.org/Simulation }
 using { /Fortnite.com/Characters }
 using { /Fortnite.com/Game }
 using { /Fortnite.com/FortPlayerUtilities }
@@ -26,43 +25,48 @@ test_device := class(creative_device):
     @editable
     Trigger3:trigger_device = trigger_device{}
 
-    GetAgentsName<localizes>(Msg:message, Msg2:message):message="{Msg} {Msg2}"
+    @editable
+    Teleporter:teleporter_device = teleporter_device{}
         
-
+    @editable
+    CaptureArea:capture_area_device = capture_area_device{}
+    
+    @editable
+    MapIndicator:map_indicator_device = map_indicator_device{}
 
     OnBegin<override>()<suspends>:void=
-        Trigger.TriggeredEvent.Subscribe(OnTriggered)
-        Trigger2.TriggeredEvent.Subscribe(OnTriggered2)
+        Trigger.TriggeredEvent.Subscribe(ChangeTeam)
+        Trigger2.TriggeredEvent.Subscribe(OnTriggered)
         Trigger3.TriggeredEvent.Subscribe(OnTriggered3)
-        
+
 
     OnTriggered(OAgent:?agent):void=
-        if(Agent := OAgent?):
-            PlayerName := GetAgentName(Agent)
-            Msg := GetAgentsName(PlayerName, S2M("は神"))
-            Print(Msg)
-        return
+        if(Agent := OAgent?, Fort := player[Agent].GetFortCharacter[]):
+            spawn{AA(Fort)}
 
+    AA(Fort:fort_character)<suspends>:void=
+        loop:
+            Transform := Fort.GetTransform()
+            NewPosition := vector3{X := Transform.Translation.X, Y := Transform.Translation.Y, Z := Transform.Translation.Z + 500.0}
+            if. MapIndicator.TeleportTo[NewPosition, Transform.Rotation]
+            Sleep(0.01)
             
     OnTriggered2(OAgent:?agent):void=
-        if(Agent := OAgent?):
-            HudDevice.Hide(Agent)
-            HudDevice2.Hide(Agent)
         return
         
          
     OnTriggered3(OAgent:?agent):void=
         return
 
-    # ChangeTeam(OAgent:?agent):void=
-    #     TeamCollection := GetPlayspace().GetTeamCollection()
-    #     TeamArray := TeamCollection.GetTeams()
-    #     if:
-    #         Agent := OAgent?
-    #         Player := player[Agent]
-    #         CurrentTeam := TeamCollection.GetTeam[Player]
-    #     then:
-    #         for(Index->Team:TeamArray):
-    #             if(not Team = CurrentTeam):
-    #                 if(TeamCollection.AddToTeam[Player, Team]):
-    #                     Print("チーム{Index}に切り替えました")
+    ChangeTeam(OAgent:?agent):void=
+        TeamCollection := GetPlayspace().GetTeamCollection()
+        TeamArray := TeamCollection.GetTeams()
+        if:
+            Agent := OAgent?
+            Player := player[Agent]
+            CurrentTeam := TeamCollection.GetTeam[Player]
+        then:
+            for(Index->Team:TeamArray):
+                if(not Team = CurrentTeam):
+                    if(TeamCollection.AddToTeam[Player, Team]):
+                        Print("チーム{Index}に切り替えました")

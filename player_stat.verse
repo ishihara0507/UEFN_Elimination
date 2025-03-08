@@ -18,8 +18,10 @@ player_stat := class<final><persistable>:
     InMatch:logic = false # 試合中か否かを保持。試合中に抜けたらこれが true のままロビーに参加してくることになる。
     PenaltyEndTime:float = -1.0 # ペナルティが解除される日時
 
-    WeaponPresets:[][]weapon_enum = array: # 武器のプリセット登録を保存
-        array{weapon_enum.DMR_L1, weapon_enum.DMR_L1, weapon_enum.DMR_L1, weapon_enum.DMR_L1, weapon_enum.DMR_L1}
+    WeaponPresets:[][]weapon_enum = array: # 武器のプリセット登録を保存。ここの要素の数が登録できるプリセットの個数になる
+        array{weapon_enum.PumpShotgun_L1, weapon_enum.SideArmPistol_L1, weapon_enum.SubmachineGun_L1, weapon_enum.AssaultRifle_L1, weapon_enum.FalconEyeSniper_L1}
+        array{}
+        array{}
         array{}
         array{}
 

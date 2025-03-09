@@ -14,6 +14,7 @@ using { /Fortnite.com/Teams }
 
 ballistic_tracking_device := class(creative_device):
 
+    # マップインジケーターのX, Y座標は、キャプチャーアイテムスポナーの位置と一致させる。
     @editable
     AttackerMapIndicator:map_indicator_device = map_indicator_device{} # 攻撃側に表示されるマップアイコン（青色アイコン）
     @editable
@@ -24,13 +25,47 @@ ballistic_tracking_device := class(creative_device):
     @editable
     CaptureItemDevices:[]capture_item_spawner_device = array{}
 
+    var OBallisticPlayer:?player = false # バリスティックの仕掛けを持っているプレイヤー
+
+    DropEvent:event() = event(){}
+
     OnBegin<override>()<suspends>:void=
+        AttackerMapIndicator.Disable() # 一旦非表示にする
+        DefenderMapIndicator.Disable() # 一旦非表示にする
+
         for(CaptureItemDevice:CaptureItemDevices):
             CaptureItemDevice.ItemPickedUpEvent.Subscribe(OnPickedUp)
             CaptureItemDevice.ItemDroppedEvent.Subscribe(OnDropped)
+            CaptureItemDevice.Disable()
+
+    # マップインジケーターを有効化する関数
+    EnableMapIndicator():void=
+        for(CaptureItemDevice:CaptureItemDevices):
+            CaptureItemDevice.Enable()
 
     OnPickedUp(Agent:agent):void=
-        Print("2")
+        Print("拾った")
+        if(Player := player[Agent]):
+            set OBallisticPlayer = option{Player}
+            spawn{MarkPlayer()}
+        DefenderMapIndicator.Disable()
+            
+    # バリスティックアイテムを所持しているプレイヤーの位置をマップに表示する関数
+    MarkPlayer()<suspends>:void=
+        if(BallisticPlayer := OBallisticPlayer?, Fort := BallisticPlayer.GetFortCharacter[]):
+            race:
+                loop:
+                    Transform := Fort.GetTransform()
+                    NewPosition := vector3{X := Transform.Translation.X, Y := Transform.Translation.Y, Z := Transform.Translation.Z + 500.0}
+                    if. AttackerMapIndicator.TeleportTo[NewPosition, Transform.Rotation]
+                    Sleep(0.01)
+                DropEvent.Await()
         
     OnDropped(Agent:agent):void=
-        Print("3")
+        Print("ドロップした")
+        DropEvent.Signal()
+        if(Player := player[Agent], Fort := Player.GetFortCharacter[]):
+            Transform := Fort.GetTransform()
+            NewPosition := vector3{X := Transform.Translation.X, Y := Transform.Translation.Y, Z := Transform.Translation.Z + 500.0}
+            if(DefenderMapIndicator.TeleportTo[NewPosition, Transform.Rotation]):
+                DefenderMapIndicator.Enable()

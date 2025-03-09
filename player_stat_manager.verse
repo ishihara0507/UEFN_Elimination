@@ -37,6 +37,46 @@ player_stat_manager := class():
                 Version := CurrentPlayerStat.Version + 1
             if. set PlayerStatMap[Player] = NewStat
 
+    # RoundWins を１加算する
+    UpdateRoundWinsStat(Agent:agent):void=
+        if(Player := player[Agent], CurrentPlayerStat := PlayerStatMap[Player]):
+            NewStat := player_stat:
+                MakeUpdatedPlayerStat<constructor>(CurrentPlayerStat)
+                RoundWins := CurrentPlayerStat.RoundWins + 1
+            if. set PlayerStatMap[Player] = NewStat
+
+    # CurrentKills に AddValue の値を加算する
+    UpdateCurrentKillsStat(Agent:agent, AddValue:int):void=
+        if(Player := player[Agent], CurrentPlayerStat := PlayerStatMap[Player]):
+            NewStat := player_stat:
+                MakeUpdatedPlayerStat<constructor>(CurrentPlayerStat)
+                CurrentKills := CurrentPlayerStat.CurrentKills + AddValue
+            if. set PlayerStatMap[Player] = NewStat
+
+    # CurrentDeaths を１加算する
+    UpdateCurrentDeathsStat(Agent:agent):void=
+        if(Player := player[Agent], CurrentPlayerStat := PlayerStatMap[Player]):
+            NewStat := player_stat:
+                MakeUpdatedPlayerStat<constructor>(CurrentPlayerStat)
+                CurrentDeaths := CurrentPlayerStat.CurrentDeaths + 1
+            if. set PlayerStatMap[Player] = NewStat
+            
+    # CurrentStartBombs を１加算する
+    UpdateCurrentStartBombsStat(Agent:agent):void=
+        if(Player := player[Agent], CurrentPlayerStat := PlayerStatMap[Player]):
+            NewStat := player_stat:
+                MakeUpdatedPlayerStat<constructor>(CurrentPlayerStat)
+                CurrentStartBombs := CurrentPlayerStat.CurrentStartBombs + 1
+            if. set PlayerStatMap[Player] = NewStat
+            
+    # CurrentStopBombs を１加算する
+    UpdateCurrentStopBombsStat(Agent:agent):void=
+        if(Player := player[Agent], CurrentPlayerStat := PlayerStatMap[Player]):
+            NewStat := player_stat:
+                MakeUpdatedPlayerStat<constructor>(CurrentPlayerStat)
+                CurrentStopBombs := CurrentPlayerStat.CurrentStopBombs + 1
+            if. set PlayerStatMap[Player] = NewStat
+
     # TotalWins を１加算する
     UpdateTotalWinsStat(Agent:agent):void=
         if(Player := player[Agent], CurrentPlayerStat := PlayerStatMap[Player]):

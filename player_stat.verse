@@ -6,7 +6,14 @@ player_stat := class<final><persistable>:
     
     Version:int = 0 # 現在の統計テーブルのバージョン
 
-    # 試合データ系
+    # 今回の試合のデータ系（ラウンドの仕掛けを使うので、クラス変数などでデータを保持できないから）
+    RoundWins:int = 0 # このプレイヤーが所属するチームが何ラウンド勝利したかを保持
+    CurrentKills:int = 0
+    CurrentDeaths:int = 0
+    CurrentStartBombs:int = 0
+    CurrentStopBombs:int = 0
+
+    # 全試合のデータ系
     TotalWins:int = 0
     TotalLosses:int = 0
     TotalKills:int = 0
@@ -28,12 +35,23 @@ player_stat := class<final><persistable>:
 # 前の player_stats_table と同じ値を持つ新しい player_stats_table を作成するコンストラクタ関数
 MakeUpdatedPlayerStat<constructor>(OldStats:player_stat)<transacts> := player_stat:
     Version := OldStats.Version
+
+    # 今回の試合のデータ系
+    RoundWins := OldStats.RoundWins
+    CurrentKills := OldStats.CurrentKills
+    CurrentDeaths := OldStats.CurrentDeaths
+    CurrentStartBombs := OldStats.CurrentStartBombs
+    CurrentStopBombs := OldStats.CurrentStopBombs
+
+    # 全試合のデータ系
     TotalWins := OldStats.TotalWins
     TotalLosses := OldStats.TotalLosses
     TotalKills := OldStats.TotalKills
     TotalDeaths := OldStats.TotalDeaths
     TotalStartBombs := OldStats.TotalStartBombs
     TotalStopBombs := OldStats.TotalStopBombs
+
+    # ペナルティ系
     PenaltyEndTime := OldStats.PenaltyEndTime
     WeaponPresets := OldStats.WeaponPresets
 

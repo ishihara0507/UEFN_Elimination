@@ -26,35 +26,33 @@ test_device := class(creative_device):
     Trigger3:trigger_device = trigger_device{}
 
     @editable
-    Teleporter:teleporter_device = teleporter_device{}
-        
+    Rift:rift_point_volume_device = rift_point_volume_device{}
+
     @editable
-    CaptureArea:capture_area_device = capture_area_device{}
-    
-    @editable
-    MapIndicator:map_indicator_device = map_indicator_device{}
+    Prop:creative_prop = creative_prop{}
 
     OnBegin<override>()<suspends>:void=
-        Trigger.TriggeredEvent.Subscribe(ChangeTeam)
-        Trigger2.TriggeredEvent.Subscribe(OnTriggered)
+        Trigger.TriggeredEvent.Subscribe(OnTriggered)
+        Trigger2.TriggeredEvent.Subscribe(OnTriggered2)
         Trigger3.TriggeredEvent.Subscribe(OnTriggered3)
 
-
     OnTriggered(OAgent:?agent):void=
+        if(Agent := OAgent?):
+            Rift.Disable()
+            if(Rift.IsEnabled[]):
+                Print("有効")
+            else:
+                Print("無効")
+                
+    OnTriggered2(OAgent:?agent):void=
         if(Agent := OAgent?, Fort := player[Agent].GetFortCharacter[]):
-            spawn{AA(Fort)}
-
-    AA(Fort:fort_character)<suspends>:void=
-        loop:
             Transform := Fort.GetTransform()
             NewPosition := vector3{X := Transform.Translation.X, Y := Transform.Translation.Y, Z := Transform.Translation.Z + 500.0}
-            if. MapIndicator.TeleportTo[NewPosition, Transform.Rotation]
-            Sleep(0.01)
-            
-    OnTriggered2(OAgent:?agent):void=
+            if. Prop.TeleportTo[NewPosition, Transform.Rotation]
+            then. Print("成功")
+            else. Print("失敗")
         return
         
-         
     OnTriggered3(OAgent:?agent):void=
         return
 

@@ -31,6 +31,8 @@ test_device := class(creative_device):
     @editable
     Prop:creative_prop = creative_prop{}
 
+    PlayerStatsManager:player_stat_manager = player_stat_manager{}
+
     OnBegin<override>()<suspends>:void=
         Trigger.TriggeredEvent.Subscribe(OnTriggered)
         Trigger2.TriggeredEvent.Subscribe(OnTriggered2)
@@ -38,11 +40,7 @@ test_device := class(creative_device):
 
     OnTriggered(OAgent:?agent):void=
         if(Agent := OAgent?):
-            Rift.Disable()
-            if(Rift.IsEnabled[]):
-                Print("有効")
-            else:
-                Print("無効")
+            PlayerStatsManager.InitializePlayerStat(Agent)
                 
     OnTriggered2(OAgent:?agent):void=
         if(Agent := OAgent?, Fort := player[Agent].GetFortCharacter[]):

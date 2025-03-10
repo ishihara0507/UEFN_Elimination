@@ -47,6 +47,16 @@ game_flow_device := class(creative_device):
     @editable
     RoundSettingDevice:round_settings_device = round_settings_device{}
 
+    # ゲーム終了後に有効化する系
+    @editable
+    GameEndMutator:mutator_zone_device = mutator_zone_device{}
+
+    @editable
+    BillBoard:billboard_device = billboard_device{}
+
+    @editable
+    MatchMakingDevice:matchmaking_portal_device = matchmaking_portal_device{}
+
     # HUD
     @editable
     MessageHud:hud_message_device = hud_message_device{}
@@ -124,6 +134,10 @@ game_flow_device := class(creative_device):
             RiftPointVolume.DefuseEvent.Subscribe(RiftDefuse)
             RiftPointVolume.DetonateEvent.Subscribe(RiftDetonate)
 
+        GameEndMutator.Disable()
+        BillBoard.HideText()
+        MatchMakingDevice.Disable()
+
         loop:
             if(GameStarted?):
                 spawn{RoundStart()} # ラウンドスタート
@@ -145,6 +159,9 @@ game_flow_device := class(creative_device):
         for(Team:TeamArray, Agent := TeamCollection.GetAgents[Team][0]):
             OPlayerStats := PlayerStatsManager.GetPlayerStats(Agent)
             if(PlayerStats := OPlayerStats?, PlayerStats.RoundWins >= WinningPoints):
+                GameEndMutator.Enable()
+                BillBoard.ShowText()
+                MatchMakingDevice.Enable()
                 EndGame() # 試合終了処理
                 return
 

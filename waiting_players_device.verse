@@ -15,6 +15,9 @@ waiting_players_device := class(creative_device):
     PlayerSpawners:[]player_spawner_device = array{} # マップに入ったときにスポーンするやつ
 
     @editable
+    RoundSettingDevice:round_settings_device = round_settings_device{}
+
+    @editable
     AttackerTeleporters:[]teleporter_device = array{}
     @editable
     DefenderTeleporters:[]teleporter_device = array{}
@@ -61,6 +64,8 @@ waiting_players_device := class(creative_device):
                 Players := GetPlayspace().GetPlayers()
                 if(Players.Length >= MatchPlayerNum):
                     Print("プレイヤーが揃ったのでゲームを開始する")
+
+                    RoundSettingDevice.DisableMatchmaking() # 新しくマップにマッチングできないようにする
                     set GamePlayers = Players
 
                     var Count:int = StartDelay

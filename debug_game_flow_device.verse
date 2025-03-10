@@ -8,10 +8,7 @@ using { /Fortnite.com/Game }
 using { /Fortnite.com/FortPlayerUtilities }
 using { /UnrealEngine.com/Temporary/UI }
 
-S2M<localizes>(S:string):message = "{S}"
-GetAgentName<localizes>(Agent:agent):message="{Agent}"
-
-game_flow_device := class(creative_device):
+debug_game_flow_device := class(creative_device):
 
     ### @editable系 ---------------------------------------------------------------------
     # 自作デバイス

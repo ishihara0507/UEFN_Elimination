@@ -11,6 +11,7 @@ using { /Verse.org/Assets }
 using { /Fortnite.com/UI }
 using { /UnrealEngine.com/Temporary/UI }
 using { /Verse.org/Colors }
+using { /Verse.org/Colors/NamedColors }
 
 #####################################
 ### プリセットの登録を行うプログラム ###
@@ -33,11 +34,15 @@ save_preset_device := class(creative_device):
 
     OnBegin<override>()<suspends>:void=
         SaveTrigger.TriggeredEvent.Subscribe(OnTriggered)
-        DebugTrigger.TriggeredEvent.Subscribe(PlayerStatsManager.ShowPresets) # デバッグ用
+        DebugTrigger.TriggeredEvent.Subscribe(OnDebugTriggered) # デバッグ用
 
     OnTriggered(OAgent:?agent):void=
         if(Agent := OAgent?, Player := player[Agent]):
             spawn{MakePresetsUI(Player)}
+
+    OnDebugTriggered(OAgent:?agent):void=
+        if(Agent := OAgent?):
+            PlayerStatsManager.ShowPresets(Agent)
 
     # プリセットUIを作成する関数        
     MakePresetsUI(Player:player)<suspends>:void=
@@ -394,7 +399,11 @@ presets_ui := class:
 
     # 「本当に保存しますか？」というUIを表示する関数（Saveボタンを押したときに呼び出す）
     ShowSaveConfirmation(SaveEvent:event(logic))<suspends>:void=
-        ConfirmText := text_block{DefaultText:=S2M("このプリセットに上書きしてもよろしいですか？\nAre you sure you want to overwrite the save?")}
+        ConfirmText := text_block:
+            DefaultText:=S2M("このプリセットに上書きしてもよろしいですか？\nAre you sure you want to overwrite the save?")
+            DefaultJustification := text_justification.Center
+            DefaultTextColor := White
+            
         SaveYesBtn := button_loud{DefaultText:=S2M("Yes")}
         SaveNoBtn := button_loud{DefaultText:=S2M("No")}
 

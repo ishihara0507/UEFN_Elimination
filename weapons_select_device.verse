@@ -10,6 +10,7 @@ using { /Fortnite.com/FortPlayerUtilities }
 using { /Verse.org/Assets }
 using { /Fortnite.com/UI }
 using { /UnrealEngine.com/Temporary/UI }
+using { /Verse.org/Colors/NamedColors }
 
 #########################################################
 ### 武器の購入や返却、手持ちの武器などを管理するプログラム ###
@@ -336,7 +337,10 @@ weapons_select_device := class(creative_device):
 
     # 武器選択エリアから出ていいかを確認するUIを付与する関数
     ShowExitConfirmation(Player:player, ClickEvent:event(logic))<suspends>:void=
-        ConfirmText := text_block{DefaultText:=S2M("プリセット登録は行いましたか？\nこのエリアから出ると手持ちのアイテムは削除されます。\nHave you saved your weapon presets?\nItems will be deleted once you leave this area."), DefaultJustification := text_justification.Center}
+        ConfirmText := text_block:
+            DefaultText:=S2M("プリセット登録は行いましたか？\nこのエリアから出ると手持ちのアイテムは削除されます。\nHave you saved your weapon presets?\nItems will be deleted once you leave this area.")
+            DefaultJustification := text_justification.Center
+            DefaultTextColor := White
         YesBtn := button_loud{DefaultText:=S2M("Yes")}
         NoBtn := button_loud{DefaultText:=S2M("No")}
 

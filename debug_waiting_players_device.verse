@@ -3,10 +3,8 @@ using { /Verse.org/Simulation }
 using { /Verse.org/Random }
 using { /Fortnite.com/Characters }
 
-# グローバル変数
-MatchPlayerNum:int = 8 # 偶数にする
 
-waiting_players_device := class(creative_device):
+debug_waiting_players_device := class(creative_device):
 
     @editable
     GameFlowDevice:game_flow_device = game_flow_device{}

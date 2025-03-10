@@ -192,11 +192,33 @@ player_stat_manager := class():
 
     ### デバッグ用 ------------------------------------------------------------------------------------
     # WeaponPresetsの中身を表示する関数
-    ShowPresets(OAgent:?agent):void=
-        if(Agent := OAgent?, Player := player[Agent], CurrentPlayerStat := PlayerStatMap[Player]):
+    ShowPresets(Agent:agent):void=
+        if(Player := player[Agent], CurrentPlayerStat := PlayerStatMap[Player]):
             for(Index->Preset:CurrentPlayerStat.WeaponPresets):
                 Print("プリセット{Index}:")
                 for(Index2->Weapon:Preset):
                     Print("{Index2}番目: {Weapon.ToString()}")
         else:
             Print("持続データが見つからない")
+
+    # すべての持続データを表示する関数
+    ShowStats(Agent:agent):void=
+        OPlayerStats := GetPlayerStats(Agent)
+        if(PlayerStats := OPlayerStats?):
+            Print("Version: {PlayerStats.Version}")
+
+            Print("試合ごとに変わるデータ系")
+            Print("CurrentKills: {PlayerStats.CurrentKills}")
+            Print("CurrentDeaths: {PlayerStats.CurrentDeaths}")
+            Print("CurrentStartBombs: {PlayerStats.CurrentStartBombs}")
+            Print("CurrentStopBombs: {PlayerStats.CurrentStopBombs}")
+
+            Print("統計データ系")
+            Print("TotalWins: {PlayerStats.TotalWins}")
+            Print("TotalLosses: {PlayerStats.TotalLosses}")
+            Print("TotalKills: {PlayerStats.TotalKills}")
+            Print("TotalDeaths: {PlayerStats.TotalDeaths}")
+            Print("TotalStartBombs: {PlayerStats.TotalStartBombs}")
+            Print("TotalStopBombs: {PlayerStats.TotalStopBombs}")
+
+            ShowPresets(Agent) # プリセットの表示

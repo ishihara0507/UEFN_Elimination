@@ -15,35 +15,40 @@ using { /Fortnite.com/Teams }
 
 # 試合結果に応じた、UIの付与や持続データの更新を行うクラス
 game_result := class:
-    GameManagerDevice:game_manager_device
+    GamePlayers:[]player
+    TeamWinsMap:[team]int
+    WinningTeam:team
+    TeamCollection:fort_team_collection
     WinLoseHudDevice:hud_message_device
     LoseWinHudDevice:hud_message_device
 
     var PlayerResultMap:[player][string]int = map{}
 
+    PlayerStatsManager:player_stat_manager = player_stat_manager{}
+
     # 全プレイヤーに試合結果のUIを表示する関数
     AddGameResultUI():void=
         # PlayerResultMap の初期化（ソートをするならここ）
-        for(Player:GameManagerDevice.GamePlayers):
+        for(Player:GamePlayers):
             var ValueMap:[string]int = map{} # １人のプレイヤーのキル・デス・ボムの値を保持
+            OPlayerStats := PlayerStatsManager.GetPlayerStats(Player)
             
-            if(Kill := GameManagerDevice.PlayerKillsMap[Player]):
-                if. set ValueMap["Kill"] = Kill
-            if(Death := GameManagerDevice.PlayerDeathsMap[Player]):
-                if. set ValueMap["Death"] = Death
-            if(StartBomb := GameManagerDevice.PlayerStartBombsMap[Player]):
-                if. set ValueMap["StartBomb"] = StartBomb
-            if(StopBomb := GameManagerDevice.PlayerStopBombsMap[Player]):
-                if. set ValueMap["StopBomb"] = StopBomb
+            if:
+                PlayerStats := OPlayerStats?
+                set ValueMap["Kill"] = PlayerStats.CurrentKills
+                set ValueMap["Death"] = PlayerStats.CurrentDeaths
+                set ValueMap["StartBomb"] = PlayerStats.CurrentStartBombs
+                set ValueMap["StopBomb"] = PlayerStats.CurrentStopBombs
+                set PlayerResultMap[Player] = ValueMap
+            
+            PlayerStatsManager.ResetGameStats(Player) # 試合ごとに初期化するデータをリセット
 
-            if. set PlayerResultMap[Player] = ValueMap
-
-        TeamCollection := GameManagerDevice.GetPlayspace().GetTeamCollection()
         TeamArray := TeamCollection.GetTeams()
         for(Team:TeamArray):
             for(Agent:TeamCollection.GetAgents[Team], Player := player[Agent]):
                 GameResultUI := game_result_ui:
-                    GameManagerDevice := GameManagerDevice
+                    TeamWinsMap := TeamWinsMap
+                    WinningTeam := WinningTeam
                     WinLoseHudDevice := WinLoseHudDevice
                     LoseWinHudDevice := LoseWinHudDevice
                     AddPlayer := Player
@@ -68,26 +73,26 @@ game_result := class:
                 PlayerStatManager.UpdateTotalStopBombsStat(Player, AddStopBombs)
 
             # 勝利数または敗北数を更新
-            if(TrueWinningTeam := GameManagerDevice.WinningTeam?, PlayerTeam := GameManagerDevice.GetPlayspace().GetTeamCollection().GetTeam[Player]):
-                if(TrueWinningTeam = PlayerTeam):
-                    PlayerStatManager.UpdateTotalWinsStat(Player)
+            for(Team:TeamCollection.GetTeams(), Agents := TeamCollection.GetAgents[Team]):
+                if(Team = WinningTeam):
+                    for(Agent:Agents):
+                        PlayerStatManager.UpdateTotalWinsStat(Agent)
                 else:
-                    PlayerStatManager.UpdateTotalLossesStat(Player)
+                    for(Agent:Agents):
+                        PlayerStatManager.UpdateTotalLossesStat(Agent)
                     
 
 # 試合結果を表示するUI関連の処理をまとめたクラス（UIの見た目は W_GameResult を元に作っている）
 game_result_ui := class:
 
-    GameManagerDevice:game_manager_device
+    TeamWinsMap:[team]int
+    WinningTeam:team
     WinLoseHudDevice:hud_message_device
     LoseWinHudDevice:hud_message_device
     AddPlayer:player # UIを付与するプレイヤー
     PlayerTeam:team # UIを付与するプレイヤーが参加しているチーム
     PlayerResultMap:[player][string]int
     TeamCollection:fort_team_collection
-
-    # WinningTeam:team # 試合に勝ったチーム
-    # TeamWinsMap:team  # 試合終了の各チームのラウンド勝利回数を保持
 
     var Widget:widget = canvas{}
     
@@ -103,7 +108,7 @@ game_result_ui := class:
         # 自分チームと敵チームのラウンド勝利数を決める
         var MyTeamPoint:int = 0
         var EnemyTeamPoint:int = 0
-        for(Team->Point:GameManagerDevice.TeamWinsMap):
+        for(Team->Point:TeamWinsMap):
             if(Team = PlayerTeam):
                 set MyTeamPoint = Point
             else:
@@ -111,11 +116,10 @@ game_result_ui := class:
 
         # 使うHUDデバイスを決める
         var UseHudDevice:hud_message_device = hud_message_device{}
-        if(TrueWinningTeam := GameManagerDevice.WinningTeam?):
-            if(PlayerTeam = TrueWinningTeam):
-                set UseHudDevice = WinLoseHudDevice
-            else:
-                set UseHudDevice = LoseWinHudDevice
+        if(PlayerTeam = WinningTeam):
+            set UseHudDevice = WinLoseHudDevice
+        else:
+            set UseHudDevice = LoseWinHudDevice
 
         if(PlayerUI := GetPlayerUI[AddPlayer]):
             CreateUI()

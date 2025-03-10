@@ -20,7 +20,7 @@ select_preset_device := class(creative_device):
     @editable
     PresetTrigger:trigger_device = trigger_device{} # このトリガーを起動したらプリセット選択が行える
 
-    var PlayerUIMap:[player]select_preset_ui = map{}
+    var PlayerUIMap:[]select_preset_ui = array{}
 
     PlayerStatsManager:player_stat_manager = player_stat_manager{}
 
@@ -39,7 +39,7 @@ select_preset_device := class(creative_device):
             NewSelectPresetUI := select_preset_ui{Presets := Presets}
             NewSelectPresetUI.Init()
 
-            if(set PlayerUIMap[Player] = NewSelectPresetUI, PlayerUI := GetPlayerUI[Player]):
+            if(set PlayerUIMap += array{NewSelectPresetUI}, PlayerUI := GetPlayerUI[Player]):
                 PlayerUI.AddWidget(NewSelectPresetUI.Widget, player_ui_slot{InputMode := ui_input_mode.All})
                 SelectNum := NewSelectPresetUI.KillEvent.Await()
                 PlayerUI.RemoveWidget(NewSelectPresetUI.Widget)

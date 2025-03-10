@@ -45,12 +45,12 @@ player_stat_manager := class():
                 RoundWins := CurrentPlayerStat.RoundWins + 1
             if. set PlayerStatMap[Player] = NewStat
 
-    # CurrentKills に AddValue の値を加算する
-    UpdateCurrentKillsStat(Agent:agent, AddValue:int):void=
+    # CurrentKills を１加算する
+    UpdateCurrentKillsStat(Agent:agent):void=
         if(Player := player[Agent], CurrentPlayerStat := PlayerStatMap[Player]):
             NewStat := player_stat:
                 MakeUpdatedPlayerStat<constructor>(CurrentPlayerStat)
-                CurrentKills := CurrentPlayerStat.CurrentKills + AddValue
+                CurrentKills := CurrentPlayerStat.CurrentKills + 1
             if. set PlayerStatMap[Player] = NewStat
 
     # CurrentDeaths を１加算する
@@ -125,21 +125,21 @@ player_stat_manager := class():
                 TotalStopBombs := CurrentPlayerStat.TotalStopBombs + AddValue
             if. set PlayerStatMap[Player] = NewStat
 
-    # InMatch を Flag に変更する
-    UpdateInMatchStat(Agent:agent, Flag:logic):void=
-        if(Player := player[Agent], CurrentPlayerStat := PlayerStatMap[Player]):
-            NewStat := player_stat:
-                MakeUpdatedPlayerStat<constructor>(CurrentPlayerStat)
-                InMatch := Flag
-            if. set PlayerStatMap[Player] = NewStat
+    # # InMatch を Flag に変更する
+    # UpdateInMatchStat(Agent:agent, Flag:logic):void=
+    #     if(Player := player[Agent], CurrentPlayerStat := PlayerStatMap[Player]):
+    #         NewStat := player_stat:
+    #             MakeUpdatedPlayerStat<constructor>(CurrentPlayerStat)
+    #             InMatch := Flag
+    #         if. set PlayerStatMap[Player] = NewStat
 
-    # PenaltyEndTime を EndTime に変更する
-    UpdatePenaltyEndTimeStat(Agent:agent, EndTime:float):void=
-        if(Player := player[Agent], CurrentPlayerStat := PlayerStatMap[Player]):
-            NewStat := player_stat:
-                MakeUpdatedPlayerStat<constructor>(CurrentPlayerStat)
-                PenaltyEndTime := EndTime
-            if. set PlayerStatMap[Player] = NewStat
+    # # PenaltyEndTime を EndTime に変更する
+    # UpdatePenaltyEndTimeStat(Agent:agent, EndTime:float):void=
+    #     if(Player := player[Agent], CurrentPlayerStat := PlayerStatMap[Player]):
+    #         NewStat := player_stat:
+    #             MakeUpdatedPlayerStat<constructor>(CurrentPlayerStat)
+    #             PenaltyEndTime := EndTime
+    #         if. set PlayerStatMap[Player] = NewStat
 
     # WeaponPresets の SetIndex 番目の要素を SetPreset に変更する
     UpdateWeaponPresetsStat(Agent:agent, SetIndex:int, SetPreset:[]weapon_enum):void=
@@ -166,7 +166,29 @@ player_stat_manager := class():
             PlayerStatMap[Player]
             set PlayerStatMap[Player] = player_stat{}
 
-
+    # 試合ごとに初期状態（-1）にすべきデータをリセットする
+    ResetGameStats(Agent:agent):void=
+        if(Player := player[Agent], CurrentPlayerStat := PlayerStatMap[Player]):
+            NewStat := player_stat:
+                MakeUpdatedPlayerStat<constructor>(CurrentPlayerStat)
+                RoundWins := -1
+                CurrentKills := -1
+                CurrentDeaths := -1
+                CurrentStartBombs := -1
+                CurrentStopBombs := -1
+            if. set PlayerStatMap[Player] = NewStat
+    
+    # 試合ごとにリセットされるデータを０に設定する（プレイヤーが揃ったという意味）
+    SetGameStats(Agent:agent):void=
+        if(Player := player[Agent], CurrentPlayerStat := PlayerStatMap[Player]):
+            NewStat := player_stat:
+                MakeUpdatedPlayerStat<constructor>(CurrentPlayerStat)
+                RoundWins := 0
+                CurrentKills := 0
+                CurrentDeaths := 0
+                CurrentStartBombs := 0
+                CurrentStopBombs := 0
+            if. set PlayerStatMap[Player] = NewStat
 
     ### デバッグ用 ------------------------------------------------------------------------------------
     # WeaponPresetsの中身を表示する関数

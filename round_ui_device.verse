@@ -75,8 +75,8 @@ round_ui_device := class(creative_device):
         RoundCountHudDevice.SetDisplayTime(DisplayTime)
 
     # ラウンドの進行状況を表すUIを全プレイヤーに付与する関数
-    AddRoundStateUI(GameManagerDevice:game_manager_device):void=
-        if(Num := Quotient[GameManagerDevice.MatchPlayerNum, 2]):
+    AddRoundStateUI(TeamRemainingMap:[team]int, TeamWinsMap:[team]int):void=
+        if(Num := Quotient[MatchPlayerNum, 2]):
             set TeamPlayerNum = Num
             
         # ウィジェットの初期化
@@ -96,7 +96,7 @@ round_ui_device := class(creative_device):
 
         set TimeText = text_block{DefaultText:=S2M("00:00")}
 
-        CreateRoundStateUI(GameManagerDevice)
+        CreateRoundStateUI(TeamRemainingMap, TeamWinsMap)
 
         TeamCollection := GetPlayspace().GetTeamCollection()
         TeamArray := TeamCollection.GetTeams()
@@ -115,7 +115,7 @@ round_ui_device := class(creative_device):
                     PlayerUI.RemoveWidget(Widget)
                     
     # ラウンドの進行状況を表すUIを作成する関数
-    CreateRoundStateUI(GameManagerDevice:game_manager_device):void=
+    CreateRoundStateUI(TeamRemainingMap:[team]int, TeamWinsMap:[team]int):void=
         for(Index := 0 .. 1):
             var NewSlots:[]canvas_slot = array{}
 
@@ -210,7 +210,7 @@ round_ui_device := class(creative_device):
             if. set TeamWidgets[Index] = canvas{Slots := NewSlots}
 
         UpdateRoundStateUIBallistic(false)
-        UpdateRoundStateUI(GameManagerDevice) # 表示・非表示を設定する
+        UpdateRoundStateUI(TeamRemainingMap, TeamWinsMap) # 表示・非表示を設定する
 
     # バリスティックの仕掛けの画像の表示・非表示を変更する関数
     UpdateRoundStateUIBallistic(State:logic):void=
@@ -229,9 +229,7 @@ round_ui_device := class(creative_device):
         TimeText.SetVisibility(widget_visibility.Hidden)
 
     # ラウンドの進行状況を表すUIを更新する関数（制限時間部分は除く）
-    UpdateRoundStateUI(GameManagerDevice:game_manager_device):void=
-        TeamWinsMap := GameManagerDevice.TeamWinsMap
-        TeamRemainingMap := GameManagerDevice.TeamRemainingMap
+    UpdateRoundStateUI(TeamRemainingMap:[team]int, TeamWinsMap:[team]int):void=
 
         TeamCollection := GetPlayspace().GetTeamCollection()
         TeamArray := TeamCollection.GetTeams()
@@ -299,10 +297,9 @@ round_ui_device := class(creative_device):
                             Texture.SetImage(Textures.Human_Dark)
 
     # ラウンド結果を表示するUIを全プレイヤーに付与する関数
-    ShowRoundResult(GameManagerDevice:game_manager_device, RoundCount:int, ORoundWinTeam:?team)<suspends>:void=
+    ShowRoundResult(TeamWinsMap:[team]int, RoundCount:int, ORoundWinTeam:?team)<suspends>:void=
         TeamCollection := GetPlayspace().GetTeamCollection()
         TeamArray := TeamCollection.GetTeams()
-        TeamWinsMap := GameManagerDevice.TeamWinsMap
 
         if(RoundWinTeam := ORoundWinTeam?):
             for(Team:TeamArray, Agents := TeamCollection.GetAgents[Team]):
@@ -328,39 +325,38 @@ round_ui_device := class(creative_device):
         Sleep(DisplayTime)
 
     # 黒半透明の背景を全プレイヤーに表示する関数
-    ShowBackground(GameManagerDevice:game_manager_device):void=
-        for(Player:GameManagerDevice.GamePlayers):
+    ShowBackground(GamePlayers:[]player):void=
+        for(Player:GamePlayers):
             BackgroundHudDevice.Show(Player)
 
-    HideBackground(GameManagerDevice:game_manager_device):void=
-        for(Player:GameManagerDevice.GamePlayers):
+    HideBackground(GamePlayers:[]player):void=
+        for(Player:GamePlayers):
             BackgroundHudDevice.Hide(Player)
 
-    ShowHideSideSwitch(GameManagerDevice:game_manager_device)<suspends>:void=
-        for(Player:GameManagerDevice.GamePlayers):
+    ShowHideSideSwitch(GamePlayers:[]player)<suspends>:void=
+        for(Player:GamePlayers):
             SideSwitchHudDevice.Show(Player)
 
         Sleep(SideSwitchDisplayTime)
 
-        for(Player:GameManagerDevice.GamePlayers):
+        for(Player:GamePlayers):
             SideSwitchHudDevice.Hide(Player)
 
     # ラウンド開始前に各プレイヤーに今何陣営かを表示する関数
-    ShowHideSide(GameManagerDevice:game_manager_device, OAttackTeam:?team, ODefenseTeam:?team)<suspends>:void=
+    ShowHideSide(GamePlayers:[]player)<suspends>:void=
         TeamCollection := GetPlayspace().GetTeamCollection()
         TeamArray := TeamCollection.GetTeams()
 
-        if(AttackTeam := OAttackTeam?, DefenceTeam := ODefenseTeam?):
-            for(Team:TeamArray, Agents := TeamCollection.GetAgents[Team]):
-                if(Team = AttackTeam):
-                    for(Agent:Agents):
-                        AttackersHudDevice.Show(Agent)
-                else:
-                    for(Agent:Agents):
-                        DefendersHudDevice.Show(Agent)
+        for(Index->Team:TeamArray, Agents := TeamCollection.GetAgents[Team]):
+            if(Index = 0):
+                for(Agent:Agents):
+                    AttackersHudDevice.Show(Agent)
+            else:
+                for(Agent:Agents):
+                    DefendersHudDevice.Show(Agent)
 
         Sleep(SideSwitchDisplayTime)
 
-        for(Player:GameManagerDevice.GamePlayers):
+        for(Player:GamePlayers):
             AttackersHudDevice.Hide(Player)
             DefendersHudDevice.Hide(Player)

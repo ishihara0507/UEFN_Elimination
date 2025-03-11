@@ -10,6 +10,10 @@ using { /UnrealEngine.com/Temporary/UI }
 
 debug_game_flow_device := class(creative_device):
 
+    # デバッグ用で新規に追加
+    @editable
+    EliminationDevice:elimination_manager_device = elimination_manager_device{}
+
     ### @editable系 ---------------------------------------------------------------------
     # 自作デバイス
     @editable
@@ -40,6 +44,13 @@ debug_game_flow_device := class(creative_device):
 
     @editable
     RoundSettingDevice:round_settings_device = round_settings_device{}
+
+    @editable
+    EliminationXPDevice:accolades_device = accolades_device{}
+    @editable
+    MatchPlayedXPDevice:accolades_device = accolades_device{}
+    @editable
+    VictoryXPDevice:accolades_device = accolades_device{}
 
     # ゲーム終了後に有効化する系
     @editable
@@ -87,6 +98,8 @@ debug_game_flow_device := class(creative_device):
 
     ### 変数 -----------------------------------------------------------------------------
     var GamePlayers:[]player = array{}
+
+    var GameAgents:[]agent = array{} ### 追加
 
     var GameStarted:logic = false
     
@@ -144,7 +157,7 @@ debug_game_flow_device := class(creative_device):
         var Count:int = 0
         var TeamRemainingMap:[team]int = map{}
         var TeamWinsMap:[team]int = map{}
-        var PlayerTeamMap:[player]team = map{} # 退出したプレイヤーがどのチームに所属していたかを判定する用
+        var AgentTeamMap:[agent]team = map{} ### var PlayerTeamMap:[player]team = map{} # 退出したプレイヤーがどのチームに所属していたかを判定する用
 
         TeamCollection := GetPlayspace().GetTeamCollection()
         TeamArray := TeamCollection.GetTeams()
@@ -161,7 +174,9 @@ debug_game_flow_device := class(creative_device):
 
         Print("ラウンド開始")
 
-        set GamePlayers = GetPlayspace().GetPlayers()
+        set GameAgents = GetPlayspace().GetPlayers() ### set GamePlayers = GetPlayspace().GetPlayers()
+        for(Agent:GameAgents, Player := player[Agent]): ### 追加
+            set GamePlayers += array{Player} ### 追加
 
         # 現在のラウンド数を取得
         RoundCount := CalcRoundCount()
@@ -178,7 +193,7 @@ debug_game_flow_device := class(creative_device):
             Agents := ClassDesigner.GetClassMembers()
             for(Agent:Agents):
                 if. TeamCollection.AddToTeam[Agent, Team]
-                if. set PlayerTeamMap[player[Agent]] = Team
+                if. set AgentTeamMap[Agent] = Team
 
         # 最初のラウンドだったら、ムービーを流す
         if(RoundCount = 1):
@@ -194,17 +209,20 @@ debug_game_flow_device := class(creative_device):
         RoundUIDevice.ShowHideSide(GamePlayers)
 
         # キルイベントを設定する
-        for(Player:GamePlayers):
-            if(FortCharacter := Player.GetFortCharacter[]):
-                FortCharacter.EliminatedEvent().Subscribe(OnPlayerEliminated)
+        EliminationDevice.EliminatedEvent.Subscribe(OnEliminatedEvent) ### 追加
+        EliminationDevice.EliminationEvent.Subscribe(OnEliminationEvent) ### 追加
+        ### for(Player:GamePlayers):
+        ###     if(FortCharacter := Player.GetFortCharacter[]):
+        ###         FortCharacter.EliminatedEvent().Subscribe(OnPlayerEliminated)
 
         # TeamRemainingMap と TeamWinsMap を初期化する
         for(Team:TeamArray, RemainingNum := TeamCollection.GetAgents[Team].Length):
             if. set TeamRemainingMap[Team] = RemainingNum
-        for(Team:TeamArray, Agent := TeamCollection.GetAgents[Team][0]):
-            OPlayerStats := PlayerStatsManager.GetPlayerStats(Agent)
-            if(PlayerStats := OPlayerStats?, Wins := PlayerStats.RoundWins):
-                if. set TeamWinsMap[Team] = Wins
+        for(Team:TeamArray, Agents := TeamCollection.GetAgents[Team]): ### for(Team:TeamArray, Agent := TeamCollection.GetAgents[Team][0]):
+            for(Agent:Agents): ### 追加
+                OPlayerStats := PlayerStatsManager.GetPlayerStats(Agent)
+                if(PlayerStats := OPlayerStats?, Wins := PlayerStats.RoundWins):
+                    if. set TeamWinsMap[Team] = Wins
 
         # ラウンドUIを初期化して表示
         RoundUIDevice.AddRoundStateUI(TeamRemainingMap, TeamWinsMap)
@@ -236,8 +254,8 @@ debug_game_flow_device := class(creative_device):
         var ORoundWinTeam:?team = false
         race:
             loop: # プレイヤー退出待ち
-                LeavingPlayer:player = GetPlayspace().PlayerRemovedEvent().Await()
-                if. (Team := PlayerTeamMap[LeavingPlayer], set TeamRemainingMap[Team] -= 1)
+                LeavingAgent := GetPlayspace().ParticipantRemovedEvent().Await() ### LeavingPlayer:player = GetPlayspace().PlayerRemovedEvent().Await()
+                if. (Team := AgentTeamMap[LeavingAgent], set TeamRemainingMap[Team] -= 1)
                 RoundUIDevice.UpdateRoundStateUI(TeamRemainingMap, TeamWinsMap)
                 # ラウンド終了判定
                 OWinTeam := CheckRoundEnd(TeamRemainingMap)
@@ -327,8 +345,8 @@ debug_game_flow_device := class(creative_device):
             Sleep(VictoryAndDefeatTime)
 
             # 全プレイヤーをクラスなしに設定する
-            for(Player:GamePlayers):
-                NoneClassSelector.ChangeClass(Player)
+            for(Agent:GameAgents):                   ### for(Player:GamePlayers):
+                NoneClassSelector.ChangeClass(Agent) ###     NoneClassSelector.ChangeClass(Player)
             
         # ラウンドを終える
         if(WinAgent := OWinAgent?):
@@ -363,12 +381,13 @@ debug_game_flow_device := class(creative_device):
         var RoundCounts:[]int = array{0, 0}
 
         # 各チームのラウンド勝利数を取得
-        for(Index->ClassDesigner:ClassDesigners, Agent := ClassDesigner.GetClassMembers()[0]):
-            OPlayerStats := PlayerStatsManager.GetPlayerStats(Agent)
-            if:
-                PlayerStats := OPlayerStats?
-                Wins := PlayerStats.RoundWins
-                set RoundCounts[Index] = Wins
+        for(Index->ClassDesigner:ClassDesigners, Agents := ClassDesigner.GetClassMembers()): ### for(Index->ClassDesigner:ClassDesigners, Agent := ClassDesigner.GetClassMembers()[0]):
+            for(Agent:Agents): ### 追加
+                OPlayerStats := PlayerStatsManager.GetPlayerStats(Agent)
+                if:
+                    PlayerStats := OPlayerStats?
+                    Wins := PlayerStats.RoundWins
+                    set RoundCounts[Index] = Wins
 
         RoundCount := if(N := RoundCounts[0], N2 := RoundCounts[1]). N + N2 + 1 else. 1
 
@@ -444,6 +463,17 @@ debug_game_flow_device := class(creative_device):
             PlayerStatsManager.UpdateCurrentDeathsStat(EliminatedAgent)
             KillEvent.Signal(EliminatedAgent)
 
+    ### 追加 Agentがキルされたときに実行される関数
+    OnEliminatedEvent(Agent:agent):void=
+        Print("キルされた！")
+        PlayerStatsManager.UpdateCurrentDeathsStat(Agent)
+        KillEvent.Signal(Agent)
+    
+    ### 追加 Agentがキルしたときに実行される関数
+    OnEliminationEvent(OAgent:?agent):void=
+        if(Agent := OAgent?):
+            PlayerStatsManager.UpdateCurrentKillsStat(Agent)
+
     # 引数秒たったら、プリセット選択UIを削除する関数
     DeleteSelectPresetUIs(Limit:float)<suspends>:void=
         Sleep(Limit)
@@ -494,11 +524,12 @@ debug_game_flow_device := class(creative_device):
         var OWinningTeam:?team = false
 
         # TeamWinsMap と OWinningTeam を設定
-        for(Team:TeamArray, Agent := TeamCollection.GetAgents[Team][0]):
-            OPlayerStats := PlayerStatsManager.GetPlayerStats(Agent)
-            if:
-                PlayerStats := OPlayerStats?
-                set TeamWinsMap[Team] = PlayerStats.RoundWins
+        for(Team:TeamArray, Agents := TeamCollection.GetAgents[Team]): ### for(Team:TeamArray, Agent := TeamCollection.GetAgents[Team][0]):
+            for(Agent:Agents): ### 追加
+                OPlayerStats := PlayerStatsManager.GetPlayerStats(Agent)
+                if:
+                    PlayerStats := OPlayerStats?
+                    set TeamWinsMap[Team] = PlayerStats.RoundWins
         for(Team->Wins:TeamWinsMap, Wins >= WinningPoints):
             set OWinningTeam = option{Team}
 
@@ -513,3 +544,10 @@ debug_game_flow_device := class(creative_device):
                 LoseWinHudDevice := LoseWinHudDevice
             GameResult.AddGameResultUI() # 試合結果を表示
             GameResult.SavePlayersResult() # 持続データを更新
+
+        # XPを与える
+        for(Team:TeamArray, Agents := TeamCollection.GetAgents[Team], WinningTeam := OWinningTeam?):
+            for(Agent:Agents):
+                MatchPlayedXPDevice.Award(Agent)
+                if(Team = WinningTeam):
+                    VictoryXPDevice.Award(Agent)

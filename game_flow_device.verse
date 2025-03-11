@@ -44,6 +44,13 @@ game_flow_device := class(creative_device):
     @editable
     RoundSettingDevice:round_settings_device = round_settings_device{}
 
+    @editable
+    EliminationXPDevice:accolades_device = accolades_device{}
+    @editable
+    MatchPlayedXPDevice:accolades_device = accolades_device{}
+    @editable
+    VictoryXPDevice:accolades_device = accolades_device{}
+
     # ゲーム終了後に有効化する系
     @editable
     GameEndMutator:mutator_zone_device = mutator_zone_device{}
@@ -153,14 +160,15 @@ game_flow_device := class(creative_device):
         TeamArray := TeamCollection.GetTeams()
 
         # 試合が終了していたらここで処理を終える
-        for(Team:TeamArray, Agent := TeamCollection.GetAgents[Team][0]):
-            OPlayerStats := PlayerStatsManager.GetPlayerStats(Agent)
-            if(PlayerStats := OPlayerStats?, PlayerStats.RoundWins >= WinningPoints):
-                GameEndMutator.Enable()
-                BillBoard.ShowText()
-                MatchMakingDevice.Enable()
-                EndGame() # 試合終了処理
-                return
+        for(Team:TeamArray, Agents := TeamCollection.GetAgents[Team]):
+            for(Agent:Agents):
+                OPlayerStats := PlayerStatsManager.GetPlayerStats(Agent)
+                if(PlayerStats := OPlayerStats?, PlayerStats.RoundWins >= WinningPoints):
+                    GameEndMutator.Enable()
+                    BillBoard.ShowText()
+                    MatchMakingDevice.Enable()
+                    EndGame() # 試合終了処理
+                    return
 
         Print("ラウンド開始")
 
@@ -441,6 +449,7 @@ game_flow_device := class(creative_device):
         OEliminatorFort:?fort_character = Result.EliminatingCharacter # キルしたプレイヤー
 
         if(EliminatorFort := OEliminatorFort?, EliminatorAgent := EliminatorFort.GetAgent[]):
+            EliminationXPDevice.Award(EliminatorAgent) # XPを与える
             PlayerStatsManager.UpdateCurrentKillsStat(EliminatorAgent)
 
         if(EliminatedAgent := EliminatedFort.GetAgent[]):
@@ -497,11 +506,12 @@ game_flow_device := class(creative_device):
         var OWinningTeam:?team = false
 
         # TeamWinsMap と OWinningTeam を設定
-        for(Team:TeamArray, Agent := TeamCollection.GetAgents[Team][0]):
-            OPlayerStats := PlayerStatsManager.GetPlayerStats(Agent)
-            if:
-                PlayerStats := OPlayerStats?
-                set TeamWinsMap[Team] = PlayerStats.RoundWins
+        for(Team:TeamArray, Agents := TeamCollection.GetAgents[Team]):
+            for(Agent:Agents):
+                OPlayerStats := PlayerStatsManager.GetPlayerStats(Agent)
+                if:
+                    PlayerStats := OPlayerStats?
+                    set TeamWinsMap[Team] = PlayerStats.RoundWins
         for(Team->Wins:TeamWinsMap, Wins >= WinningPoints):
             set OWinningTeam = option{Team}
 
@@ -516,3 +526,10 @@ game_flow_device := class(creative_device):
                 LoseWinHudDevice := LoseWinHudDevice
             GameResult.AddGameResultUI() # 試合結果を表示
             GameResult.SavePlayersResult() # 持続データを更新
+
+        # XPを与える
+        for(Team:TeamArray, Agents := TeamCollection.GetAgents[Team], WinningTeam := OWinningTeam?):
+            for(Agent:Agents):
+                MatchPlayedXPDevice.Award(Agent)
+                if(Team = WinningTeam):
+                    VictoryXPDevice.Award(Agent)

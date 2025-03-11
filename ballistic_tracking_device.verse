@@ -21,7 +21,21 @@ ballistic_tracking_device := class(creative_device):
     DefenderMapIndicator:map_indicator_device = map_indicator_device{} # 守備側に表示されるマップアイコン（赤色アイコン）
 
     @editable
-    MapIndicators:[]map_indicator_device = array{} # その他のマップインジケーター
+    BeforeMapIndicators:[]map_indicator_device = array{} # 爆弾が設置される前に表示するマップインジケーター
+
+    @editable
+    AfterMapIndicatorsA:[]map_indicator_device = array{} # 爆弾が設置された後に表示するA地点のマップインジケーター
+    @editable
+    AfterMapIndicatorsB:[]map_indicator_device = array{} # 爆弾が設置された後に表示するB地点のマップインジケーター
+    @editable
+    AfterMapIndicatorsC:[]map_indicator_device = array{} # 爆弾が設置された後に表示するC地点のマップインジケーター
+
+    @editable
+    RiftPointVolumeA:rift_point_volume_device = rift_point_volume_device{}
+    @editable
+    RiftPointVolumeB:rift_point_volume_device = rift_point_volume_device{}
+    @editable
+    RiftPointVolumeC:rift_point_volume_device = rift_point_volume_device{}
 
     # 攻守交代時に使うデバイスを切り替える必要がある。
     # なぜなら、一度このデバイスからアイテムを取得したら、再度アイテムがリスポーンしたときに最初に取得したチーム以外は取得できなくなるからである。
@@ -36,10 +50,14 @@ ballistic_tracking_device := class(creative_device):
 
     OnBegin<override>()<suspends>:void=
         # 最初はマップインジケーターは非表示にしておく
-        AttackerMapIndicator.Disable()
-        DefenderMapIndicator.Disable()
+        var MapIndicators:[]map_indicator_device = array{AttackerMapIndicator, DefenderMapIndicator}
+        set MapIndicators += BeforeMapIndicators + AfterMapIndicatorsA + AfterMapIndicatorsB + AfterMapIndicatorsC
         for(MapIndicator:MapIndicators):
             MapIndicator.Disable()
+
+        RiftPointVolumeA.PlantEvent.Subscribe(PlantBombAtA)
+        RiftPointVolumeB.PlantEvent.Subscribe(PlantBombAtB)
+        RiftPointVolumeC.PlantEvent.Subscribe(PlantBombAtC)
         
         CaptureItemDevice.ItemPickedUpEvent.Subscribe(OnPickedUp)
         CaptureItemDevice.ItemDroppedEvent.Subscribe(OnDropped)
@@ -48,7 +66,7 @@ ballistic_tracking_device := class(creative_device):
     EnableMapIndicator():void=
         AttackerMapIndicator.Enable()
         DefenderMapIndicator.Enable()
-        for(MapIndicator:MapIndicators):
+        for(MapIndicator:BeforeMapIndicators):
             MapIndicator.Enable()
 
     OnPickedUp(Agent:agent):void=
@@ -83,3 +101,24 @@ ballistic_tracking_device := class(creative_device):
             NewPosition := vector3{X := Transform.Translation.X, Y := Transform.Translation.Y, Z := Transform.Translation.Z + 500.0}
             if(DefenderMapIndicator.TeleportTo[NewPosition, Transform.Rotation]):
                 DefenderMapIndicator.Enable()
+
+    # RiftPointVolumeA に爆弾が設置されたら実行される関数
+    PlantBombAtA(Agent:agent):void=
+        for(MapIndicator:BeforeMapIndicators):
+            MapIndicator.Disable()
+        for(MapIndicator:AfterMapIndicatorsA):
+            MapIndicator.Enable()
+        
+    # RiftPointVolumeB に爆弾が設置されたら実行される関数
+    PlantBombAtB(Agent:agent):void=
+        for(MapIndicator:BeforeMapIndicators):
+            MapIndicator.Disable()
+        for(MapIndicator:AfterMapIndicatorsB):
+            MapIndicator.Enable()
+        
+    # RiftPointVolumeC に爆弾が設置されたら実行される関数
+    PlantBombAtC(Agent:agent):void=
+        for(MapIndicator:BeforeMapIndicators):
+            MapIndicator.Disable()
+        for(MapIndicator:AfterMapIndicatorsC):
+            MapIndicator.Enable()

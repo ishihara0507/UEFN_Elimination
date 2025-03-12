@@ -12,19 +12,40 @@ using { /Verse.org/Colors }
 using { /Fortnite.com/Teams }
 
 test_device := class(creative_device):
-
+    
     @editable
     Trigger:trigger_device = trigger_device{}
+
+    @editable
+    Trigger2:trigger_device = trigger_device{}
 
     PlayerStatsManager:player_stat_manager = player_stat_manager{}
 
     OnBegin<override>()<suspends>:void=
         Trigger.TriggeredEvent.Subscribe(OnTriggered)
+        Trigger2.TriggeredEvent.Subscribe(OnTriggered2)
 
     OnTriggered(OAgent:?agent):void=
-        if(Agent := OAgent?):
-            PlayerStatsManager.ShowStats(Agent)
-                
+        TeamCollection := GetPlayspace().GetTeamCollection()
+        TeamArray := TeamCollection.GetTeams()
+
+        if(Agent := OAgent?, Team := TeamArray[1]):
+            if. TeamCollection.AddToTeam[Agent, Team]
+            then:
+                Print(GetAgentName(Agent))
+                Print("のチームを１に変更しました。")
+                  
+    OnTriggered2(OAgent:?agent):void=
+        TeamCollection := GetPlayspace().GetTeamCollection()
+        TeamArray := TeamCollection.GetTeams()
+
+        for(Index->Team:TeamArray, Agents := TeamCollection.GetAgents[Team]):
+            Print("チーム{Index+1}の人数: {Agents.Length}人")
+            for(Index2->Agent:Agents, Player := player[Agent]):
+                AgentName := GetAgentName(Agent)
+                Print("No.{Index2}")
+                Print(AgentName)
+            
     ChangeTeam(OAgent:?agent):void=
         TeamCollection := GetPlayspace().GetTeamCollection()
         TeamArray := TeamCollection.GetTeams()

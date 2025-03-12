@@ -29,6 +29,9 @@ game_flow_device := class(creative_device):
 
     # いろいろ
     @editable
+    StartPlayerSpawners:[]player_spawner_device = array{}
+
+    @editable
     ClassDesigners:[]class_designer_device = array{} # 要素１をクラス２のやつに、要素２をクラス３のやつに設定する必要がある
     @editable
     ClassSelectors:[]class_and_team_selector_device = array{}
@@ -210,8 +213,9 @@ game_flow_device := class(creative_device):
                 FortCharacter.EliminatedEvent().Subscribe(OnPlayerEliminated)
 
         # TeamRemainingMap と TeamWinsMap を初期化する
-        for(Team:TeamArray, RemainingNum := TeamCollection.GetAgents[Team].Length):
-            if. set TeamRemainingMap[Team] = RemainingNum
+        for(Team:TeamArray, Agents := TeamCollection.GetAgents[Team]):
+            for(Agent:Agents, Player := player[Agent]):
+                if. set TeamRemainingMap[Team] += 1
         for(Team:TeamArray, Agent := TeamCollection.GetAgents[Team][0]):
             OPlayerStats := PlayerStatsManager.GetPlayerStats(Agent)
             if(PlayerStats := OPlayerStats?, Wins := PlayerStats.RoundWins):
@@ -412,8 +416,8 @@ game_flow_device := class(creative_device):
         var TeamMsgMap:[team]message = map{}
 
         for(Team:TeamArray, Agents := TeamCollection.GetAgents[Team]):
-            for(Index->Agent:Agents):
-                PlayerName := GetAgentName(Agent)
+            for(Index->Agent:Agents, Player := player[Agent]): # プレイヤー以外の名前は取らないようにする
+                PlayerName := GetAgentName(Player)
                 if(Index = 0):
                     if. set TeamMsgMap[Team] = PlayerName
                 else if(DeforeMsg := TeamMsgMap[Team]):

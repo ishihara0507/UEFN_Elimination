@@ -26,6 +26,8 @@ waiting_players_device := class(creative_device):
     ClassDesigners:[]class_designer_device = array{} # 要素１をクラス２のやつに、要素２をクラス３のやつに設定する必要がある
     @editable
     ClassSelectors:[]class_and_team_selector_device = array{}
+    @editable
+    NoneClassSelector:class_and_team_selector_device = class_and_team_selector_device{}
 
     @editable
     MessageHud:hud_message_device = hud_message_device{}
@@ -33,7 +35,9 @@ waiting_players_device := class(creative_device):
     CountDownHud:hud_message_device = hud_message_device{}
 
     @editable
-    PopupDialogDevice:popup_dialog_device = popup_dialog_device{} # 人数が揃っていない状態で試合を始めていいかを確認するためのデバイス
+    VoteStartPopupDevice:popup_dialog_device = popup_dialog_device{} # 人数が揃っていない状態で試合を始めていいかを確認するためのデバイス
+    @editable
+    VoteResultPopupDevice:popup_dialog_device = popup_dialog_device{} # 投票の結果を表示するためのデバイス
 
     var GamePlayers:[]player = array{}
 
@@ -47,32 +51,34 @@ waiting_players_device := class(creative_device):
     StartDelay:int = 5 # プレイヤーがそろってから試合を開始するまでの秒数
 
     DisplayPopupTime:float = 10.0 # ポップアップを表示する時間
+    DisplayResultPopupTime:float = 15.0 # ポップアップを表示する時間
 
     CompleteVoteEvent:event() = event(){}
+    VoteResultEvent:event() = event(){}
 
     PlayerStatsManager:player_stat_manager = player_stat_manager{}
 
     OnBegin<override>()<suspends>:void=
         for(PlayerSpawner:PlayerSpawners):
             PlayerSpawner.SpawnedEvent.Subscribe(OnPlayerSpawn)
-        PopupDialogDevice.RespondingButtonEvent.Subscribe(ClickPopupBtn)
+        VoteStartPopupDevice.RespondingButtonEvent.Subscribe(ClickPopupBtn)
 
         set TeleportersArray = array{AttackerTeleporters, DefenderTeleporters}
 
+        spawn{OnPlayerLeaved()} # 退出待ちループ関数を実行する
+
         # プレイヤー待ちループは、試合開始前のみ実行させるようにする
         var NotGameStarted:logic = false
-        var CheckedPlayerCount:int = 0
         loop:
+            var CheckedPlayerCount:int = 0
             Print("プレイヤーを確認")
-            Players := GetPlayspace().GetPlayers()
-            if(Players.Length >= 2):
-                for(Player:Players):
-                    OPlayerStats := PlayerStatsManager.GetPlayerStats(Player)
-                    if(PlayerStats := OPlayerStats?, PlayerStats.RoundWins = -1):
-                        set CheckedPlayerCount += 1
-                        set NotGameStarted = true
-                    else:
-                        Print("プレイヤーを正常に確認できなかった")
+            for(Player:GetPlayspace().GetPlayers()):
+                OPlayerStats := PlayerStatsManager.GetPlayerStats(Player)
+                if(PlayerStats := OPlayerStats?, PlayerStats.RoundWins = -1):
+                    set CheckedPlayerCount += 1
+                    set NotGameStarted = true
+                else:
+                    Print("プレイヤーを正常に確認できなかった")
             if(CheckedPlayerCount >= 2):
                 Print("プレイヤーを正常に確認できた")
                 break
@@ -84,9 +90,16 @@ waiting_players_device := class(creative_device):
         if(NotGameStarted?):
             loop:
                 # 3分経過して8人に達していなかったら、試合を始めてるかの投票を行う
-                if(WaitedTime >= 180.0): 
-                    DisplayVoteStarting() # 投票を行う
+                PlayerNum := GetPlayspace().GetPlayers().Length
+                if(WaitedTime >= 180.0, PlayerNum < MatchPlayerNum): 
+                    spawn{DisplayVoteStarting(PlayerNum)} # 投票を行う
                     CompleteVoteEvent.Await() # 投票が完了するまで待機
+
+                    spawn{DisplayVoteResult(PlayerNum)} # 投票結果を表示
+                    VoteResultEvent.Await()
+
+                    set VoteYesCount = 0
+                    set VoteNoCount = 0
                     set WaitedTime = 0.0
 
                 # 人数が揃っているかを確認
@@ -131,6 +144,13 @@ waiting_players_device := class(creative_device):
         PlayerStatsManager.InitializePlayerStat(Agent) # 持続データをプレイヤーに割り当てる
         PlayerStatsManager.ResetGameStats(Agent) # 試合ごとに-1にするデータを初期化する
 
+    # プレイヤーが退出したら、そのプレイヤーのクラスをクラスなしに変更する関数
+    OnPlayerLeaved()<suspends>:void=
+        loop:
+            LeavingPlayer := GetPlayspace().PlayerRemovedEvent().Await()
+            PlayerStatsManager.ResetGameStats(LeavingPlayer) # 試合ごとに-1にするデータを初期化する
+            NoneClassSelector.ChangeClass(LeavingPlayer) # クラスをクラスなしに設定する
+
     # チーム分けを行う関数。実際にはここではクラスを設定することでチームを分ける
     SplitPlayersToTeams():void=
         Players := Shuffle(GamePlayers)
@@ -159,19 +179,17 @@ waiting_players_device := class(creative_device):
                 Teleporter.Teleport(Agent)
 
     # 8人揃っていない状態で試合を始めてもいいかをプレイヤーに確認するポップアップを表示する関数
-    DisplayVoteStarting()<suspends>:void=
-        PlayersNum := GetPlayspace().GetPlayers().Length
-        PopupDialogDevice.SetTitleText(S2M("{PlayersNum}/{MatchPlayerNum}"))
-        PopupDialogDevice.Show() # すべてのプレイヤーにポップアップを表示する
-        Sleep(DisplayPopupTime + 1.0)
+    DisplayVoteStarting(PlayerNum:int)<suspends>:void=
+        VoteStartPopupDevice.SetTitleText(S2M("{PlayerNum}/{MatchPlayerNum} players"))
+
+        VoteStartPopupDevice.Show() # すべてのプレイヤーにポップアップを表示する
+        Sleep(DisplayPopupTime + 0.5)
+        VoteStartPopupDevice.Hide()
         
         Print("VoteYesCount: {VoteYesCount}, VoteNoCount: {VoteNoCount}")
-        if(VoteYesCount >= VoteNoCount):
-            Print("必要な人数を{PlayersNum}人に変更します")
-            set ThisMatchPlayerNum = PlayersNum
-        else:
-            set VoteNoCount = 0
-            set VoteYesCount = 0
+        if(VoteYesCount >= VoteNoCount, not VoteYesCount = 0 and VoteNoCount = 0):
+            Print("必要な人数を{PlayerNum}人に変更します")
+            set ThisMatchPlayerNum = PlayerNum
 
         CompleteVoteEvent.Signal()
 
@@ -181,3 +199,29 @@ waiting_players_device := class(creative_device):
             set VoteNoCount += 1
         else if(BtnNum = 1):
             set VoteYesCount += 1
+
+    # 投票の結果をポップアップで表示する関数
+    DisplayVoteResult(PlayerNum:int)<suspends>:void=
+        TitleText := "投票結果 Voting results"
+        TimedOutNum := PlayerNum - (VoteYesCount + VoteNoCount)
+        var DescriptionText:string = ""
+
+        if(not ThisMatchPlayerNum = MatchPlayerNum): # Yes >= No だったら
+            set DescriptionText = "Yes: {VoteYesCount}人, No: {VoteNoCount}人, 時間切れ: {TimedOutNum}人 だったので、試合を開始します。\n"
+            set DescriptionText = "\n"
+            set DescriptionText = "Yes: {VoteYesCount}, No: {VoteNoCount}, Timed out: {TimedOutNum}. Therefore, we will start the game."
+        else:
+            set DescriptionText = "Yes: {VoteYesCount}人, No: {VoteNoCount}人, 時間切れ: {TimedOutNum}人 だったので、他のプレイヤーの参加を待ちます。\n"
+            set DescriptionText = "さらに3分経過してもまだ8人に達していない場合は、再度投票を行います。\n"
+            set DescriptionText = "\n"
+            set DescriptionText = "Yes: {VoteYesCount}, No: {VoteNoCount}, Timed out: {TimedOutNum}. Therefore, we will wait for more players to join.\n"
+            set DescriptionText = "If the number of players still does not reach 8 after an additional 3 minutes, we will hold another vote."
+
+        VoteResultPopupDevice.SetTitleText(S2M(TitleText))
+        VoteResultPopupDevice.SetDescriptionText(S2M(DescriptionText))
+
+        VoteResultPopupDevice.Show()
+        Sleep(DisplayResultPopupTime)
+        VoteResultPopupDevice.Hide()
+
+        VoteResultEvent.Signal()

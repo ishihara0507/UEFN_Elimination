@@ -284,6 +284,8 @@ weapons_select_device := class(creative_device):
 
     MaxGolds:int = 1000 # ゴールドの最大枚数（最初に与えられるゴールドの枚数）
 
+    PlayerStatsManager:player_stat_manager = player_stat_manager{}
+
     OnBegin<override>()<suspends>:void=
         for(WeaponData:WeaponDatas):
             set WeaponData.GoldCondBtn = GoldCondBtn
@@ -307,12 +309,13 @@ weapons_select_device := class(creative_device):
 
     # 入口側のミューテーターゾーンに入ったときに実行する関数
     OnEnterMutator(Agent:agent):void=
-        # 武器選択エリアから出る場合と、武器選択エリアにいるときに試合が始まって、再度武器選択エリアに入る場合に実行される
+        PlayerStatsManager.InitializePlayerStat(Agent)
         if(Player := player[Agent]):
             if. set WeaponsPlayerMap[Player] = array{} # 手持ち武器の管理配列を初期化
             if. set PlayerInEreaMap[Player] = false
+            NoneClassSelector.ChangeClass(Agent)
+            Barrier.AddToIgnoreList(Agent) # バリアを通れるようにする
 
-        Barrier.AddToIgnoreList(Agent) # バリアを通れるようにする
         ItemRemover.Remove(Agent)
 
     # 出口側のミューテーターゾーンに入ったときに実行する関数

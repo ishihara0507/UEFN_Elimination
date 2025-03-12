@@ -24,6 +24,8 @@ display_stats_device := class(creative_device):
     OnPushEnglishBtn(Agent:agent):void=
         PlayerReferenceDevice.Register(Agent)
 
+        PlayerStatsManager.InitializePlayerStat(Agent)
+        
         var Str:string = ""
         OPlayerStats := PlayerStatsManager.GetPlayerStats(Agent)
         if(PlayerStats := OPlayerStats?):
@@ -39,6 +41,8 @@ display_stats_device := class(creative_device):
     # ボタンを押したときに実行される関数
     OnPushJapaneseBtn(Agent:agent):void=
         PlayerReferenceDevice.Register(Agent)
+        
+        PlayerStatsManager.InitializePlayerStat(Agent)
 
         var Str:string = ""
         OPlayerStats := PlayerStatsManager.GetPlayerStats(Agent)

@@ -166,6 +166,7 @@ debug_game_flow_device := class(creative_device):
         for(Team:TeamArray, Agent := TeamCollection.GetAgents[Team][0]):
             OPlayerStats := PlayerStatsManager.GetPlayerStats(Agent)
             if(PlayerStats := OPlayerStats?, PlayerStats.RoundWins >= WinningPoints):
+                Print("試合を終了する")
                 GameEndMutator.Enable()
                 BillBoard.ShowText()
                 MatchMakingDevice.Enable()

@@ -35,10 +35,10 @@ game_result := class:
             
             if:
                 PlayerStats := OPlayerStats?
-                set ValueMap["Kill"] = PlayerStats.CurrentKills
-                set ValueMap["Death"] = PlayerStats.CurrentDeaths
-                set ValueMap["StartBomb"] = PlayerStats.CurrentStartBombs
-                set ValueMap["StopBomb"] = PlayerStats.CurrentStopBombs
+                set ValueMap["Kills"] = PlayerStats.CurrentKills
+                set ValueMap["Deaths"] = PlayerStats.CurrentDeaths
+                set ValueMap["StartBombs"] = PlayerStats.CurrentStartBombs
+                set ValueMap["StopBombs"] = PlayerStats.CurrentStopBombs
                 set PlayerResultMap[Player] = ValueMap
             
             PlayerStatsManager.ResetGameStats(Player) # 試合ごとに初期化するデータをリセット
@@ -100,7 +100,7 @@ game_result_ui := class:
 
     var CloseBtn:button_loud = button_loud{}
 
-    TeamPlayerNum:int = 4
+    TeamPlayerNum:int = 4 # プレイヤーを2列4行分を表示する
 
     Init()<suspends>:void=
         set CloseBtn = button_loud{DefaultText:=S2M("CLOSE")}
@@ -148,52 +148,53 @@ game_result_ui := class:
                     overlay_slot:
                         HorizontalAlignment := horizontal_alignment.Fill
                         VerticalAlignment := vertical_alignment.Fill
-                        Widget := color_block{DefaultDesiredSize := vector2{X := 100.0, Y := -0.0}, DefaultOpacity := 0.0}
+                        Widget := color_block{DefaultColor := color{R := 1.0, G := 0.0, B := 1.0}, DefaultDesiredSize := vector2{X := 100.0, Y := -0.0}, DefaultOpacity := 1.0}
                     overlay_slot:
                         HorizontalAlignment := horizontal_alignment.Center
                         VerticalAlignment := vertical_alignment.Center
-                        Widget := color_block{DefaultDesiredSize := vector2{X := 52.0, Y := 52.0}, DefaultOpacity := 0.0}
+                        Widget := color_block{DefaultColor := color{R := 1.0, G := 1.0, B := 1.0}, DefaultDesiredSize := vector2{X := 52.0, Y := 52.0}, DefaultOpacity := 1.0}
 
         # 味方と敵の表の部分をループで作成する
         set StackBoxSlots = for(StackIndex := 0 .. 1):
             # スタックボックスの表に見出しの行を追加
             # （実際には見出しの行の部分は、HUDデバイスで表示するが、位置を合わせるために透明の見出し行を追加する。）
-            stack_box_slot:
-                HorizontalAlignment := horizontal_alignment.Fill
-                VerticalAlignment := vertical_alignment.Fill
-                Widget := overlay:
-                    Slots := array:
-                        overlay_slot:
-                            HorizontalAlignment := horizontal_alignment.Fill
-                            VerticalAlignment := vertical_alignment.Fill
-                            Widget := color_block{DefaultColor := color{R := 1.0, G := 1.0, B := 1.0}, DefaultDesiredSize := vector2{X := -0.0, Y := -0.0}}
-                        overlay_slot:
-                            Padding := margin{Left := 10.0, Top := 10.0, Right := 10.0, Bottom := 10.0}
-                            HorizontalAlignment := horizontal_alignment.Fill
-                            VerticalAlignment := vertical_alignment.Fill
-                            Widget := stack_box:
-                                Orientation := orientation.Horizontal
-                                Slots := array:
-                                    # プレイヤー名の領域
-                                    stack_box_slot:
-                                        HorizontalAlignment := horizontal_alignment.Fill
-                                        VerticalAlignment := vertical_alignment.Fill
-                                        Widget := overlay:
-                                            Slots := array:
-                                                overlay_slot:
-                                                    HorizontalAlignment := horizontal_alignment.Fill
-                                                    VerticalAlignment := vertical_alignment.Fill
-                                                    Widget := color_block{DefaultDesiredSize := vector2{X := 365.0, Y := -0.0}, DefaultOpacity := 0.0}
-                                                overlay_slot:
-                                                    HorizontalAlignment := horizontal_alignment.Left
-                                                    VerticalAlignment := vertical_alignment.Center
-                                                    Widget := text_block{DefaultText := S2M("PlayerName"), DefaultTextOpacity := 0.0}
-                                    # キルアイコンの領域
-                                    ClearBox
-                                    # デスアイコンの領域
-                                    ClearBox
-                                    # ボムアイコンの領域
-                                    ClearBox
+            array:
+                stack_box_slot:
+                    HorizontalAlignment := horizontal_alignment.Fill
+                    VerticalAlignment := vertical_alignment.Fill
+                    Widget := overlay:
+                        Slots := array:
+                            overlay_slot:
+                                HorizontalAlignment := horizontal_alignment.Fill
+                                VerticalAlignment := vertical_alignment.Fill
+                                Widget := color_block{DefaultColor := color{R := 1.0, G := 1.0, B := 1.0}, DefaultDesiredSize := vector2{X := -0.0, Y := -0.0}}
+                            overlay_slot:
+                                Padding := margin{Left := 10.0, Top := 10.0, Right := 10.0, Bottom := 10.0}
+                                HorizontalAlignment := horizontal_alignment.Fill
+                                VerticalAlignment := vertical_alignment.Fill
+                                Widget := stack_box:
+                                    Orientation := orientation.Horizontal
+                                    Slots := array:
+                                        # プレイヤー名の領域
+                                        stack_box_slot:
+                                            HorizontalAlignment := horizontal_alignment.Fill
+                                            VerticalAlignment := vertical_alignment.Fill
+                                            Widget := overlay:
+                                                Slots := array:
+                                                    overlay_slot:
+                                                        HorizontalAlignment := horizontal_alignment.Fill
+                                                        VerticalAlignment := vertical_alignment.Fill
+                                                        Widget := color_block{DefaultColor := color{R := 1.0, G := 1.0, B := 1.0}, DefaultDesiredSize := vector2{X := 365.0, Y := -0.0}, DefaultOpacity := 1.0}
+                                                    overlay_slot:
+                                                        HorizontalAlignment := horizontal_alignment.Left
+                                                        VerticalAlignment := vertical_alignment.Center
+                                                        Widget := text_block{DefaultText := S2M("PlayerName"), DefaultTextOpacity := 1.0}
+                                        # キルアイコンの領域
+                                        ClearBox
+                                        # デスアイコンの領域
+                                        ClearBox
+                                        # ボムアイコンの領域
+                                        ClearBox
 
             # スタックボックスに表のデータ部分を追加
             TeamOrder := if(PlayerTeam = TeamArray[0]). array{0, 1} else. array{1, 0}
@@ -202,7 +203,7 @@ game_result_ui := class:
             if(StackIndex = 1):
                 set Color = color{R := 0.57, G := 0.0, B := 0.08} # 赤色
 
-            for(Index2 := 0 .. TeamPlayerNum - 1):
+            + for(Index2 := 0 .. TeamPlayerNum - 1):
                 var PlayerName:message = S2M("----------")
                 var Kill:string = "--"
                 var Death:string = "--"
@@ -260,7 +261,6 @@ game_result_ui := class:
                                         CreateStackBoxSlot(StartBomb)
                                         # ボム数の追加
                                         CreateStackBoxSlot(StopBomb)
-
                                 
         # キャンバスに味方と敵の表を横に並べるスタックボックスを追加
         set NewSlots = array:

@@ -8,7 +8,7 @@ player_stat_manager := class():
     # プレイヤーの統計データを返す関数（オプション型を返す）
     GetPlayerStats(Agent:agent):?player_stat=
         var PlayerStat:?player_stat = false
-        if(Player := player[Agent], CurrentPlayerStat := PlayerStatMap[Player]):
+        if(Player := player[Agent], Player.IsActive[], CurrentPlayerStat := PlayerStatMap[Player]):
             set PlayerStat = option{CurrentPlayerStat}
         return PlayerStat
 
@@ -21,6 +21,7 @@ player_stat_manager := class():
     InitializePlayerStat(Agent:agent):void=
         if:
             Player := player[Agent]
+            Player.IsActive[]
             not PlayerStatMap[Player]
             set PlayerStatMap[Player] = player_stat{}
         then:
@@ -31,7 +32,7 @@ player_stat_manager := class():
     ### 更新関数 -------------------------------------------------------
     # Version を１加算する
     UpdateVersionStat(Agent:agent):void=
-        if(Player := player[Agent], CurrentPlayerStat := PlayerStatMap[Player]):
+        if(Player := player[Agent], Player.IsActive[], CurrentPlayerStat := PlayerStatMap[Player]):
             NewStat := player_stat:
                 MakeUpdatedPlayerStat<constructor>(CurrentPlayerStat)
                 Version := CurrentPlayerStat.Version + 1
@@ -39,7 +40,7 @@ player_stat_manager := class():
 
     # RoundWins を１加算する
     UpdateRoundWinsStat(Agent:agent):void=
-        if(Player := player[Agent], CurrentPlayerStat := PlayerStatMap[Player]):
+        if(Player := player[Agent], Player.IsActive[], CurrentPlayerStat := PlayerStatMap[Player]):
             NewStat := player_stat:
                 MakeUpdatedPlayerStat<constructor>(CurrentPlayerStat)
                 RoundWins := CurrentPlayerStat.RoundWins + 1
@@ -47,7 +48,7 @@ player_stat_manager := class():
 
     # CurrentKills を１加算する
     UpdateCurrentKillsStat(Agent:agent):void=
-        if(Player := player[Agent], CurrentPlayerStat := PlayerStatMap[Player]):
+        if(Player := player[Agent], Player.IsActive[], CurrentPlayerStat := PlayerStatMap[Player]):
             NewStat := player_stat:
                 MakeUpdatedPlayerStat<constructor>(CurrentPlayerStat)
                 CurrentKills := CurrentPlayerStat.CurrentKills + 1
@@ -55,7 +56,7 @@ player_stat_manager := class():
 
     # CurrentDeaths を１加算する
     UpdateCurrentDeathsStat(Agent:agent):void=
-        if(Player := player[Agent], CurrentPlayerStat := PlayerStatMap[Player]):
+        if(Player := player[Agent], Player.IsActive[], CurrentPlayerStat := PlayerStatMap[Player]):
             NewStat := player_stat:
                 MakeUpdatedPlayerStat<constructor>(CurrentPlayerStat)
                 CurrentDeaths := CurrentPlayerStat.CurrentDeaths + 1
@@ -63,7 +64,7 @@ player_stat_manager := class():
             
     # CurrentStartBombs を１加算する
     UpdateCurrentStartBombsStat(Agent:agent):void=
-        if(Player := player[Agent], CurrentPlayerStat := PlayerStatMap[Player]):
+        if(Player := player[Agent], Player.IsActive[], CurrentPlayerStat := PlayerStatMap[Player]):
             NewStat := player_stat:
                 MakeUpdatedPlayerStat<constructor>(CurrentPlayerStat)
                 CurrentStartBombs := CurrentPlayerStat.CurrentStartBombs + 1
@@ -71,7 +72,7 @@ player_stat_manager := class():
             
     # CurrentStopBombs を１加算する
     UpdateCurrentStopBombsStat(Agent:agent):void=
-        if(Player := player[Agent], CurrentPlayerStat := PlayerStatMap[Player]):
+        if(Player := player[Agent], Player.IsActive[], CurrentPlayerStat := PlayerStatMap[Player]):
             NewStat := player_stat:
                 MakeUpdatedPlayerStat<constructor>(CurrentPlayerStat)
                 CurrentStopBombs := CurrentPlayerStat.CurrentStopBombs + 1
@@ -79,7 +80,7 @@ player_stat_manager := class():
 
     # TotalWins を１加算する
     UpdateTotalWinsStat(Agent:agent):void=
-        if(Player := player[Agent], CurrentPlayerStat := PlayerStatMap[Player]):
+        if(Player := player[Agent], Player.IsActive[], CurrentPlayerStat := PlayerStatMap[Player]):
             NewStat := player_stat:
                 MakeUpdatedPlayerStat<constructor>(CurrentPlayerStat)
                 TotalWins := CurrentPlayerStat.TotalWins + 1
@@ -87,7 +88,7 @@ player_stat_manager := class():
     
     # TotalLosses を１加算する
     UpdateTotalLossesStat(Agent:agent):void=
-        if(Player := player[Agent], CurrentPlayerStat := PlayerStatMap[Player]):
+        if(Player := player[Agent], Player.IsActive[], CurrentPlayerStat := PlayerStatMap[Player]):
             NewStat := player_stat:
                 MakeUpdatedPlayerStat<constructor>(CurrentPlayerStat)
                 TotalLosses := CurrentPlayerStat.TotalLosses + 1
@@ -95,7 +96,7 @@ player_stat_manager := class():
 
     # TotalKills に AddValue の値を加算する
     UpdateTotalKillsStat(Agent:agent, AddValue:int):void=
-        if(Player := player[Agent], CurrentPlayerStat := PlayerStatMap[Player]):
+        if(Player := player[Agent], Player.IsActive[], CurrentPlayerStat := PlayerStatMap[Player]):
             NewStat := player_stat:
                 MakeUpdatedPlayerStat<constructor>(CurrentPlayerStat)
                 TotalKills := CurrentPlayerStat.TotalKills + AddValue
@@ -103,7 +104,7 @@ player_stat_manager := class():
     
     # TotalDeaths に AddValue の値を加算する
     UpdateTotalDeathsStat(Agent:agent, AddValue:int):void=
-        if(Player := player[Agent], CurrentPlayerStat := PlayerStatMap[Player]):
+        if(Player := player[Agent], Player.IsActive[], CurrentPlayerStat := PlayerStatMap[Player]):
             NewStat := player_stat:
                 MakeUpdatedPlayerStat<constructor>(CurrentPlayerStat)
                 TotalDeaths := CurrentPlayerStat.TotalDeaths + AddValue
@@ -111,7 +112,7 @@ player_stat_manager := class():
 
     # TotalStartBombs に AddValue の値を加算する
     UpdateTotalStartBombsStat(Agent:agent, AddValue:int):void=
-        if(Player := player[Agent], CurrentPlayerStat := PlayerStatMap[Player]):
+        if(Player := player[Agent], Player.IsActive[], CurrentPlayerStat := PlayerStatMap[Player]):
             NewStat := player_stat:
                 MakeUpdatedPlayerStat<constructor>(CurrentPlayerStat)
                 TotalStartBombs := CurrentPlayerStat.TotalStartBombs + AddValue
@@ -119,7 +120,7 @@ player_stat_manager := class():
     
     # TotalStopBombs に AddValue の値を加算する
     UpdateTotalStopBombsStat(Agent:agent, AddValue:int):void=
-        if(Player := player[Agent], CurrentPlayerStat := PlayerStatMap[Player]):
+        if(Player := player[Agent], Player.IsActive[], CurrentPlayerStat := PlayerStatMap[Player]):
             NewStat := player_stat:
                 MakeUpdatedPlayerStat<constructor>(CurrentPlayerStat)
                 TotalStopBombs := CurrentPlayerStat.TotalStopBombs + AddValue
@@ -127,7 +128,7 @@ player_stat_manager := class():
 
     # # InMatch を Flag に変更する
     # UpdateInMatchStat(Agent:agent, Flag:logic):void=
-    #     if(Player := player[Agent], CurrentPlayerStat := PlayerStatMap[Player]):
+    #     if(Player := player[Agent], Player.IsActive[], CurrentPlayerStat := PlayerStatMap[Player]):
     #         NewStat := player_stat:
     #             MakeUpdatedPlayerStat<constructor>(CurrentPlayerStat)
     #             InMatch := Flag
@@ -135,7 +136,7 @@ player_stat_manager := class():
 
     # # PenaltyEndTime を EndTime に変更する
     # UpdatePenaltyEndTimeStat(Agent:agent, EndTime:float):void=
-    #     if(Player := player[Agent], CurrentPlayerStat := PlayerStatMap[Player]):
+    #     if(Player := player[Agent], Player.IsActive[], CurrentPlayerStat := PlayerStatMap[Player]):
     #         NewStat := player_stat:
     #             MakeUpdatedPlayerStat<constructor>(CurrentPlayerStat)
     #             PenaltyEndTime := EndTime
@@ -143,7 +144,7 @@ player_stat_manager := class():
 
     # WeaponPresets の SetIndex 番目の要素を SetPreset に変更する
     UpdateWeaponPresetsStat(Agent:agent, SetIndex:int, SetPreset:[]weapon_enum):void=
-        if(Player := player[Agent], CurrentPlayerStat := PlayerStatMap[Player]):
+        if(Player := player[Agent], Player.IsActive[], CurrentPlayerStat := PlayerStatMap[Player]):
             var NewWeaponPresets:[][]weapon_enum = array{}
             CurrentWeaponPresets := CurrentPlayerStat.WeaponPresets
 
@@ -163,24 +164,21 @@ player_stat_manager := class():
     ResetPlayerStat(Agent:agent):void=
         if:
             Player := player[Agent]
+            Player.IsActive[]
             PlayerStatMap[Player]
             set PlayerStatMap[Player] = player_stat{}
 
-    # 試合ごとに初期状態（-1）にすべきデータをリセットする
+    # 試合ごとに初期化されるデータを、試合開始前または試合開始後という状態に変更する関数
     ResetGameStats(Agent:agent):void=
-        if(Player := player[Agent], CurrentPlayerStat := PlayerStatMap[Player]):
+        if(Player := player[Agent], Player.IsActive[], CurrentPlayerStat := PlayerStatMap[Player]):
             NewStat := player_stat:
                 MakeUpdatedPlayerStat<constructor>(CurrentPlayerStat)
                 RoundWins := -1
-                CurrentKills := -1
-                CurrentDeaths := -1
-                CurrentStartBombs := -1
-                CurrentStopBombs := -1
             if. set PlayerStatMap[Player] = NewStat
     
-    # 試合ごとにリセットされるデータを０に設定する（プレイヤーが揃ったという意味）
+    # 試合ごとに初期化されるデータを、試合開始直後という状態に変更する関数（プレイヤーが揃ったという意味）
     SetGameStats(Agent:agent):void=
-        if(Player := player[Agent], CurrentPlayerStat := PlayerStatMap[Player]):
+        if(Player := player[Agent], Player.IsActive[], CurrentPlayerStat := PlayerStatMap[Player]):
             NewStat := player_stat:
                 MakeUpdatedPlayerStat<constructor>(CurrentPlayerStat)
                 RoundWins := 0
@@ -193,7 +191,7 @@ player_stat_manager := class():
     ### デバッグ用 ------------------------------------------------------------------------------------
     # WeaponPresetsの中身を表示する関数
     ShowPresets(Agent:agent):void=
-        if(Player := player[Agent], CurrentPlayerStat := PlayerStatMap[Player]):
+        if(Player := player[Agent], Player.IsActive[], CurrentPlayerStat := PlayerStatMap[Player]):
             for(Index->Preset:CurrentPlayerStat.WeaponPresets):
                 Print("プリセット{Index}:")
                 for(Index2->Weapon:Preset):
@@ -208,6 +206,7 @@ player_stat_manager := class():
             Print("Version: {PlayerStats.Version}")
 
             Print("試合ごとに変わるデータ系")
+            Print("RoundWins: {PlayerStats.RoundWins}")
             Print("CurrentKills: {PlayerStats.CurrentKills}")
             Print("CurrentDeaths: {PlayerStats.CurrentDeaths}")
             Print("CurrentStartBombs: {PlayerStats.CurrentStartBombs}")

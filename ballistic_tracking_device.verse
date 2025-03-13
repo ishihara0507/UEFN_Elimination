@@ -64,6 +64,7 @@ ballistic_tracking_device := class(creative_device):
 
     # マップインジケーターを有効化する関数
     EnableMapIndicator():void=
+        Print("マップインジケーターを有効化")
         AttackerMapIndicator.Enable()
         DefenderMapIndicator.Enable()
         for(MapIndicator:BeforeMapIndicators):
@@ -108,6 +109,9 @@ ballistic_tracking_device := class(creative_device):
             MapIndicator.Disable()
         for(MapIndicator:AfterMapIndicatorsA):
             MapIndicator.Enable()
+        AttackerMapIndicator.Disable()
+        DefenderMapIndicator.Disable()
+        DropEvent.Signal()
         
     # RiftPointVolumeB に爆弾が設置されたら実行される関数
     PlantBombAtB(Agent:agent):void=
@@ -115,6 +119,9 @@ ballistic_tracking_device := class(creative_device):
             MapIndicator.Disable()
         for(MapIndicator:AfterMapIndicatorsB):
             MapIndicator.Enable()
+        AttackerMapIndicator.Disable()
+        DefenderMapIndicator.Disable()
+        DropEvent.Signal()
         
     # RiftPointVolumeC に爆弾が設置されたら実行される関数
     PlantBombAtC(Agent:agent):void=
@@ -122,3 +129,6 @@ ballistic_tracking_device := class(creative_device):
             MapIndicator.Disable()
         for(MapIndicator:AfterMapIndicatorsC):
             MapIndicator.Enable()
+        AttackerMapIndicator.Disable()
+        DefenderMapIndicator.Disable()
+        DropEvent.Signal()

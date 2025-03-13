@@ -13,6 +13,8 @@ round_ui_device := class(creative_device):
 
     var TeamWidgets:[]widget = array{canvas{}, canvas{}}
 
+    var RoundStateUIPlayerMap:[player]widget = map{}
+
     # ウィジェット
     var MyTeamTextures:[][]texture_block = array{}
     var EnemyTeamTextures:[][]texture_block = array{}
@@ -26,11 +28,6 @@ round_ui_device := class(creative_device):
     # --------------------------------------------------------------------------------------------------------------
 
     # ラウンド結果を表示するUI用 --------------------------------------------------------------------------------------
-    @editable
-    DisplayTime:float = 4.0
-
-    @editable
-    SideSwitchDisplayTime:float = 3.0
 
     @editable
     WinMTHudDevices:[]hud_message_device = array{} # 自分のチームが勝利したときの、自分のチーム側のウィジェット
@@ -59,20 +56,7 @@ round_ui_device := class(creative_device):
     #  -------------------------------------------------------------------------------------------------------------
 
     OnBegin<override>()<suspends>:void=
-        # ラウンド結果を表示するUI用 -------------------------------------------------------
-        for(HudDevice:WinMTHudDevices):
-            HudDevice.SetDisplayTime(DisplayTime)
-
-        for(HudDevice:WinETHudDevices):
-            HudDevice.SetDisplayTime(DisplayTime)
-
-        for(HudDevice:LoseMTHudDevices):
-            HudDevice.SetDisplayTime(DisplayTime)
-
-        for(HudDevice:LoseETHudDevices):
-            HudDevice.SetDisplayTime(DisplayTime)
-
-        RoundCountHudDevice.SetDisplayTime(DisplayTime)
+        return
 
     # ラウンドの進行状況を表すUIを全プレイヤーに付与する関数
     AddRoundStateUI(TeamRemainingMap:[team]int, TeamWinsMap:[team]int):void=
@@ -101,8 +85,8 @@ round_ui_device := class(creative_device):
         TeamCollection := GetPlayspace().GetTeamCollection()
         TeamArray := TeamCollection.GetTeams()
         for(Index := 0 .. 1):
-            for(Agent:TeamCollection.GetAgents[TeamArray[Index]], PlayerUI := GetPlayerUI[player[Agent]]):
-                if(Widget := TeamWidgets[Index]):
+            for(Agent:TeamCollection.GetAgents[TeamArray[Index]], Player := player[Agent], PlayerUI := GetPlayerUI[Player]):
+                if(Widget := TeamWidgets[Index], set RoundStateUIPlayerMap[Player] = Widget):
                     PlayerUI.AddWidget(Widget)
 
     # ラウンドの進行状況を表すUIを全プレイヤーから削除する関数
@@ -296,8 +280,13 @@ round_ui_device := class(creative_device):
                         else:
                             Texture.SetImage(Textures.Human_Dark)
 
+    # ラウンドの進行状況を表すUIを更新する関数
+    RemoveRoundStateUI(Players:[]player):void=
+        for(Player->Widget:RoundStateUIPlayerMap, PlayerUI := GetPlayerUI[Player]):
+            PlayerUI.RemoveWidget(Widget)
+
     # ラウンド結果を表示するUIを全プレイヤーに付与する関数
-    ShowRoundResult(TeamWinsMap:[team]int, RoundCount:int, ORoundWinTeam:?team)<suspends>:void=
+    ShowRoundResult(TeamWinsMap:[team]int, RoundCount:int, ORoundWinTeam:?team):void=
         TeamCollection := GetPlayspace().GetTeamCollection()
         TeamArray := TeamCollection.GetTeams()
 
@@ -311,6 +300,7 @@ round_ui_device := class(creative_device):
                 var MTIndex:int = -1
                 var ETIndex:int = -1
                 for(Team2:TeamArray, Wins := TeamWinsMap[Team2]):
+                    Print("チームの勝利数: {Wins}")
                     if(Team2 = Team):
                         set MTIndex = if(Team2 = RoundWinTeam). Wins - 1 else. Wins
                     else:
@@ -322,7 +312,12 @@ round_ui_device := class(creative_device):
                         RoundCountHudDevice.Show(Agent, S2M("Round {RoundCount}"))
                         MTHudDevice.Show(Agent)
                         ETHudDevice.Show(Agent)
-        Sleep(DisplayTime)
+
+    HideRoundResult(GamePlayers:[]player):void=
+        HudDevices := WinMTHudDevices + LoseMTHudDevices + WinETHudDevices + LoseETHudDevices
+        for(Player:GamePlayers):
+            for(HudDevice:HudDevices):
+                HudDevice.Hide(Player)
 
     # 黒半透明の背景を全プレイヤーに表示する関数
     ShowBackground(GamePlayers:[]player):void=
@@ -333,17 +328,16 @@ round_ui_device := class(creative_device):
         for(Player:GamePlayers):
             BackgroundHudDevice.Hide(Player)
 
-    ShowHideSideSwitch(GamePlayers:[]player)<suspends>:void=
+    ShowSideSwitch(GamePlayers:[]player):void=
         for(Player:GamePlayers):
             SideSwitchHudDevice.Show(Player)
 
-        Sleep(SideSwitchDisplayTime)
-
+    HideSideSwitch(GamePlayers:[]player):void=
         for(Player:GamePlayers):
             SideSwitchHudDevice.Hide(Player)
 
     # ラウンド開始前に各プレイヤーに今何陣営かを表示する関数
-    ShowHideSide(GamePlayers:[]player)<suspends>:void=
+    ShowSide(GamePlayers:[]player):void=
         TeamCollection := GetPlayspace().GetTeamCollection()
         TeamArray := TeamCollection.GetTeams()
 
@@ -355,8 +349,7 @@ round_ui_device := class(creative_device):
                 for(Agent:Agents):
                     DefendersHudDevice.Show(Agent)
 
-        Sleep(SideSwitchDisplayTime)
-
+    HideSide(GamePlayers:[]player):void=
         for(Player:GamePlayers):
             AttackersHudDevice.Hide(Player)
             DefendersHudDevice.Hide(Player)

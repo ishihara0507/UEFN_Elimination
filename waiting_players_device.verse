@@ -12,6 +12,9 @@ waiting_players_device := class(creative_device):
     GameFlowDevice:game_flow_device = game_flow_device{}
 
     @editable
+    SavePresetDevice:save_preset_device = save_preset_device{}
+
+    @editable
     PlayerSpawners:[]player_spawner_device = array{} # マップに入ったときにスポーンするやつ
 
     @editable
@@ -36,6 +39,11 @@ waiting_players_device := class(creative_device):
     MessageHud:hud_message_device = hud_message_device{}
     @editable
     CountDownHud:hud_message_device = hud_message_device{}
+    
+    @editable
+    VsMTHudDevice:hud_message_device = hud_message_device{}
+    @editable
+    VsETHudDevice:hud_message_device = hud_message_device{}
 
     @editable
     VoteStartPopupDevice:popup_dialog_device = popup_dialog_device{} # 人数が揃っていない状態で試合を始めていいかを確認するためのデバイス
@@ -54,6 +62,7 @@ waiting_players_device := class(creative_device):
     StartDelay:int = 5 # プレイヤーがそろってから試合を開始するまでの秒数
 
     DisplayPopupTime:float = 10.0 # ポップアップを表示する時間
+    VsPlayerNameDisplayTime:float = 5.0
 
     CompleteVoteEvent:event() = event(){}
     VoteResultEvent:event() = event(){}
@@ -131,7 +140,8 @@ waiting_players_device := class(creative_device):
                         PlayerStatsManager.InitializePlayerStat(Player) # 念のため初期化処理
                         PlayerStatsManager.SetGameStats(Player)
 
-                    TeleportToStage() # 全プレイヤーをステージに送る
+                    SavePresetDevice.KillAllPresetsUI() # プリセット登録UIを全プレイヤーから削除する
+                    ShowVsUIAndTeleportToStage() # 参加するプレイヤーの名前を見せて、ステージへのテレポートも行う
 
                     set GameFlowDevice.GameStarted = true # 試合開始の合図
                     break
@@ -175,6 +185,53 @@ waiting_players_device := class(creative_device):
             for(Player:T2):
                 ClassSelector2.ChangeClass(Player)
 
+    # messageを結合する関数（間に改行を挟む）
+    CombineMsg<localizes>(Msg:message, Msg2:message):message="{Msg}\n{Msg2}"
+
+    # 各チームのプレイヤーネームテキストを作成する関数
+    GenPlayerNamesMsg():[team]message=
+        TeamCollection := GetPlayspace().GetTeamCollection()
+        TeamArray := TeamCollection.GetTeams()
+        var TeamMsgMap:[team]message = map{}
+
+        for(Team:TeamArray, Agents := TeamCollection.GetAgents[Team]):
+            if(Agents.Length > 0):
+                for(Index->Agent:Agents, Player := player[Agent]):
+                    PlayerName := GetAgentName(Player)
+                    if(Index = 0):
+                        if. set TeamMsgMap[Team] = PlayerName
+                    else if(DeforeMsg := TeamMsgMap[Team]):
+                        AfterMsg := CombineMsg(DeforeMsg, PlayerName)
+                        if. set TeamMsgMap[Team] = AfterMsg
+            else:
+                EmptyMsg := S2M("")
+                if. set TeamMsgMap[Team] = EmptyMsg
+
+        return TeamMsgMap
+    
+    # 試合開始前に各チームのプレイヤーの名前を表示するUIを付与する関数
+    ShowVsUIAndTeleportToStage()<suspends>:void=
+        TeamCollection := GetPlayspace().GetTeamCollection()
+        TeamArray := TeamCollection.GetTeams()
+
+        TeamMsgMap := GenPlayerNamesMsg()
+
+        for(Team:TeamArray, Agents := TeamCollection.GetAgents[Team]):
+            for(Agent:Agents):
+                for(Team2->Msg:TeamMsgMap):
+                    if(Team2 = Team):
+                        VsMTHudDevice.Show(Agent, Msg)
+                    else:
+                        VsETHudDevice.Show(Agent, Msg)
+
+        Sleep(VsPlayerNameDisplayTime / 2.0)
+        TeleportToStage()
+        Sleep(VsPlayerNameDisplayTime / 2.0)
+
+        for(Player:GamePlayers):
+            VsMTHudDevice.Hide(Player)
+            VsETHudDevice.Hide(Player)
+
     # すべてのプレイヤーを静止させてから、ステージにテレポートさせる関数
     TeleportToStage():void=
         for(Index->ClassDesigner:ClassDesigners, Teleporters := TeleportersArray[Index]):
@@ -196,7 +253,7 @@ waiting_players_device := class(creative_device):
         VoteStartPopupDevice.Hide()
         
         Print("VoteYesCount: {VoteYesCount}, VoteNoCount: {VoteNoCount}")
-        if(VoteYesCount >= VoteNoCount, not VoteYesCount = 0 and VoteNoCount = 0):
+        if(VoteYesCount >= VoteNoCount, not (VoteYesCount = 0 and VoteNoCount = 0)):
             Print("必要な人数を{PlayerNum}人に変更します")
             set ThisMatchPlayerNum = PlayerNum
             MessageHud.Hide()

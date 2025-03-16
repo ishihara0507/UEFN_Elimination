@@ -16,9 +16,6 @@ game_flow_device := class(creative_device):
     ### @editable系 ---------------------------------------------------------------------
     # 自作デバイス
     @editable
-    SavePresetDevice:save_preset_device = save_preset_device{}
-    
-    @editable
     SelectPresetDevice:select_preset_device = select_preset_device{}
     
     @editable
@@ -29,7 +26,7 @@ game_flow_device := class(creative_device):
 
     # いろいろ
     @editable
-    StartTeleporters:[]teleporter_device = array{}
+    StartPlayerSpawners:[]player_spawner_device = array{}
 
     @editable
     ClassDesigners:[]class_designer_device = array{} # 要素１をクラス２のやつに、要素２をクラス３のやつに設定する必要がある
@@ -76,12 +73,6 @@ game_flow_device := class(creative_device):
 
     @editable
     StartDelayHud:hud_message_device = hud_message_device{} # 試合開始直前のカウントダウンを表示するHUD（数字を大きめにしたいから別で用意）
-    
-    @editable
-    VsMTHudDevice:hud_message_device = hud_message_device{}
-
-    @editable
-    VsETHudDevice:hud_message_device = hud_message_device{}
 
     @editable
     VictoryHudDevice:hud_message_device = hud_message_device{}
@@ -122,10 +113,10 @@ game_flow_device := class(creative_device):
 
     RoundTime:int = 300
 
+    BallisticTime:int = 45 # バリスティックの仕掛けを起動してから爆発するまでの時間
+
     RoundResultDisplayTime:float = 4.0
-
     SideSwitchDisplayTime:float = 3.0
-
     VictoryAndDefeatTime:float = 5.0 # 勝利、敗北UIを表示する秒数
 
     PlayerStatsManager:player_stat_manager = player_stat_manager{}
@@ -164,7 +155,8 @@ game_flow_device := class(creative_device):
 
     # ラウンドの処理を実行する関数
     RoundStart()<suspends>:void=
-        var Count:int = 0
+        var Count:int = 0  
+        var KilledPlayers:[]player = array{} # そのラウンドでキルされたプレイヤー（退出でReamingMapの値を減らす判定のために用意）
         var TeamRemainingMap:[team]int = map{}
         var TeamWinsMap:[team]int = map{}
         var PlayerTeamMap:[player]team = map{} # 退出したプレイヤーがどのチームに所属していたかを判定する用
@@ -179,6 +171,7 @@ game_flow_device := class(creative_device):
         for(Player:GamePlayers):
             GoldHudDevice.Hide(Player)
             ItemRemover.Remove(Player)
+            PlayerStatsManager.UpdateRoundCountStat(Player) # ラウンドカウント１増やす
 
         # 現在のラウンド数を取得
         RoundCount := CalcRoundCount()
@@ -192,8 +185,6 @@ game_flow_device := class(creative_device):
 
         # 最初のラウンドだったら、ムービーを流す
         if(RoundCount = 1):
-            SavePresetDevice.KillAllPresetsUI() # プリセット登録UIを全プレイヤーから削除する
-            ShowVsUI() # 対戦相手を表示するUIを付与して、一定時間後に削除
             StageCinemaDevice.Play()
             StageCinemaDevice.StoppedEvent.Await()
             # プレイヤーの静止状態を解除する
@@ -212,16 +203,20 @@ game_flow_device := class(creative_device):
 
         # TeamRemainingMap と TeamWinsMap を初期化する
         for(Team:TeamArray, Agents := TeamCollection.GetAgents[Team], set TeamRemainingMap[Team] = 0):
-            for(Agent:Agents, Player := player[Agent]):
+            for(Agent:Agents, Player := player[Agent], GamePlayers.Find[Player]):
                 if. set TeamRemainingMap[Team] += 1
         for(Team:TeamArray, Agents := TeamCollection.GetAgents[Team]):
             for(Agent:Agents):
                 OPlayerStats := PlayerStatsManager.GetPlayerStats(Agent)
                 if(PlayerStats := OPlayerStats?, Wins := PlayerStats.RoundWins):
                     if. set TeamWinsMap[Team] = Wins
-
+        for(Team:TeamArray, not TeamWinsMap[Team]): # プレイヤーが１人もいない状況の対策
+            for(Team2:TeamArray, not Team = Team2, ETWins := TeamWinsMap[Team2]):
+                if. set TeamWinsMap[Team] = (RoundCount - 1) - ETWins
+            
         # ラウンドUIを初期化して表示
-        RoundUIDevice.AddRoundStateUI(TeamRemainingMap, TeamWinsMap)
+        RoundUIDevice.AddRoundStatusUI(TeamRemainingMap, TeamWinsMap)
+        RoundUIDevice.UpdateRoundTimeText(S2M("{CalcElapsedTime(RoundTime)}"))
 
         # 武器を付与する（自作デバイスを使って実装した）
         for(Player:GamePlayers):
@@ -239,7 +234,7 @@ game_flow_device := class(creative_device):
         StartDelayHud.Hide()
 
         # マップインジケーターを有効化する
-        BallisticTrackingDevice.EnableMapIndicator()
+        BallisticTrackingDevice.InitializeMapIndicators()
 
         # バリアを無効化
         for(BarrierZone:BarrierZones):
@@ -248,10 +243,21 @@ game_flow_device := class(creative_device):
         # ラウンド終了待ち
         var ORoundWinTeam:?team = false
         race:
+            block: # ラウンド開始時点で一方のチームが０人だったら、もう一方のチームを勝者として即座にラウンドを終了させるための処理（試合終了にはしない。面倒だから）
+                Sleep(0.1)
+                OWinTeam := CheckRoundEnd(TeamRemainingMap)
+                if(WinTeam := OWinTeam?):
+                    set ORoundWinTeam = OWinTeam
+                else:
+                    Sleep(1000.0) # ラウンドの最長時間より長ければ何秒でもいい
+
             loop: # プレイヤー退出待ち
                 LeavingPlayer:player = GetPlayspace().PlayerRemovedEvent().Await()
-                if. (Team := PlayerTeamMap[LeavingPlayer], set TeamRemainingMap[Team] -= 1)
-                RoundUIDevice.UpdateRoundStateUI(TeamRemainingMap, TeamWinsMap)
+                if:
+                    not KilledPlayers.Find[LeavingPlayer] # 退出したプレイヤーがキルされていなかったら
+                    Team := PlayerTeamMap[LeavingPlayer] 
+                    set TeamRemainingMap[Team] -= 1
+                RoundUIDevice.UpdateRoundStatusUI(TeamRemainingMap, TeamWinsMap)
                 # ラウンド終了判定
                 OWinTeam := CheckRoundEnd(TeamRemainingMap)
                 if(WinTeam := OWinTeam?):
@@ -264,8 +270,13 @@ game_flow_device := class(creative_device):
 
             loop: # 一方のチームの全滅待ち
                 EliminatedAgent := KillEvent.Await() # キルされたプレイヤー
-                if. (Team := TeamCollection.GetTeam[EliminatedAgent], set TeamRemainingMap[Team] -= 1)
-                RoundUIDevice.UpdateRoundStateUI(TeamRemainingMap, TeamWinsMap)
+                if:
+                    EliminatedPlayer := player[EliminatedAgent]
+                    EliminatedPlayer.IsActive[]
+                    set KilledPlayers += array{EliminatedPlayer}
+                    Team := TeamCollection.GetTeam[EliminatedAgent]
+                    set TeamRemainingMap[Team] -= 1
+                RoundUIDevice.UpdateRoundStatusUI(TeamRemainingMap, TeamWinsMap)
                 # ラウンド終了判定
                 OWinTeam := CheckRoundEnd(TeamRemainingMap)
                 if(WinTeam := OWinTeam?):
@@ -278,12 +289,12 @@ game_flow_device := class(creative_device):
 
             block: # 制限時間終了（守備チームの勝利）
                 set Count = RoundTime
-                RoundUIDevice.UpdateRoundStateUITimeText(S2M("{CalcElapsedTime(Count)}"))
+                RoundUIDevice.UpdateRoundTimeText(S2M("{CalcElapsedTime(Count)}"))
 
                 loop:
                     Sleep(1.0)
                     set Count -= 1
-                    RoundUIDevice.UpdateRoundStateUITimeText(S2M("{CalcElapsedTime(Count)}"))
+                    RoundUIDevice.UpdateRoundTimeText(S2M("{CalcElapsedTime(Count)}"))
                     if(Count <= 0 or IsBombActivated?):
                         break
                         
@@ -294,6 +305,7 @@ game_flow_device := class(creative_device):
 
             block: # 爆弾設置
                 BombStartEvent.Await()
+
                 race:
                     block:
                         BombStopEvent.Await()
@@ -304,15 +316,16 @@ game_flow_device := class(creative_device):
                         set ORoundWinTeam = option{TeamArray[0]} # 攻撃側の勝ち
                         Print("爆弾が爆発しました")
 
+        # 爆弾を置けないようにする
+        for(RiftPointVolume:RiftPointVolumes):
+            RiftPointVolume.Disable()
+
+        # セレクトウェポンUIを削除する
+        SelectPresetDevice.KillAllPresetsUI()
+
         # プレイヤーがダメージを受けないようにする
         for(Player:GamePlayers, Fort := Player.GetFortCharacter[]):
             Fort.SetVulnerability(false)
-            Fort.PutInStasis(stasis_args{
-                AllowTurning := true # 移動停止中に回転できるか
-                AllowFalling := false # 移動停止中に落下するか
-                AllowEmotes := false # 移動停止中にエモートできるか
-            })
-
 
         ### ラウンド終了処理
         var OWinAgent:?agent = false
@@ -338,18 +351,6 @@ game_flow_device := class(creative_device):
             Sleep(RoundResultDisplayTime)
             RoundUIDevice.HideRoundResult(GamePlayers)
 
-            # 陣営変更
-            if(Mod[RoundCount, SideSwitchNum] = 0):
-                Print("陣営変更")
-                RoundUIDevice.ShowSideSwitch(GamePlayers)
-                for(Index->ClassDesigner:ClassDesigners):
-                    for(Index2->ClassSelector:ClassSelectors, not Index = Index2):
-                        for(Agent:ClassDesigner.GetClassMembers()):
-                            ClassSelector.ChangeClass(Agent)
-            Sleep(SideSwitchDisplayTime)
-            RoundUIDevice.HideSideSwitch(GamePlayers)
-            RoundUIDevice.HideBackground(GamePlayers) # 暗転解除
-
         # ゲーム終了判定
         var OGameWinTeam:?team = false
         for(Team->Wins:TeamWinsMap):
@@ -373,33 +374,83 @@ game_flow_device := class(creative_device):
             
         # ラウンドを終える
         if(WinAgent := OWinAgent?, not OGameWinTeam?): # 試合勝利チームが存在していなかったら
+            # 陣営変更
+            if(Mod[RoundCount, SideSwitchNum] = 0):
+                Print("陣営変更")
+                var ATKMembers:[]agent = array{}
+                var DEFMembers:[]agent = array{}
+
+                RoundUIDevice.ShowSideSwitch(GamePlayers)
+                for(Index->ClassDesigner:ClassDesigners):
+                    if(Index = 0):
+                        set ATKMembers = ClassDesigner.GetClassMembers()
+                    else:
+                        set DEFMembers = ClassDesigner.GetClassMembers()
+
+                for(Index->ClassSelector:ClassSelectors):
+                    if(Index = 0):
+                        for(Agent:DEFMembers):
+                            ClassSelector.ChangeClass(Agent)
+                            Print(GetAgentName(Agent))
+                            Print("クラスを攻撃側に変更")
+                    else:
+                        for(Agent:ATKMembers):
+                            ClassSelector.ChangeClass(Agent)
+                            Print(GetAgentName(Agent))
+                            Print("クラスを守備側に変更")
+                Sleep(SideSwitchDisplayTime)
+                RoundUIDevice.HideSideSwitch(GamePlayers)
+            RoundUIDevice.HideBackground(GamePlayers) # 暗転解除
+
+            # ラウンドを更新
+            Print("ラウンドを更新")
             RoundSettingDevice.EndRound(WinAgent)
         else: # 試合勝利チームが存在していたら
-            RoundUIDevice.RemoveRoundStateUI(GamePlayers) # ラウンド進行状況UIを削除する
+            RoundUIDevice.HideBackground(GamePlayers) # 暗転解除
+            RoundUIDevice.HideRoundTimeText()
+            RoundUIDevice.HideBallisticTime()
+            RoundUIDevice.RemoveRoundStatusUI() # ラウンド進行状況UIを削除する
             GameEndMutator.Enable()
             BillBoard.ShowText()
             MatchMakingDevice.Enable()
-            for(Index->Player:GamePlayers, Fort := Player.GetFortCharacter[], Teleporter := StartTeleporters[Index]):
-                Teleporter.Teleport(Player)
-                ItemRemover.Remove(Player)
-                Fort.SetHealth(100.0)
-                Fort.SetShield(100.0)
-                Fort.ReleaseFromStasis()
+            
+            Rotation := MakeRotation(vector3{X := 0.0, Y := 0.0, Z := -1.0}, 87.998901) # リスポーン時の向きを作成（これは最初にマップにスポーンしたときの向き）
+            for(Index->Player:GamePlayers, Spawner := StartPlayerSpawners[Index]):
+                Player.Respawn(Spawner.GetTransform().Translation, Rotation)
+                
+            Sleep(0.1)
+
             EndGame() # 試合終了処理
-            Print("ゲーム終了処理完了！！！！！！")
             return
                     
 
+    # バリスティックの仕掛けが爆発するまでの制限時間を表示・更新する関数
+    ShowBallisticTime()<suspends>:void=
+        RoundUIDevice.ShowBallisticTime(S2M("{CalcElapsedTime(BallisticTime)}"))
+
+        var Count:int = BallisticTime
+        
+        race:
+            loop:
+                Sleep(1.0)
+                set Count -= 1
+                RoundUIDevice.UpdateBallisticTimeText(S2M("{CalcElapsedTime(Count)}"))
+                if(Count <= 0):
+                    break
+            BombStopEvent.Await()
+            BombEndEvent.Await()
 
     # バリスティックの仕掛けを起動したときに実行する関数
     RiftPlant(Agent:agent):void=
         BombStartEvent.Signal()
+
+        RoundUIDevice.HideRoundTimeText() # 制限時間のテキストを非表示にする
+
+        spawn{ShowBallisticTime()}
+
         set IsBombActivated = true
         for(RiftPointVolume:RiftPointVolumes):
             RiftPointVolume.Disable()
-
-        RoundUIDevice.HideRoundStateUITimeText() # 制限時間のテキストを非表示にする
-        RoundUIDevice.UpdateRoundStateUIBallistic(true) # バリスティックの仕掛けの画像を表示
 
         PlayerStatsManager.UpdateCurrentStartBombsStat(Agent)
         
@@ -415,77 +466,43 @@ game_flow_device := class(creative_device):
     
     # 現在のラウンド数を算出する関数
     CalcRoundCount():int=
-        var RoundCounts:[]int = array{0, 0}
+        var TrueCoundCount:int = 0
+        var RoundCountSameFlag:logic = true
+        var RoundWinSameFlag:logic = true
 
-        # 各チームのラウンド勝利数を取得
-        for(Index->ClassDesigner:ClassDesigners, Agent := ClassDesigner.GetClassMembers()[0]):
-            OPlayerStats := PlayerStatsManager.GetPlayerStats(Agent)
-            if:
-                PlayerStats := OPlayerStats?
-                Wins := PlayerStats.RoundWins
-                set RoundCounts[Index] = Wins
+        # 全員のラウンドカウントが一致しているかを判定
+        var OBeforeRoundCount:?int = false
+        for(Player:GamePlayers):
+            OPlayerStats := PlayerStatsManager.GetPlayerStats(Player)
+            if(PlayerStats := OPlayerStats?, RoundCount := PlayerStats.RoundCount):
+                if(BeforeRoundCount := OBeforeRoundCount?):
+                    if(not RoundCount = BeforeRoundCount):
+                        set RoundCountSameFlag = false
+                else:
+                    set OBeforeRoundCount = option{RoundCount}
+                    set TrueCoundCount = RoundCount
 
-        RoundCount := if(N := RoundCounts[0], N2 := RoundCounts[1]). N + N2 + 1 else. 1
-
-        # 各チームでプレイヤーのラウンド勝利数が一致しているかを確認
-        var SameFlag:logic = true
-        for(ClassDesigner:ClassDesigners, SameFlag?):
-            var Wins:int = 0
-            for(Index->Agent:ClassDesigner.GetClassMembers(), SameFlag?):
+        # 各チームのラウンド勝利数が一致しているかを判定
+        TeamCollection := GetPlayspace().GetTeamCollection()
+        TeamArray := TeamCollection.GetTeams()
+        for(Team:TeamArray, Agents := TeamCollection.GetAgents[Team]):
+            var OBeforeRoundWins:?int = false
+            for(Agent:Agents):
                 OPlayerStats := PlayerStatsManager.GetPlayerStats(Agent)
-                if(PlayerStats := OPlayerStats?):
-                    if(Index = 0):
-                        set Wins = PlayerStats.RoundWins
-                    else if(not Wins = PlayerStats.RoundWins):
-                        set SameFlag = false
-                
-        # 一致していなかったらバグってるので、ゲームを１ラウンドから始める
-        if(SameFlag = false):
+                if(PlayerStats := OPlayerStats?, RoundWins := PlayerStats.RoundWins):
+                    if(BeforeRoundWins := OBeforeRoundWins?):
+                        if(not RoundWins = BeforeRoundWins):
+                            set RoundWinSameFlag = false
+                    else:
+                        set OBeforeRoundWins = option{RoundWins}
+
+        # 異なっていたら、試合状況をリセットする（試合が1ラウンドから始まる）
+        if(not RoundCountSameFlag? or not RoundWinSameFlag?):
             for(Player:GamePlayers):
                 PlayerStatsManager.SetGameStats(Player)
-
-        return if(SameFlag = false). 1 else. RoundCount
-
-    # messageを結合する関数（間に改行を挟む）
-    CombineMsg<localizes>(Msg:message, Msg2:message):message="{Msg}\n{Msg2}"
-
-    # 各チームのプレイヤーネームテキストを作成する関数
-    GenPlayerNamesMsg():[team]message=
-        TeamCollection := GetPlayspace().GetTeamCollection()
-        TeamArray := TeamCollection.GetTeams()
-        var TeamMsgMap:[team]message = map{}
-
-        for(Team:TeamArray, Agents := TeamCollection.GetAgents[Team]):
-            for(Index->Agent:Agents, Player := player[Agent]): # プレイヤー以外の名前は取らないようにする
-                PlayerName := GetAgentName(Player)
-                if(Index = 0):
-                    if. set TeamMsgMap[Team] = PlayerName
-                else if(DeforeMsg := TeamMsgMap[Team]):
-                    AfterMsg := CombineMsg(DeforeMsg, PlayerName)
-                    if. set TeamMsgMap[Team] = AfterMsg
-
-        return TeamMsgMap
-
-    # 試合開始前に各チームのプレイヤーの名前を表示するUIを付与する関数
-    ShowVsUI()<suspends>:void=
-        TeamCollection := GetPlayspace().GetTeamCollection()
-        TeamArray := TeamCollection.GetTeams()
-
-        TeamMsgMap := GenPlayerNamesMsg()
-
-        for(Team:TeamArray, Agents := TeamCollection.GetAgents[Team]):
-            for(Agent:Agents):
-                for(Team2->Msg:TeamMsgMap):
-                    if(Team2 = Team):
-                        VsMTHudDevice.Show(Agent, Msg)
-                    else:
-                        VsETHudDevice.Show(Agent, Msg)
-
-        Sleep(5.0)
-
-        for(Player:GamePlayers):
-            VsMTHudDevice.Hide(Player)
-            VsETHudDevice.Hide(Player)
+            set TrueCoundCount = 1
+        
+        return TrueCoundCount
 
     OnPlayerEliminated(Result:elimination_result):void=
         Print("キル発生!!")
@@ -544,13 +561,19 @@ game_flow_device := class(creative_device):
         var TeamWinsMap:[team]int = map{}
         var OWinningTeam:?team = false
 
-        # TeamWinsMap と OWinningTeam を設定
+        # TeamWinsMap を作成
         for(Team:TeamArray, Agents := TeamCollection.GetAgents[Team]):
             for(Agent:Agents):
                 OPlayerStats := PlayerStatsManager.GetPlayerStats(Agent)
                 if:
                     PlayerStats := OPlayerStats?
                     set TeamWinsMap[Team] = PlayerStats.RoundWins
+        RoundCount := CalcRoundCount()
+        for(Team:TeamArray, not TeamWinsMap[Team]): # プレイヤーが１人もいない状況の対策
+            for(Team2:TeamArray, not Team = Team2, ETWins := TeamWinsMap[Team2]):
+                if. set TeamWinsMap[Team] = RoundCount - ETWins
+        
+        # OWinningTeam 作成
         for(Team->Wins:TeamWinsMap, Wins >= WinningPoints):
             set OWinningTeam = option{Team}
 

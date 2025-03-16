@@ -345,7 +345,7 @@ weapons_select_device := class(creative_device):
             DefaultJustification := text_justification.Center
             DefaultTextColor := White
         YesBtn := button_loud{DefaultText:=S2M("Yes")}
-        NoBtn := button_loud{DefaultText:=S2M("No")}
+        NoBtn := button_regular{DefaultText:=S2M("No")}
 
         ConfirmWidget := canvas:
             Slots := array:

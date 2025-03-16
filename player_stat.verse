@@ -7,6 +7,7 @@ player_stat := class<final><persistable>:
     Version:int = 0 # 現在の統計テーブルのバージョン
 
     # 今回の試合のデータ系（ラウンドの仕掛けを使うので、クラス変数などでデータを保持できないから）
+    RoundCount:int = -1 # 試合の現在のラウンド数
     RoundWins:int = -1 # このプレイヤーが所属するチームが何ラウンド勝利したかを保持
     CurrentKills:int = -1
     CurrentDeaths:int = -1
@@ -37,6 +38,7 @@ MakeUpdatedPlayerStat<constructor>(OldStats:player_stat)<transacts> := player_st
     Version := OldStats.Version
 
     # 今回の試合のデータ系
+    RoundCount := OldStats.RoundCount
     RoundWins := OldStats.RoundWins
     CurrentKills := OldStats.CurrentKills
     CurrentDeaths := OldStats.CurrentDeaths

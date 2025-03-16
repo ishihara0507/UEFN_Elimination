@@ -38,6 +38,14 @@ player_stat_manager := class():
                 Version := CurrentPlayerStat.Version + 1
             if. set PlayerStatMap[Player] = NewStat
 
+    # RoundCount を１加算する
+    UpdateRoundCountStat(Agent:agent):void=
+        if(Player := player[Agent], Player.IsActive[], CurrentPlayerStat := PlayerStatMap[Player]):
+            NewStat := player_stat:
+                MakeUpdatedPlayerStat<constructor>(CurrentPlayerStat)
+                RoundCount := CurrentPlayerStat.RoundCount + 1
+            if. set PlayerStatMap[Player] = NewStat
+
     # RoundWins を１加算する
     UpdateRoundWinsStat(Agent:agent):void=
         if(Player := player[Agent], Player.IsActive[], CurrentPlayerStat := PlayerStatMap[Player]):
@@ -80,6 +88,7 @@ player_stat_manager := class():
 
     # TotalWins を１加算する
     UpdateTotalWinsStat(Agent:agent):void=
+        Print("UpdateTotalWinsStatが呼び出された")
         if(Player := player[Agent], Player.IsActive[], CurrentPlayerStat := PlayerStatMap[Player]):
             NewStat := player_stat:
                 MakeUpdatedPlayerStat<constructor>(CurrentPlayerStat)
@@ -181,6 +190,7 @@ player_stat_manager := class():
         if(Player := player[Agent], Player.IsActive[], CurrentPlayerStat := PlayerStatMap[Player]):
             NewStat := player_stat:
                 MakeUpdatedPlayerStat<constructor>(CurrentPlayerStat)
+                RoundCount := 0
                 RoundWins := 0
                 CurrentKills := 0
                 CurrentDeaths := 0
@@ -206,6 +216,7 @@ player_stat_manager := class():
             Print("Version: {PlayerStats.Version}")
 
             Print("試合ごとに変わるデータ系")
+            Print("RoundCount: {PlayerStats.RoundCount}")
             Print("RoundWins: {PlayerStats.RoundWins}")
             Print("CurrentKills: {PlayerStats.CurrentKills}")
             Print("CurrentDeaths: {PlayerStats.CurrentDeaths}")

@@ -71,6 +71,8 @@ select_preset_ui := class:
     var MaxPage:int = 0
     WeaponSlotsNum:int = 5
 
+    UpValue:float = 100.0 # ウィジェット全体を中央からどれだけ上に移動させるか（0.0にすると武器画像の列が上下左右中央に配置される）
+
     # ウィジェット
     var BackBtn:button_loud = button_loud{}
     var SelectBtn:button_loud = button_loud{}
@@ -89,9 +91,9 @@ select_preset_ui := class:
         set MaxPage = Presets.Length
 
         # 各ウィジェットの設定
-        set BackBtn = button_loud{DefaultText:=S2M("Back")}
+        set BackBtn = button_loud{DefaultText:=S2M("<")}
         set SelectBtn = button_loud{DefaultText:=S2M("Select")}
-        set NextBtn = button_loud{DefaultText:=S2M("Next")}
+        set NextBtn = button_loud{DefaultText:=S2M(">")}
         for(Index := 0 .. MaxPage - 1):
             set PagiNationBorders += array{color_block{DefaultColor := color{R := 0.8, G := 0.0, B := 0.0}, DefaultDesiredSize := vector2{X := 50.0, Y := 50.0}}} # 赤
             set PagiNationBlocks += array{color_block{DefaultColor := color{R := 1.0, G := 1.0, B := 1.0}, DefaultDesiredSize := vector2{X := 38.0, Y := 38.0}}} # 白 
@@ -111,19 +113,19 @@ select_preset_ui := class:
             canvas_slot:
                 Widget := BackBtn
                 Anchors := anchors{Minimum:=vector2{X:=0.5,Y:=0.5},Maximum:=vector2{X:=0.5,Y:=0.5}}
-                Offsets := margin{Left := -260.0, Top := 250.0, Right := -0.0, Bottom := -0.0}
+                Offsets := margin{Left := -150.0, Top := 250.0 - UpValue, Right := -0.0, Bottom := -0.0}
                 Alignment := vector2{X:=0.5,Y:=0.5}
                 SizeToContent := true
             canvas_slot:
                 Widget := SelectBtn
                 Anchors := anchors{Minimum:=vector2{X:=0.5,Y:=0.5},Maximum:=vector2{X:=0.5,Y:=0.5}}
-                Offsets := margin{Left := 0.0, Top := 250.0, Right := 250.0, Bottom := 80.0}
+                Offsets := margin{Left := 0.0, Top := 250.0 - UpValue, Right := 200.0, Bottom := 80.0}
                 Alignment := vector2{X:=0.5,Y:=0.5}
                 SizeToContent := false
             canvas_slot:
                 Widget := NextBtn
                 Anchors := anchors{Minimum:=vector2{X:=0.5,Y:=0.5},Maximum:=vector2{X:=0.5,Y:=0.5}}
-                Offsets := margin{Left := 260.0, Top := 250.0, Right := -0.0, Bottom := -0.0}
+                Offsets := margin{Left := 150.0, Top := 250.0 - UpValue, Right := -0.0, Bottom := -0.0}
                 Alignment := vector2{X:=0.5,Y:=0.5}
                 SizeToContent := true
             
@@ -131,7 +133,7 @@ select_preset_ui := class:
         set NewSlots += array:
             canvas_slot:
                 Anchors := anchors{Minimum:=vector2{X:=0.5,Y:=0.5},Maximum:=vector2{X:=0.5,Y:=0.5}}
-                Offsets := margin{Left := 0.0, Top := 150.0, Right := -0.0, Bottom := -0.0}
+                Offsets := margin{Left := 0.0, Top := 150.0 - UpValue, Right := -0.0, Bottom := -0.0}
                 Alignment := vector2{X:=0.5,Y:=0.5}
                 SizeToContent := true
                 Widget := stack_box:
@@ -170,7 +172,7 @@ select_preset_ui := class:
         set NewSlots += array:
             canvas_slot:
                 Anchors := anchors{Minimum:=vector2{X:=0.5,Y:=0.5},Maximum:=vector2{X:=0.5,Y:=0.5}}
-                Offsets := margin{Left := 0.0, Top := 0.0, Right := -0.0, Bottom := -0.0}
+                Offsets := margin{Left := 0.0, Top := 0.0 - UpValue, Right := -0.0, Bottom := -0.0}
                 Alignment := vector2{X:=0.5,Y:=0.5}
                 SizeToContent := true
                 Widget := overlay:
@@ -216,19 +218,6 @@ select_preset_ui := class:
 
     # UIを更新する関数
     UpdateUI():void=
-        
-        # Backボタンの表示・非表示切り替え
-        if(PageNum <= 0):
-            BackBtn.SetVisibility(widget_visibility.Hidden)
-        else:
-            BackBtn.SetVisibility(widget_visibility.Visible)
-
-        # Nextボタンの表示・非表示切り替え
-        if(PageNum >= MaxPage - 1):
-            NextBtn.SetVisibility(widget_visibility.Hidden)
-        else:
-            NextBtn.SetVisibility(widget_visibility.Visible)
-
         # ページネーションの更新
         for(Index->PagiNationBorder:PagiNationBorders):
             if(Index = PageNum):
@@ -265,14 +254,18 @@ select_preset_ui := class:
 
                 if(SelectedBtn = "Back"):
                     Print("Backボタンが押された")
-                    if(PageNum > 0): # なくても大丈夫だったけど一応
+                    if(PageNum = 0):
+                        set PageNum = MaxPage - 1
+                    else:
                         set PageNum -= 1
                 else if(SelectedBtn = "Select"):
                     Print("Selectボタンが押された")
                     KillEvent.Signal(PageNum)
                 else if(SelectedBtn = "Next"):
                     Print("Nextボタンが押された")
-                    if(PageNum < MaxPage - 1): # なくても大丈夫だったけど一応
+                    if(PageNum = MaxPage - 1):
+                        set PageNum = 0
+                    else:
                         set PageNum += 1
 
                 UpdateUI()

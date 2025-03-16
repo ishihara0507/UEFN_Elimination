@@ -9,11 +9,16 @@ using { /Fortnite.com/Teams }
 round_ui_device := class(creative_device):
 
     # ラウンドの進行結果を表示するUI用---------------------------------------------------------------------------------
+    @editable
+    RoundTimeHudDevice:hud_message_device = hud_message_device{} # ラウンドの制限時間を表示するようにテキスト
+    @editable
+    BallisticTimeHudDevice:hud_message_device = hud_message_device{} # 爆弾が設置された後のテキスト
+
     var TeamPlayerNum:int = 0
 
     var TeamWidgets:[]widget = array{canvas{}, canvas{}}
 
-    var RoundStateUIPlayerMap:[player]widget = map{}
+    var PlayerRoundStatusUIMap:[player]round_status_ui = map{}
 
     # ウィジェット
     var MyTeamTextures:[][]texture_block = array{}
@@ -21,10 +26,6 @@ round_ui_device := class(creative_device):
 
     var MyPointTexts:[]text_block = array{}
     var EnemyPointTexts:[]text_block = array{}
-
-    var TimeText:text_block = text_block{}
-
-    var BallisticTexture:texture_block = texture_block{DefaultImage := Textures.Ballistic, DefaultDesiredSize := vector2{X := 100.0, Y := 100.0}}
     # --------------------------------------------------------------------------------------------------------------
 
     # ラウンド結果を表示するUI用 --------------------------------------------------------------------------------------
@@ -55,235 +56,57 @@ round_ui_device := class(creative_device):
     DefendersHudDevice:hud_message_device = hud_message_device{}
     #  -------------------------------------------------------------------------------------------------------------
 
-    OnBegin<override>()<suspends>:void=
-        return
-
     # ラウンドの進行状況を表すUIを全プレイヤーに付与する関数
-    AddRoundStateUI(TeamRemainingMap:[team]int, TeamWinsMap:[team]int):void=
+    AddRoundStatusUI(TeamRemainingMap:[team]int, TeamWinsMap:[team]int):void=
+        RemoveRoundStatusUI() # 一応前回のラウンド進行状況UIを削除しておく（一度のラウンド中に複数回付与することはないはずだけど）
+
         if(Num := Quotient[MatchPlayerNum, 2]):
             set TeamPlayerNum = Num
-            
-        # ウィジェットの初期化
-        set MyTeamTextures = for(Index := 0 .. 1):
-            for(Index2 := 0 .. TeamPlayerNum - 1):
-                texture_block{DefaultImage := Textures.Human_Blue, DefaultDesiredSize := vector2{X := 54.0, Y := 54.0}}
-
-        set EnemyTeamTextures = for(Index := 0 .. 1):
-            for(Index2 := 0 .. TeamPlayerNum - 1):
-                texture_block{DefaultImage := Textures.Human_Red, DefaultDesiredSize := vector2{X := 54.0, Y := 54.0}}
-
-        set MyPointTexts = for(Index := 0 .. 1):
-            text_block{DefaultText:=S2M("0")}
-        
-        set EnemyPointTexts = for(Index := 0 .. 1):
-            text_block{DefaultText:=S2M("0")}
-
-        set TimeText = text_block{DefaultText:=S2M("00:00")}
-
-        CreateRoundStateUI(TeamRemainingMap, TeamWinsMap)
 
         TeamCollection := GetPlayspace().GetTeamCollection()
-        TeamArray := TeamCollection.GetTeams()
-        for(Index := 0 .. 1):
-            for(Agent:TeamCollection.GetAgents[TeamArray[Index]], Player := player[Agent], PlayerUI := GetPlayerUI[Player]):
-                if(Widget := TeamWidgets[Index], set RoundStateUIPlayerMap[Player] = Widget):
-                    PlayerUI.AddWidget(Widget)
+        for(Team:TeamCollection.GetTeams(), Agents := TeamCollection.GetAgents[Team]):
+            for(Agent:Agents, Player := player[Agent], PlayerUI := GetPlayerUI[Player]):
+                RoundStatusUI := round_status_ui:
+                    PlayerTeam := Team
+                    TeamCollection := TeamCollection
+                    TeamPlayerNum := TeamPlayerNum
+                RoundStatusUI.Init(TeamRemainingMap, TeamWinsMap)
+                PlayerUI.AddWidget(RoundStatusUI.Widget)
+                if. set PlayerRoundStatusUIMap[Player] = RoundStatusUI
 
-    # ラウンドの進行状況を表すUIを全プレイヤーから削除する関数
-    DeleteRoundStateUI():void=
-        TeamCollection := GetPlayspace().GetTeamCollection()
-        TeamArray := TeamCollection.GetTeams()
-        for(Index := 0 .. 1):
-            for(Agent:TeamCollection.GetAgents[TeamArray[Index]], PlayerUI := GetPlayerUI[player[Agent]]):
-                if(Widget := TeamWidgets[Index]):
-                    PlayerUI.RemoveWidget(Widget)
-                    
-    # ラウンドの進行状況を表すUIを作成する関数
-    CreateRoundStateUI(TeamRemainingMap:[team]int, TeamWinsMap:[team]int):void=
-        for(Index := 0 .. 1):
-            var NewSlots:[]canvas_slot = array{}
-
-            # 制限時間を表示するウィジェットを追加
-            set NewSlots += array:
-                canvas_slot:
-                    Anchors := anchors{Minimum:=vector2{X:=0.5,Y:=0.0},Maximum:=vector2{X:=0.5,Y:=0.0}}
-                    Offsets := margin{Left := 0.0, Top := 60.0, Right := -0.0, Bottom := -0.0}
-                    Alignment := vector2{X:=0.5,Y:=0.5}
-                    SizeToContent := true
-                    ZOrder := 0
-                    Widget := color_block{DefaultColor := color{R := 1.0, G := 1.0, B := 1.0}, DefaultDesiredSize := vector2{X := 128.0, Y := 54.0}}
-                canvas_slot:
-                    Anchors := anchors{Minimum:=vector2{X:=0.5,Y:=0.0},Maximum:=vector2{X:=0.5,Y:=0.0}}
-                    Offsets := margin{Left := 0.0, Top := 60.0, Right := -0.0, Bottom := -0.0}
-                    Alignment := vector2{X:=0.5,Y:=0.5}
-                    SizeToContent := true
-                    ZOrder := 1
-                    Widget := TimeText
-                canvas_slot:
-                    Anchors := anchors{Minimum:=vector2{X:=0.5,Y:=0.0},Maximum:=vector2{X:=0.5,Y:=0.0}}
-                    Offsets := margin{Left := 0.0, Top := 60.0, Right := -0.0, Bottom := -0.0}
-                    Alignment := vector2{X:=0.5,Y:=0.5}
-                    SizeToContent := true
-                    ZOrder := 1
-                    Widget := BallisticTexture
-
-            # ラウンド勝利数を追加
-            if(MyPointText := MyPointTexts[Index], EnemyPointText := EnemyPointTexts[Index]):
-                set NewSlots += array:
-                    canvas_slot:
-                        Anchors := anchors{Minimum:=vector2{X:=0.5,Y:=0.0},Maximum:=vector2{X:=0.5,Y:=0.0}}
-                        Offsets := margin{Left := -100.0, Top := 60.0, Right := -0.0, Bottom := -0.0}
-                        Alignment := vector2{X:=0.5,Y:=0.5}
-                        SizeToContent := true
-                        Widget := MyPointText
-                    canvas_slot:
-                        Anchors := anchors{Minimum:=vector2{X:=0.5,Y:=0.0},Maximum:=vector2{X:=0.5,Y:=0.0}}
-                        Offsets := margin{Left := 100.0, Top := 60.0, Right := -0.0, Bottom := -0.0}
-                        Alignment := vector2{X:=0.5,Y:=0.5}
-                        SizeToContent := true
-                        Widget := EnemyPointText
-
-            # 味方チームのプレイヤーアイコンを追加
-            if(MyTeamTexture := MyTeamTextures[Index]):
-                set NewSlots += array:
-                    canvas_slot:
-                        Anchors := anchors{Minimum:=vector2{X:=0.5,Y:=0.0},Maximum:=vector2{X:=0.5,Y:=0.0}}
-                        Offsets := margin{Left := -216.0, Top := 60.0, Right := -0.0, Bottom := -0.0}
-                        Alignment := vector2{X:=0.5,Y:=0.5}
-                        SizeToContent := true
-                        Widget := stack_box:
-                            Orientation := orientation.Horizontal
-                            Slots := for(Index2 := 0 .. TeamPlayerNum - 1):
-                                var PaddingLeft:float = -10.0
-                                var Texture:texture_block = texture_block{DefaultImage := Textures.Human_Blue}
-                                if(Index2 = 0):
-                                    set PaddingLeft = 0.0
-                                if(T := MyTeamTexture[Index2]):
-                                    set Texture = T
-                                
-                                stack_box_slot:
-                                    Padding := margin{Left := PaddingLeft}
-                                    HorizontalAlignment := horizontal_alignment.Fill
-                                    VerticalAlignment := vertical_alignment.Fill
-                                    Widget := Texture
-
-            # 敵チームのプレイヤーアイコンを追加
-            if(EnemyTeamTexture := EnemyTeamTextures[Index]):
-                set NewSlots += array:
-                    canvas_slot:
-                        Anchors := anchors{Minimum:=vector2{X:=0.5,Y:=0.0},Maximum:=vector2{X:=0.5,Y:=0.0}}
-                        Offsets := margin{Left := 216.0, Top := 60.0, Right := -0.0, Bottom := -0.0}
-                        Alignment := vector2{X:=0.5,Y:=0.5}
-                        SizeToContent := true
-                        Widget := stack_box:
-                            Orientation := orientation.Horizontal
-                            Slots := for(Index2 := 0 .. TeamPlayerNum - 1):
-                                var PaddingLeft:float = -10.0
-                                var Texture:texture_block = texture_block{DefaultImage := Textures.Human_Red}
-                                if(Index2 = 0):
-                                    set PaddingLeft = 0.0
-                                if(T := EnemyTeamTexture[Index2]):
-                                    set Texture = T
-                                
-                                stack_box_slot:
-                                    Padding := margin{Left := PaddingLeft}
-                                    HorizontalAlignment := horizontal_alignment.Fill
-                                    VerticalAlignment := vertical_alignment.Fill
-                                    Widget := Texture
-
-            if. set TeamWidgets[Index] = canvas{Slots := NewSlots}
-
-        UpdateRoundStateUIBallistic(false)
-        UpdateRoundStateUI(TeamRemainingMap, TeamWinsMap) # 表示・非表示を設定する
-
-    # バリスティックの仕掛けの画像の表示・非表示を変更する関数
-    UpdateRoundStateUIBallistic(State:logic):void=
-        if(State?): # State = true
-            BallisticTexture.SetVisibility(widget_visibility.Visible)
-        else:
-            BallisticTexture.SetVisibility(widget_visibility.Hidden)
-
-    # ラウンドの進行状況を表すUIを更新する関数（制限時間部分のみ）
-    # 制限時間は頻繁に更新するので別関数として用意
-    UpdateRoundStateUITimeText(Message:message):void=
-        TimeText.SetText(Message)
-
-    # 制限時間のテキストを非表示にする関数
-    HideRoundStateUITimeText():void=
-        TimeText.SetVisibility(widget_visibility.Hidden)
+        RoundTimeHudDevice.Show(S2M(""))
 
     # ラウンドの進行状況を表すUIを更新する関数（制限時間部分は除く）
-    UpdateRoundStateUI(TeamRemainingMap:[team]int, TeamWinsMap:[team]int):void=
+    UpdateRoundStatusUI(TeamRemainingMap:[team]int, TeamWinsMap:[team]int):void=
+        for(RoundStatusUI:PlayerRoundStatusUIMap):
+            RoundStatusUI.UpdateUI(TeamRemainingMap, TeamWinsMap)
 
-        TeamCollection := GetPlayspace().GetTeamCollection()
-        TeamArray := TeamCollection.GetTeams()
+    # ラウンドの進行状況を表すUIを全プレイヤーから削除する関数
+    RemoveRoundStatusUI():void=
+        for(Player->RoundStatusUI:PlayerRoundStatusUIMap, PlayerUI := GetPlayerUI[Player]):
+            PlayerUI.RemoveWidget(RoundStatusUI.Widget)
 
-        # 味方チームのラウンド勝利数を更新
-        for(Index->Team:TeamArray):
-            if(MyPointText := MyPointTexts[Index], Point := TeamWinsMap[Team]):
-                MyPointText.SetText(S2M("{Point}"))
+        RoundTimeHudDevice.Hide()
+        BallisticTimeHudDevice.Hide()
+                    
+    # ラウンドの進行状況を表すUIを更新する関数（制限時間部分のみ）
+    # 制限時間は頻繁に更新するので別関数として用意
+    UpdateRoundTimeText(Message:message):void=
+        RoundTimeHudDevice.SetText(Message)
 
-        # 敵チームのラウンド勝利数を更新
-        for(Index->Team:TeamArray):
-            for(Index2 := 0 .. 1):
-                if(not Index = Index2, EnemyPointText := EnemyPointTexts[Index2], Point := TeamWinsMap[Team]):
-                    EnemyPointText.SetText(S2M("{Point}"))
+    # 制限時間のテキストを非表示にする関数
+    HideRoundTimeText():void=
+        RoundTimeHudDevice.Hide()
+        
+    ShowBallisticTime(Message:message):void=
+        RoundTimeHudDevice.Hide()
+        BallisticTimeHudDevice.Show(Message)
 
-        # 味方チームの生存者リストを更新
-        for(Index->MyTeamTexture:MyTeamTextures):
-            var PlayerNum:int = 0
+    UpdateBallisticTimeText(Message:message):void=
+        BallisticTimeHudDevice.SetText(Message)
 
-            # プレイヤーのテクスチャ自体を表示するかしないかを設定
-            if(Num := TeamCollection.GetAgents[TeamArray[Index]].Length):
-                set PlayerNum = Num
-                var HiddenNum:int = TeamPlayerNum - PlayerNum
-                for(Texture:MyTeamTexture):
-                    if(HiddenNum > 0):
-                        Texture.SetVisibility(widget_visibility.Hidden)
-                        set HiddenNum -= 1
-                    else:
-                        Texture.SetVisibility(widget_visibility.Visible)
-
-            # プレイヤーがキルされているかいなかを設定
-            var DeathPlayerNum:int = 0
-            if(RemainingNum := TeamRemainingMap[TeamArray[Index]]):
-                set DeathPlayerNum = PlayerNum - RemainingNum
-                for(Texture:MyTeamTexture):
-                    if(DeathPlayerNum > 0):
-                        Texture.SetImage(Textures.Human_Dark)
-                        set DeathPlayerNum -= 1
-                    else:
-                        Texture.SetImage(Textures.Human_Blue)
-
-        # 敵チームの生存者リストを更新
-        for(Index->EnemyTeamTexture:EnemyTeamTextures):
-            for(Index2 := 0 .. 1):
-                # プレイヤーのテクスチャ自体を表示するかしないかを設定
-                var PlayerNum:int = 0
-                if(not Index = Index2, Num := TeamCollection.GetAgents[TeamArray[Index2]].Length):
-                    set PlayerNum = Num
-                    for(Texture:EnemyTeamTexture):
-                        if(PlayerNum > 0):
-                            Texture.SetVisibility(widget_visibility.Visible)
-                            set PlayerNum -= 1
-                        else:
-                            Texture.SetVisibility(widget_visibility.Hidden)
-
-                # プレイヤーがキルされているかいかなを設定
-                var RemainingNum:int = 0
-                if(not Index = Index2, Num := TeamRemainingMap[TeamArray[Index2]]):
-                    set RemainingNum = Num
-                    for(Texture:EnemyTeamTexture):
-                        if(RemainingNum > 0):
-                            Texture.SetImage(Textures.Human_Red)
-                            set RemainingNum -= 1
-                        else:
-                            Texture.SetImage(Textures.Human_Dark)
-
-    # ラウンドの進行状況を表すUIを更新する関数
-    RemoveRoundStateUI(Players:[]player):void=
-        for(Player->Widget:RoundStateUIPlayerMap, PlayerUI := GetPlayerUI[Player]):
-            PlayerUI.RemoveWidget(Widget)
+    HideBallisticTime():void=
+        BallisticTimeHudDevice.Hide()
 
     # ラウンド結果を表示するUIを全プレイヤーに付与する関数
     ShowRoundResult(TeamWinsMap:[team]int, RoundCount:int, ORoundWinTeam:?team):void=
@@ -291,7 +114,7 @@ round_ui_device := class(creative_device):
         TeamArray := TeamCollection.GetTeams()
 
         if(RoundWinTeam := ORoundWinTeam?):
-            for(Team:TeamArray, Agents := TeamCollection.GetAgents[Team]):
+            for(Index->Team:TeamArray, Agents := TeamCollection.GetAgents[Team]):
                 # 使用するHUDデバイスの配列を決定する
                 MTHudDevices := if(Team = RoundWinTeam). WinMTHudDevices else. LoseMTHudDevices
                 ETHudDevices := if(Team = RoundWinTeam). WinETHudDevices else. LoseETHudDevices
@@ -300,7 +123,6 @@ round_ui_device := class(creative_device):
                 var MTIndex:int = -1
                 var ETIndex:int = -1
                 for(Team2:TeamArray, Wins := TeamWinsMap[Team2]):
-                    Print("チームの勝利数: {Wins}")
                     if(Team2 = Team):
                         set MTIndex = if(Team2 = RoundWinTeam). Wins - 1 else. Wins
                     else:
@@ -314,7 +136,7 @@ round_ui_device := class(creative_device):
                         ETHudDevice.Show(Agent)
 
     HideRoundResult(GamePlayers:[]player):void=
-        HudDevices := WinMTHudDevices + LoseMTHudDevices + WinETHudDevices + LoseETHudDevices
+        HudDevices := array{RoundCountHudDevice} + WinMTHudDevices + LoseMTHudDevices + WinETHudDevices + LoseETHudDevices
         for(Player:GamePlayers):
             for(HudDevice:HudDevices):
                 HudDevice.Hide(Player)
@@ -353,3 +175,183 @@ round_ui_device := class(creative_device):
         for(Player:GamePlayers):
             AttackersHudDevice.Hide(Player)
             DefendersHudDevice.Hide(Player)
+
+
+round_status_ui := class:
+    PlayerTeam:team
+    TeamCollection:fort_team_collection
+    TeamPlayerNum:int
+
+    var Widget:widget = canvas{}
+
+    # ウィジェット
+    var MyTeamTextures:[]texture_block = array{}
+    var EnemyTeamTextures:[]texture_block = array{}
+
+    var MyPointText:text_block = text_block{}
+    var EnemyPointText:text_block = text_block{}
+
+    var TimeText:text_block = text_block{}
+
+    Init(TeamRemainingMap:[team]int, TeamWinsMap:[team]int):void=
+        # ウィジェットの初期化
+        set MyTeamTextures = for(Index2 := 0 .. TeamPlayerNum - 1):
+            texture_block{DefaultImage := Textures.Human_Blue, DefaultDesiredSize := vector2{X := 54.0, Y := 54.0}}
+
+        set EnemyTeamTextures = for(Index2 := 0 .. TeamPlayerNum - 1):
+                texture_block{DefaultImage := Textures.Human_Red, DefaultDesiredSize := vector2{X := 54.0, Y := 54.0}}
+
+        set MyPointText = text_block{DefaultText:=S2M("0")}
+        
+        set EnemyPointText = text_block{DefaultText:=S2M("0")}
+
+        CreateUI()
+        UpdateUI(TeamRemainingMap, TeamWinsMap)
+
+    # ラウンドの進行状況を表すUIを作成する関数
+    CreateUI():void=
+        var NewSlots:[]canvas_slot = array{}
+
+        # 制限時間を表示するウィジェットを追加
+        set NewSlots += array:
+            canvas_slot:
+                Anchors := anchors{Minimum:=vector2{X:=0.5,Y:=0.0},Maximum:=vector2{X:=0.5,Y:=0.0}}
+                Offsets := margin{Left := 0.0, Top := 60.0, Right := -0.0, Bottom := -0.0}
+                Alignment := vector2{X:=0.5,Y:=0.5}
+                SizeToContent := true
+                ZOrder := 0
+                Widget := texture_block{DefaultImage := Textures.RoundTimeBack, DefaultDesiredSize := vector2{X := 130.0, Y := 70.0}}
+
+        # ラウンド勝利数を追加
+        set NewSlots += array:
+            canvas_slot:
+                Anchors := anchors{Minimum:=vector2{X:=0.5,Y:=0.0},Maximum:=vector2{X:=0.5,Y:=0.0}}
+                Offsets := margin{Left := -100.0, Top := 60.0, Right := -0.0, Bottom := -0.0}
+                Alignment := vector2{X:=0.5,Y:=0.5}
+                SizeToContent := true
+                Widget := MyPointText
+            canvas_slot:
+                Anchors := anchors{Minimum:=vector2{X:=0.5,Y:=0.0},Maximum:=vector2{X:=0.5,Y:=0.0}}
+                Offsets := margin{Left := 100.0, Top := 60.0, Right := -0.0, Bottom := -0.0}
+                Alignment := vector2{X:=0.5,Y:=0.5}
+                SizeToContent := true
+                Widget := EnemyPointText
+
+        # 味方チームのプレイヤーアイコンを追加
+        set NewSlots += array:
+            canvas_slot:
+                Anchors := anchors{Minimum:=vector2{X:=0.5,Y:=0.0},Maximum:=vector2{X:=0.5,Y:=0.0}}
+                Offsets := margin{Left := -216.0, Top := 60.0, Right := -0.0, Bottom := -0.0}
+                Alignment := vector2{X:=0.5,Y:=0.5}
+                SizeToContent := true
+                Widget := stack_box:
+                    Orientation := orientation.Horizontal
+                    Slots := for(Index := 0 .. TeamPlayerNum - 1):
+                        var PaddingLeft:float = -10.0
+                        var Texture:texture_block = texture_block{DefaultImage := Textures.Human_Blue}
+                        if(Index = 0):
+                            set PaddingLeft = 0.0
+                        if(T := MyTeamTextures[Index]):
+                            set Texture = T
+                        
+                        stack_box_slot:
+                            Padding := margin{Left := PaddingLeft}
+                            HorizontalAlignment := horizontal_alignment.Fill
+                            VerticalAlignment := vertical_alignment.Fill
+                            Widget := Texture
+
+        # 敵チームのプレイヤーアイコンを追加
+        set NewSlots += array:
+            canvas_slot:
+                Anchors := anchors{Minimum:=vector2{X:=0.5,Y:=0.0},Maximum:=vector2{X:=0.5,Y:=0.0}}
+                Offsets := margin{Left := 216.0, Top := 60.0, Right := -0.0, Bottom := -0.0}
+                Alignment := vector2{X:=0.5,Y:=0.5}
+                SizeToContent := true
+                Widget := stack_box:
+                    Orientation := orientation.Horizontal
+                    Slots := for(Index := 0 .. TeamPlayerNum - 1):
+                        var PaddingLeft:float = -10.0
+                        var Texture:texture_block = texture_block{DefaultImage := Textures.Human_Red}
+                        if(Index = 0):
+                            set PaddingLeft = 0.0
+                        if(T := EnemyTeamTextures[Index]):
+                            set Texture = T
+                        
+                        stack_box_slot:
+                            Padding := margin{Left := PaddingLeft}
+                            HorizontalAlignment := horizontal_alignment.Fill
+                            VerticalAlignment := vertical_alignment.Fill
+                            Widget := Texture
+
+        set Widget = canvas{Slots := NewSlots}
+
+    # ラウンドの進行状況を表すUIを更新する関数（制限時間部分は除く）
+    UpdateUI(TeamRemainingMap:[team]int, TeamWinsMap:[team]int):void=
+        TeamArray := TeamCollection.GetTeams()
+        var OEnemyTeam:?team = false
+
+        for(Team:TeamArray, Team <> PlayerTeam):
+            set OEnemyTeam = option{Team}
+
+        # 味方チームのラウンド勝利数を更新 --------------------------------------------
+        if(Point := TeamWinsMap[PlayerTeam]):
+            MyPointText.SetText(S2M("{Point}"))
+
+        # 敵チームのラウンド勝利数を更新 --------------------------------------------
+        if(EnemyTeam := OEnemyTeam?, Point := TeamWinsMap[EnemyTeam]):
+            EnemyPointText.SetText(S2M("{Point}"))
+
+        # 味方チームの生存者リストを更新 --------------------------------------------
+        var MTPlayerNum:int = 0
+        if(Num := TeamCollection.GetAgents[PlayerTeam].Length):
+            if(Num <= TeamPlayerNum):
+                set MTPlayerNum = Num
+            else:
+                set MTPlayerNum = TeamPlayerNum
+
+        # プレイヤーのテクスチャ自体を表示するかしないかを設定
+        var MTHiddenNum:int = TeamPlayerNum - MTPlayerNum
+        for(Texture:MyTeamTextures):
+            if(MTHiddenNum > 0):
+                Texture.SetVisibility(widget_visibility.Hidden)
+                set MTHiddenNum -= 1
+            else:
+                Texture.SetVisibility(widget_visibility.Visible)
+
+        # プレイヤーがキルされているかいないかを設定
+        var MTDeathPlayerNum:int = 0
+        if(RemainingNum := TeamRemainingMap[PlayerTeam]):
+            set MTDeathPlayerNum = MTPlayerNum - RemainingNum
+            for(Texture:MyTeamTextures):
+                if(MTDeathPlayerNum > 0):
+                    Texture.SetImage(Textures.Human_Dark)
+                    set MTDeathPlayerNum -= 1
+                else:
+                    Texture.SetImage(Textures.Human_Blue)
+
+        # 敵チームの生存者リストを更新 --------------------------------------------
+        var ETPlayerNum:int = 0
+        if(EnemyTeam := OEnemyTeam?, Num := TeamCollection.GetAgents[EnemyTeam].Length):
+            if(Num <= TeamPlayerNum):
+                set ETPlayerNum = Num
+            else:
+                set ETPlayerNum = TeamPlayerNum
+
+        # プレイヤーのテクスチャ自体を表示するかしないかを設定
+        for(Texture:EnemyTeamTextures):
+            if(ETPlayerNum > 0):
+                Texture.SetVisibility(widget_visibility.Visible)
+                set ETPlayerNum -= 1
+            else:
+                Texture.SetVisibility(widget_visibility.Hidden)
+
+        # プレイヤーがキルされているかいないかを設定
+        var ETRemainingNum:int = 0
+        if(EnemyTeam := OEnemyTeam?, Num := TeamRemainingMap[EnemyTeam]):
+            set ETRemainingNum = Num
+            for(Texture:EnemyTeamTextures):
+                if(ETRemainingNum > 0):
+                    Texture.SetImage(Textures.Human_Red)
+                    set ETRemainingNum -= 1
+                else:
+                    Texture.SetImage(Textures.Human_Dark)

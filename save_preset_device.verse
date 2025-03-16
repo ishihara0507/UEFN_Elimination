@@ -83,7 +83,7 @@ presets_ui := class:
     var BackBtn:button_loud = button_loud{}
     var SaveBtn:button_loud = button_loud{}
     var NextBtn:button_loud = button_loud{}
-    var ExitBtn:button_loud = button_loud{}
+    var ExitBtn:button_regular = button_regular{}
 
     var PagiNationBlocks:[]color_block = array{}
     var PagiNationBorders:[]color_block = array{}
@@ -107,10 +107,10 @@ presets_ui := class:
         set MaxPage = Presets.Length # 最大ページ数を設定
 
         # 各ウィジェットの設定
-        set BackBtn = button_loud{DefaultText:=S2M("Back")}
+        set BackBtn = button_loud{DefaultText:=S2M("<")}
         set SaveBtn = button_loud{DefaultText:=S2M("Save")}
-        set NextBtn = button_loud{DefaultText:=S2M("Next")}
-        set ExitBtn = button_loud{DefaultText:=S2M("Exit")}
+        set NextBtn = button_loud{DefaultText:=S2M(">")}
+        set ExitBtn = button_regular{DefaultText:=S2M("Exit")}
         for(Index := 0 .. MaxPage - 1):
             set PagiNationBorders += array{color_block{DefaultColor := color{R := 0.8, G := 0.0, B := 0.0}, DefaultDesiredSize := vector2{X := 50.0, Y := 50.0}}} # 赤
             set PagiNationBlocks += array{color_block{DefaultColor := color{R := 1.0, G := 1.0, B := 1.0}, DefaultDesiredSize := vector2{X := 38.0, Y := 38.0}}} # 白 
@@ -130,25 +130,25 @@ presets_ui := class:
             canvas_slot:
                 Widget := BackBtn
                 Anchors := anchors{Minimum:=vector2{X:=0.5,Y:=0.5},Maximum:=vector2{X:=0.5,Y:=0.5}}
-                Offsets := margin{Left := -260.0, Top := 250.0, Right := -0.0, Bottom := -0.0}
+                Offsets := margin{Left := -150.0, Top := 250.0, Right := -0.0, Bottom := -0.0}
                 Alignment := vector2{X:=0.5,Y:=0.5}
                 SizeToContent := true
             canvas_slot:
                 Widget := SaveBtn
                 Anchors := anchors{Minimum:=vector2{X:=0.5,Y:=0.5},Maximum:=vector2{X:=0.5,Y:=0.5}}
-                Offsets := margin{Left := 0.0, Top := 250.0, Right := 250.0, Bottom := 80.0}
+                Offsets := margin{Left := 0.0, Top := 250.0, Right := 200.0, Bottom := 80.0}
                 Alignment := vector2{X:=0.5,Y:=0.5}
                 SizeToContent := false
             canvas_slot:
                 Widget := NextBtn
                 Anchors := anchors{Minimum:=vector2{X:=0.5,Y:=0.5},Maximum:=vector2{X:=0.5,Y:=0.5}}
-                Offsets := margin{Left := 260.0, Top := 250.0, Right := -0.0, Bottom := -0.0}
+                Offsets := margin{Left := 150.0, Top := 250.0, Right := -0.0, Bottom := -0.0}
                 Alignment := vector2{X:=0.5,Y:=0.5}
                 SizeToContent := true
             canvas_slot:
                 Widget := ExitBtn
                 Anchors := anchors{Minimum:=vector2{X:=0.5,Y:=0.5},Maximum:=vector2{X:=0.5,Y:=0.5}}
-                Offsets := margin{Left := 0.0, Top := 360.0, Right := 250.0, Bottom := 80.0}
+                Offsets := margin{Left := 0.0, Top := 350.0, Right := 200.0, Bottom := 80.0}
                 Alignment := vector2{X:=0.5,Y:=0.5}
                 SizeToContent := false
             
@@ -288,7 +288,7 @@ presets_ui := class:
                 Offsets := margin{Left := 0.0, Top := -150.0, Right := -0.0, Bottom := -0.0}
                 Alignment := vector2{X:=0.5,Y:=0.5}
                 SizeToContent := true
-                Widget := color_block{DefaultColor := color{R := 1.0, G := 1.0, B := 0.0}, DefaultDesiredSize := vector2{X := 80.0, Y := 80.0}}
+                Widget := texture_block{DefaultImage := Textures.Arrow, DefaultDesiredSize := vector2{X := 80.0, Y := 80.0}}
 
         set Widget = canvas{Slots := NewSlots}
 
@@ -297,13 +297,6 @@ presets_ui := class:
 
     # UIの更新処理を行う関数
     UpdateUI():void=
-
-        # Backボタンの表示・非表示切り替え
-        if(PageNum <= 0):
-            BackBtn.SetVisibility(widget_visibility.Hidden)
-        else:
-            BackBtn.SetVisibility(widget_visibility.Visible)
-
         # Nextボタンの表示・非表示切り替え
         if(PageNum >= MaxPage - 1):
             NextBtn.SetVisibility(widget_visibility.Hidden)
@@ -358,7 +351,9 @@ presets_ui := class:
 
                 if(SelectedBtn = "Back"):
                     Print("Backボタンが押された")
-                    if(PageNum > 0): # なくても大丈夫だったけど一応
+                    if(PageNum = 0):
+                        set PageNum = MaxPage - 1
+                    else:
                         set PageNum -= 1
                 else if(SelectedBtn = "Save"):
                     Print("Saveボタンが押された")
@@ -386,7 +381,9 @@ presets_ui := class:
                         Print("セーブがキャンセルされました")
                 else if(SelectedBtn = "Next"):
                     Print("Nextボタンが押された")
-                    if(PageNum < MaxPage - 1): # なくても大丈夫だったけど一応
+                    if(PageNum = MaxPage - 1):
+                        set PageNum = 0
+                    else:
                         set PageNum += 1
                 else if(SelectedBtn = "Exit"):
                     Print("Exitボタンが押された")

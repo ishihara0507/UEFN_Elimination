@@ -32,8 +32,9 @@ game_flow_device := class(creative_device):
     ClassDesigners:[]class_designer_device = array{} # 要素１をクラス２のやつに、要素２をクラス３のやつに設定する必要がある
     @editable
     ClassSelectors:[]class_and_team_selector_device = array{}
-    @editable
-    NoneClassSelector:class_and_team_selector_device = class_and_team_selector_device{} # 試合終了時にクラスなしに設定する用
+
+    @editable # 試合後に変更されるクラス
+    GameEndClassSelector:class_and_team_selector_device = class_and_team_selector_device{} 
 
     @editable
     ItemRemover:item_remover_device = item_remover_device{}
@@ -183,6 +184,29 @@ game_flow_device := class(creative_device):
                 if. TeamCollection.AddToTeam[Agent, Team]
                 if. set PlayerTeamMap[player[Agent]] = Team
 
+        # TeamRemainingMap と TeamWinsMap を初期化する
+        for(Team:TeamArray, Agents := TeamCollection.GetAgents[Team], set TeamRemainingMap[Team] = 0):
+            for(Agent:Agents, Player := player[Agent], GamePlayers.Find[Player]):
+                if. set TeamRemainingMap[Team] += 1
+        for(Team:TeamArray, Agents := TeamCollection.GetAgents[Team]):
+            for(Agent:Agents):
+                OPlayerStats := PlayerStatsManager.GetPlayerStats(Agent)
+                if(PlayerStats := OPlayerStats?, Wins := PlayerStats.RoundWins):
+                    if. set TeamWinsMap[Team] = Wins
+        for(Team:TeamArray, not TeamWinsMap[Team]): # プレイヤーが１人もいない状況の対策
+            for(Team2:TeamArray, not Team = Team2, ETWins := TeamWinsMap[Team2]):
+                if. set TeamWinsMap[Team] = (RoundCount - 1) - ETWins
+
+        # 試合が終了していたらここで処理を終える
+        for(Team->Wins:TeamWinsMap):
+            if(Wins >= WinningPoints):
+                GameEndMutator.Enable()
+                BillBoard.ShowText()
+                MatchMakingDevice.Enable()
+
+                EndGame() # 試合終了処理
+                return
+
         # 最初のラウンドだったら、ムービーを流す
         if(RoundCount = 1):
             StageCinemaDevice.Play()
@@ -200,19 +224,6 @@ game_flow_device := class(creative_device):
         for(Player:GamePlayers):
             if(FortCharacter := Player.GetFortCharacter[]):
                 FortCharacter.EliminatedEvent().Subscribe(OnPlayerEliminated)
-
-        # TeamRemainingMap と TeamWinsMap を初期化する
-        for(Team:TeamArray, Agents := TeamCollection.GetAgents[Team], set TeamRemainingMap[Team] = 0):
-            for(Agent:Agents, Player := player[Agent], GamePlayers.Find[Player]):
-                if. set TeamRemainingMap[Team] += 1
-        for(Team:TeamArray, Agents := TeamCollection.GetAgents[Team]):
-            for(Agent:Agents):
-                OPlayerStats := PlayerStatsManager.GetPlayerStats(Agent)
-                if(PlayerStats := OPlayerStats?, Wins := PlayerStats.RoundWins):
-                    if. set TeamWinsMap[Team] = Wins
-        for(Team:TeamArray, not TeamWinsMap[Team]): # プレイヤーが１人もいない状況の対策
-            for(Team2:TeamArray, not Team = Team2, ETWins := TeamWinsMap[Team2]):
-                if. set TeamWinsMap[Team] = (RoundCount - 1) - ETWins
             
         # ラウンドUIを初期化して表示
         RoundUIDevice.AddRoundStatusUI(TeamRemainingMap, TeamWinsMap)
@@ -330,9 +341,18 @@ game_flow_device := class(creative_device):
         ### ラウンド終了処理
         var OWinAgent:?agent = false
         if(RoundWinTeam := ORoundWinTeam?):
+            # もし一方のチームが０人だったら、もう一方のチームを勝利状態にする
+            var NoneTeamFlag:logic = false
+            for(Team:TeamArray, TeamCollection.GetAgents[Team].Length < 1):
+                set NoneTeamFlag = true
+                for(Team2:TeamArray, Team2 <> Team, Agents := TeamCollection.GetAgents[Team2]):
+                    for(Agent:Agents):
+                        PlayerStatsManager.UpdateRoundWinsStat(Agent, WinningPoints)
+                    if. set TeamWinsMap[Team2] = WinningPoints
+
             # 持続データのラウンド勝利数の更新
             for(Agent:TeamCollection.GetAgents[RoundWinTeam]):
-                PlayerStatsManager.UpdateRoundWinsStat(Agent)
+                PlayerStatsManager.UpdateRoundWinsStat(Agent, 1)
                 if(not OWinAgent?):
                     set OWinAgent = option{Agent}
             
@@ -347,9 +367,10 @@ game_flow_device := class(creative_device):
 
             RoundUIDevice.ShowBackground(GamePlayers) # 暗転
 
-            RoundUIDevice.ShowRoundResult(TeamWinsMap, RoundCount, ORoundWinTeam) # ラウンド結果UIの表示
-            Sleep(RoundResultDisplayTime)
-            RoundUIDevice.HideRoundResult(GamePlayers)
+            if(not NoneTeamFlag?):
+                RoundUIDevice.ShowRoundResult(TeamWinsMap, RoundCount, ORoundWinTeam) # ラウンド結果UIの表示
+                Sleep(RoundResultDisplayTime)
+                RoundUIDevice.HideRoundResult(GamePlayers)
 
         # ゲーム終了判定
         var OGameWinTeam:?team = false
@@ -370,12 +391,12 @@ game_flow_device := class(creative_device):
 
             # 全プレイヤーをクラスなしに設定する
             for(Player:GamePlayers):
-                NoneClassSelector.ChangeClass(Player)
+                GameEndClassSelector.ChangeClass(Player)
             
         # ラウンドを終える
-        if(WinAgent := OWinAgent?, not OGameWinTeam?): # 試合勝利チームが存在していなかったら
+        if(WinAgent := OWinAgent?):
             # 陣営変更
-            if(Mod[RoundCount, SideSwitchNum] = 0):
+            if(Mod[RoundCount, SideSwitchNum] = 0, not OGameWinTeam?):
                 Print("陣営変更")
                 var ATKMembers:[]agent = array{}
                 var DEFMembers:[]agent = array{}
@@ -400,28 +421,15 @@ game_flow_device := class(creative_device):
                             Print("クラスを守備側に変更")
                 Sleep(SideSwitchDisplayTime)
                 RoundUIDevice.HideSideSwitch(GamePlayers)
-            RoundUIDevice.HideBackground(GamePlayers) # 暗転解除
 
-            # ラウンドを更新
-            Print("ラウンドを更新")
-            RoundSettingDevice.EndRound(WinAgent)
-        else: # 試合勝利チームが存在していたら
             RoundUIDevice.HideBackground(GamePlayers) # 暗転解除
             RoundUIDevice.HideRoundTimeText()
             RoundUIDevice.HideBallisticTime()
             RoundUIDevice.RemoveRoundStatusUI() # ラウンド進行状況UIを削除する
-            GameEndMutator.Enable()
-            BillBoard.ShowText()
-            MatchMakingDevice.Enable()
-            
-            Rotation := MakeRotation(vector3{X := 0.0, Y := 0.0, Z := -1.0}, 87.998901) # リスポーン時の向きを作成（これは最初にマップにスポーンしたときの向き）
-            for(Index->Player:GamePlayers, Spawner := StartPlayerSpawners[Index]):
-                Player.Respawn(Spawner.GetTransform().Translation, Rotation)
-                
-            Sleep(0.1)
 
-            EndGame() # 試合終了処理
-            return
+            # ラウンドを更新
+            Print("ラウンドを更新")
+            RoundSettingDevice.EndRound(WinAgent)
                     
 
     # バリスティックの仕掛けが爆発するまでの制限時間を表示・更新する関数
@@ -554,7 +562,7 @@ game_flow_device := class(creative_device):
 
         return "{Minutes_zero}{Minutes}:{Seconds_zero}{Seconds}"
 
-    # 試合が終了したラウンドの１つ後のラウンドで実行する関数
+    # 試合が終了したら実行する関数
     EndGame():void=
         TeamCollection := GetPlayspace().GetTeamCollection()
         TeamArray := TeamCollection.GetTeams()
@@ -571,7 +579,7 @@ game_flow_device := class(creative_device):
         RoundCount := CalcRoundCount()
         for(Team:TeamArray, not TeamWinsMap[Team]): # プレイヤーが１人もいない状況の対策
             for(Team2:TeamArray, not Team = Team2, ETWins := TeamWinsMap[Team2]):
-                if. set TeamWinsMap[Team] = RoundCount - ETWins
+                if. set TeamWinsMap[Team] = (RoundCount - 1) - ETWins
         
         # OWinningTeam 作成
         for(Team->Wins:TeamWinsMap, Wins >= WinningPoints):

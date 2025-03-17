@@ -75,6 +75,7 @@ debug_waiting_players_device := class(creative_device):
 
         spawn{OnPlayerLeaved()} # 退出待ちループ関数を実行する
 
+        Sleep(0.0) # スポーン時の処理を先に実行させるために必要
         # プレイヤー待ちループは、試合開始前のみ実行させるようにする
         var NotGameStarted:logic = false
         loop:
@@ -151,6 +152,7 @@ debug_waiting_players_device := class(creative_device):
             Print("試合は始まっている")
 
     OnPlayerSpawn(Agent:agent):void=
+        Print("データを-1に初期化")
         PlayerStatsManager.InitializePlayerStat(Agent) # 持続データをプレイヤーに割り当てる
         PlayerStatsManager.ResetGameStats(Agent) # 試合ごとに-1にするデータを初期化する
         
@@ -165,6 +167,7 @@ debug_waiting_players_device := class(creative_device):
     OnEnterMutator(Agent:agent):void=
         PlayerStatsManager.InitializePlayerStat(Agent) # 持続データをプレイヤーに割り当てる
         PlayerStatsManager.ResetGameStats(Agent) # 試合ごとに-1にするデータを初期化する
+        NoneClassSelector.ChangeClass(Agent) # クラスをクラスなしに設定する
 
     # チーム分けを行う関数。実際にはここではクラスを設定することでチームを分ける
     SplitPlayersToTeams():void=

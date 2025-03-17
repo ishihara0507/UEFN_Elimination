@@ -46,12 +46,12 @@ player_stat_manager := class():
                 RoundCount := CurrentPlayerStat.RoundCount + 1
             if. set PlayerStatMap[Player] = NewStat
 
-    # RoundWins を１加算する
-    UpdateRoundWinsStat(Agent:agent):void=
+    # RoundWins に AddValue の値を加算する
+    UpdateRoundWinsStat(Agent:agent, AddValue:int):void=
         if(Player := player[Agent], Player.IsActive[], CurrentPlayerStat := PlayerStatMap[Player]):
             NewStat := player_stat:
                 MakeUpdatedPlayerStat<constructor>(CurrentPlayerStat)
-                RoundWins := CurrentPlayerStat.RoundWins + 1
+                RoundWins := CurrentPlayerStat.RoundWins + AddValue
             if. set PlayerStatMap[Player] = NewStat
 
     # CurrentKills を１加算する

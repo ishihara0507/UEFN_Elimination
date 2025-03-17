@@ -7,12 +7,12 @@ player_stat := class<final><persistable>:
     Version:int = 0 # 現在の統計テーブルのバージョン
 
     # 今回の試合のデータ系（ラウンドの仕掛けを使うので、クラス変数などでデータを保持できないから）
-    RoundCount:int = -1 # 試合の現在のラウンド数
-    RoundWins:int = -1 # このプレイヤーが所属するチームが何ラウンド勝利したかを保持
-    CurrentKills:int = -1
-    CurrentDeaths:int = -1
-    CurrentStartBombs:int = -1
-    CurrentStopBombs:int = -1
+    RoundCount:int = 0 # 試合の現在のラウンド数
+    RoundWins:int = -1 # このプレイヤーが所属するチームが何ラウンド勝利したかを保持。試合が始まっているかを判定するために必要不可欠。初期値は-1。
+    CurrentKills:int = 0
+    CurrentDeaths:int = 0
+    CurrentStartBombs:int = 0
+    CurrentStopBombs:int = 0
 
     # 全試合のデータ系
     TotalWins:int = 0

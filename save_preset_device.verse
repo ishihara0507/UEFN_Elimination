@@ -297,12 +297,6 @@ presets_ui := class:
 
     # UIの更新処理を行う関数
     UpdateUI():void=
-        # Nextボタンの表示・非表示切り替え
-        if(PageNum >= MaxPage - 1):
-            NextBtn.SetVisibility(widget_visibility.Hidden)
-        else:
-            NextBtn.SetVisibility(widget_visibility.Visible)
-
         # ページネーションの更新
         for(Index->PagiNationBorder:PagiNationBorders):
             if(Index = PageNum):
@@ -402,7 +396,7 @@ presets_ui := class:
             DefaultTextColor := White
             
         SaveYesBtn := button_loud{DefaultText:=S2M("Yes")}
-        SaveNoBtn := button_loud{DefaultText:=S2M("No")}
+        SaveNoBtn := button_regular{DefaultText:=S2M("No")}
 
         ConfirmWidget := canvas:
             Slots := array:

@@ -67,7 +67,7 @@ round_ui_device := class(creative_device):
         for(Team:TeamCollection.GetTeams(), Agents := TeamCollection.GetAgents[Team]):
             for(Agent:Agents, Player := player[Agent], PlayerUI := GetPlayerUI[Player]):
                 RoundStatusUI := round_status_ui:
-                    Agents := GetPlayspace().GetParticipants() ###
+                    Players := GetPlayspace().GetPlayers()
                     PlayerTeam := Team
                     TeamCollection := TeamCollection
                     TeamPlayerNum := TeamPlayerNum
@@ -186,7 +186,7 @@ round_ui_device := class(creative_device):
 
 
 round_status_ui := class:
-    Agents:[]agent ###
+    Players:[]player
     PlayerTeam:team
     TeamCollection:fort_team_collection
     TeamPlayerNum:int
@@ -311,18 +311,9 @@ round_status_ui := class:
             EnemyPointText.SetText(S2M("{Point}"))
 
         # 味方チームの生存者リストを更新 --------------------------------------------
-        ###
         var MTPlayerNum:int = 0
-        for(A:TeamCollection.GetAgents[PlayerTeam], Agents.Find[A]):
+        for(Agent:TeamCollection.GetAgents[PlayerTeam], Players.Find[player[Agent]]):
             set MTPlayerNum += 1
-        ###
-
-        # var MTPlayerNum:int = 0
-        # if(Num := TeamCollection.GetAgents[PlayerTeam].Length):
-        #     if(Num <= TeamPlayerNum):
-        #         set MTPlayerNum = Num
-        #     else:
-        #         set MTPlayerNum = TeamPlayerNum
 
         # プレイヤーのテクスチャ自体を表示するかしないかを設定
         var MTHiddenNum:int = TeamPlayerNum - MTPlayerNum
@@ -345,19 +336,10 @@ round_status_ui := class:
                     Texture.SetImage(Textures.Human_Blue)
 
         # 敵チームの生存者リストを更新 --------------------------------------------
-        ###
         var ETPlayerNum:int = 0
         if(EnemyTeam := OEnemyTeam?):
-            for(A:TeamCollection.GetAgents[EnemyTeam], Agents.Find[A]):
+            for(Agent:TeamCollection.GetAgents[EnemyTeam], Players.Find[player[Agent]]):
                 set ETPlayerNum += 1
-        ###
-
-        # var ETPlayerNum:int = 0
-        # if(EnemyTeam := OEnemyTeam?, Num := TeamCollection.GetAgents[EnemyTeam].Length):
-        #     if(Num <= TeamPlayerNum):
-        #         set ETPlayerNum = Num
-        #     else:
-        #         set ETPlayerNum = TeamPlayerNum
 
         # プレイヤーのテクスチャ自体を表示するかしないかを設定
         for(Texture:EnemyTeamTextures):

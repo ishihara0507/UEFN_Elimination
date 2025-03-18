@@ -241,15 +241,16 @@ debug_game_flow_device := class(creative_device):
         # キルイベントを設定する
         EliminationDevice.EliminatedEvent.Subscribe(OnEliminatedEvent) ### 追加
         EliminationDevice.EliminationEvent.Subscribe(OnEliminationEvent) ### 追加
-        ### for(Player:GamePlayers):
-        ###     if(FortCharacter := Player.GetFortCharacter[]):
-        ###         FortCharacter.EliminatedEvent().Subscribe(OnPlayerEliminated)
+        # for(Player:GamePlayers):
+        #     if(FortCharacter := Player.GetFortCharacter[]):
+        #         FortCharacter.EliminatedEvent().Subscribe(OnPlayerEliminated)
 
         ### 追加
         Print("ラウンド開始時ーーーーーーーーーー")
         for(Index->Team:TeamArray, Wins := TeamWinsMap[Team]):
             Print("TeamWinsMap[{Index}] = {Wins}")
         Print("ーーーーーーーーーーーーーーーー")
+        ###
 
         # ラウンドUIを初期化して表示
         RoundUIDevice.AddRoundStatusUI(TeamRemainingMap, TeamWinsMap)
@@ -309,6 +310,10 @@ debug_game_flow_device := class(creative_device):
 
             loop: # 一方のチームの全滅待ち
                 EliminatedAgent := KillEvent.Await() # キルされたプレイヤー
+                if(EliminatedPlayer := player[EliminatedAgent], EliminatedPlayer.IsActive[]):
+                    Print("キルされたプレイヤーアクティブ")
+                else. Print("キルされたプレイヤー非アクティブ")
+
                 if:
                     EliminatedPlayer := player[EliminatedAgent]
                     EliminatedPlayer.IsActive[]
@@ -563,9 +568,12 @@ debug_game_flow_device := class(creative_device):
         OEliminatorFort:?fort_character = Result.EliminatingCharacter # キルしたプレイヤー
 
         if(EliminatorFort := OEliminatorFort?, EliminatorAgent := EliminatorFort.GetAgent[]):
+            Print("キルしたやつがいた！！")
+            EliminationXPDevice.Award(EliminatorAgent) # XPを与える
             PlayerStatsManager.UpdateCurrentKillsStat(EliminatorAgent)
 
         if(EliminatedAgent := EliminatedFort.GetAgent[]):
+            Print("キルされたやつがいた！！")
             PlayerStatsManager.UpdateCurrentDeathsStat(EliminatedAgent)
             KillEvent.Signal(EliminatedAgent)
 

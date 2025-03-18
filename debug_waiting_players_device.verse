@@ -59,6 +59,8 @@ debug_waiting_players_device := class(creative_device):
 
     StartDelay:int = 5 # プレイヤーがそろってから試合を開始するまでの秒数
 
+    WaitMinutes:int = 1 # 何分おきに人数の変更を促すか
+
     DisplayPopupTime:float = 10.0 # ポップアップを表示する時間
     VsPlayerNameDisplayTime:float = 5.0
 
@@ -100,12 +102,12 @@ debug_waiting_players_device := class(creative_device):
                 # Print("CheckedPlayerCount: {CheckedPlayerCount}")
                 Sleep(1.0)
             
-        var WaitedTime:float = 0.0
+        var WaitedTime:int = 0
         if(NotGameStarted?):
             loop: # プレイヤー待ちループ
                 # 3分経過して8人に達していなかったら、試合を始めてるかの投票を行う
                 PlayerNum := GetPlayspace().GetParticipants().Length ### PlayerNum := GetPlayspace().GetPlayers().Length
-                if(WaitedTime >= 5.0, PlayerNum < MatchPlayerNum): ### 短くした
+                if(WaitedTime > WaitMinutes * 60, PlayerNum < ThisMatchPlayerNum): ### 短くした
                     spawn{DisplayVoteStarting(PlayerNum)} # 投票を行う
                     CompleteVoteEvent.Await() # 投票が完了するまで待機
 
@@ -114,7 +116,7 @@ debug_waiting_players_device := class(creative_device):
 
                     set VoteYesCount = 0
                     set VoteNoCount = 0
-                    set WaitedTime = 0.0
+                    set WaitedTime = 0
 
                 # 人数が揃っているかを確認
                 Players := GetPlayspace().GetParticipants() ### Players := GetPlayspace().GetPlayers()
@@ -156,9 +158,9 @@ debug_waiting_players_device := class(creative_device):
                     break
 
                 NeedPlayerNum:int = MatchPlayerNum - SpawnedNum
-                MessageHud.Show(S2M("あと {NeedPlayerNum} 人のプレイヤーの参加を待っています。\nWaiting for {NeedPlayerNum} more players to join.")) # プレイヤー全員にHUDを表示
+                MessageHud.Show(S2M("あと {NeedPlayerNum} 人のプレイヤーの参加を待っています。\nWaiting for {NeedPlayerNum} more players to join.\n{WaitMinutes * 60 - WaitedTime}")) # プレイヤー全員にHUDを表示
                 Sleep(1.0)
-                set WaitedTime += 1.0
+                set WaitedTime += 1
         else:
             set DebugGameFlowDevice.GameStarted = true # ラウンド開始の合図
             Print("試合は始まっている")
@@ -243,7 +245,7 @@ debug_waiting_players_device := class(creative_device):
                         AfterMsg := CombineMsg(DeforeMsg, PlayerName)
                         if. set TeamMsgMap[Team] = AfterMsg
             if(not TeamMsgMap[Team]):
-                EmptyMsg := S2M("teki")
+                EmptyMsg := S2M("     ")
                 if. set TeamMsgMap[Team] = EmptyMsg
 
         return TeamMsgMap
@@ -318,10 +320,10 @@ debug_waiting_players_device := class(creative_device):
             set DescriptionText += "Yes: {VoteYesCount}, No: {VoteNoCount}, Timed out: {TimedOutNum}. Therefore, we will start the game."
         else:
             set DescriptionText += "Yes: {VoteYesCount}人, No: {VoteNoCount}人, 時間切れ: {TimedOutNum}人 だったので、他のプレイヤーの参加を待ちます。\n"
-            set DescriptionText += "さらに3分経過してもまだ8人に達していない場合は、再度投票を行います。\n"
+            set DescriptionText += "さらに{WaitMinutes}分経過してもまだ{MatchPlayerNum}人に達していない場合は、再度投票を行います。\n"
             set DescriptionText += "\n"
             set DescriptionText += "Yes: {VoteYesCount}, No: {VoteNoCount}, Timed out: {TimedOutNum}. Therefore, we will wait for more players to join.\n"
-            set DescriptionText += "If the number of players still does not reach 8 after an additional 3 minutes, we will hold another vote."
+            set DescriptionText += "If the number of players still does not reach {MatchPlayerNum} after an additional {WaitMinutes} minutes, we will hold another vote."
 
         VoteResultPopupDevice.SetTitleText(S2M(TitleText))
         VoteResultPopupDevice.SetDescriptionText(S2M(DescriptionText))

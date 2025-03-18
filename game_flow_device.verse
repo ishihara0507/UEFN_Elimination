@@ -112,7 +112,7 @@ game_flow_device := class(creative_device):
     
     StartDelay:int = 3 # ラウンド開始前などに設ける時間
 
-    RoundTime:int = 300
+    RoundTime:int = 180
 
     BallisticTime:int = 45 # バリスティックの仕掛けを起動してから爆発するまでの時間
 
@@ -181,8 +181,9 @@ game_flow_device := class(creative_device):
         for(Index->ClassDesigner:ClassDesigners, Team := TeamArray[Index]):
             Agents := ClassDesigner.GetClassMembers()
             for(Agent:Agents):
-                if. TeamCollection.AddToTeam[Agent, Team]
-                if. set PlayerTeamMap[player[Agent]] = Team
+                if:
+                    TeamCollection.AddToTeam[Agent, Team]
+                    set PlayerTeamMap[player[Agent]] = Team
 
         # TeamRemainingMap と TeamWinsMap を初期化する
         for(Team:TeamArray, Agents := TeamCollection.GetAgents[Team], set TeamRemainingMap[Team] = 0):
@@ -394,6 +395,9 @@ game_flow_device := class(creative_device):
                     for(Agent:Agents):
                         DefeatHudDevice.Show(Agent)
             Sleep(VictoryAndDefeatTime)
+            for(Player:GamePlayers):
+                VictoryHudDevice.Hide(Player)
+                DefeatHudDevice.Hide(Player)
 
             # 全プレイヤーをクラスなしに設定する
             for(Player:GamePlayers):
@@ -577,7 +581,7 @@ game_flow_device := class(creative_device):
 
         # TeamWinsMap を作成
         for(Team:TeamArray, Agents := TeamCollection.GetAgents[Team]):
-            for(Agent:Agents):
+            for(Agent:Agents, GamePlayers.Find[player[Agent]]):
                 OPlayerStats := PlayerStatsManager.GetPlayerStats(Agent)
                 if:
                     PlayerStats := OPlayerStats?

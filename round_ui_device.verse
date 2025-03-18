@@ -79,6 +79,13 @@ round_ui_device := class(creative_device):
 
     # ラウンドの進行状況を表すUIを更新する関数（制限時間部分は除く）
     UpdateRoundStatusUI(TeamRemainingMap:[team]int, TeamWinsMap:[team]int):void=
+        ###
+        TeamCollection := GetPlayspace().GetTeamCollection()
+        TeamArray := TeamCollection.GetTeams()
+        for(Index->Team:TeamArray, R := TeamRemainingMap[Team], W := TeamWinsMap[Team]):
+            Print("チーム{Index + 1},  残り人数: {R}, 勝利数: {W}")
+        ###
+
         for(RoundStatusUI:PlayerRoundStatusUIMap):
             RoundStatusUI.UpdateUI(TeamRemainingMap, TeamWinsMap)
 

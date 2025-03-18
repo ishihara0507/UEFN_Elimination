@@ -15,7 +15,7 @@ waiting_players_device := class(creative_device):
     SavePresetDevice:save_preset_device = save_preset_device{}
 
     @editable
-    PlayerSpawners:[]player_spawner_device = array{} # マップに入ったときにスポーンするやつ
+    StartPlayerSpawners:[]player_spawner_device = array{} # マップに入ったときにスポーンするやつ
 
     @editable
     EnterMutator:mutator_zone_device = mutator_zone_device{}
@@ -51,6 +51,8 @@ waiting_players_device := class(creative_device):
     VoteResultPopupDevice:popup_dialog_device = popup_dialog_device{} # 投票の結果を表示するためのデバイス
 
     var GamePlayers:[]player = array{}
+    
+    var SpawnedPlayers:[]player = array{} # スポーンが完了したプレイヤーを保持する配列
 
     var TeleportersArray:[][]teleporter_device = array{}
 
@@ -70,8 +72,10 @@ waiting_players_device := class(creative_device):
     PlayerStatsManager:player_stat_manager = player_stat_manager{}
 
     OnBegin<override>()<suspends>:void=
-        for(PlayerSpawner:PlayerSpawners):
-            PlayerSpawner.SpawnedEvent.Subscribe(OnPlayerSpawn)
+        for(PlayerSpawner:StartPlayerSpawners):
+            Print("スポナーに登録した")
+            PlayerSpawner.SpawnedEvent.Subscribe(OnStartPlayerSpawn)
+
         VoteStartPopupDevice.RespondingButtonEvent.Subscribe(ClickPopupBtn)
         EnterMutator.AgentEntersEvent.Subscribe(OnEnterMutator)
 
@@ -118,7 +122,10 @@ waiting_players_device := class(creative_device):
 
                 # 人数が揃っているかを確認
                 Players := GetPlayspace().GetPlayers()
-                if(Players.Length >= ThisMatchPlayerNum):
+                var SpawnedNum:int = 0
+                for(Player:Players, SpawnedPlayers.Find[Player]):
+                    set SpawnedNum += 1
+                if(SpawnedNum >= ThisMatchPlayerNum, Players.Length <= SpawnedNum):
                     Print("プレイヤーが揃ったのでゲームを開始する")
                     RoundSettingDevice.DisableMatchmaking() # 新しくマップにマッチングできないようにする
                     MessageHud.Hide()
@@ -147,7 +154,7 @@ waiting_players_device := class(creative_device):
                     set GameFlowDevice.GameStarted = true # 試合開始の合図
                     break
 
-                NeedPlayerNum:int = MatchPlayerNum - Players.Length
+                NeedPlayerNum:int = MatchPlayerNum - SpawnedNum
                 MessageHud.Show(S2M("あと {NeedPlayerNum} 人のプレイヤーの参加を待っています。\nWaiting for {NeedPlayerNum} more players to join.")) # プレイヤー全員にHUDを表示
                 Sleep(1.0)
                 set WaitedTime += 1.0
@@ -155,23 +162,39 @@ waiting_players_device := class(creative_device):
             set GameFlowDevice.GameStarted = true # ラウンド開始の合図
             Print("試合は始まっている")
 
-    OnPlayerSpawn(Agent:agent):void=
+    # マップに入って最初にスポーンするプレイヤースポナーに登録する関数
+    OnStartPlayerSpawn(Agent:agent):void=
+        Print("プレイヤーがマップに参加した！！！")
+        Print("データを-1に初期化")
         PlayerStatsManager.InitializePlayerStat(Agent) # 持続データをプレイヤーに割り当てる
         PlayerStatsManager.ResetGameStats(Agent) # 試合ごとに-1にするデータを初期化する
+        if(Player := player[Agent]):
+            Print("プレイヤーがスポーンした")
+            set SpawnedPlayers += array{Player}
 
     # プレイヤーが退出したら、そのプレイヤーのクラスをクラスなしに変更する関数
     OnPlayerLeaved()<suspends>:void=
+        Print("退出待ちループ開始")
         loop:
             LeavingPlayer := GetPlayspace().PlayerRemovedEvent().Await()
+            Print("退出確認")
             PlayerStatsManager.ResetGameStats(LeavingPlayer) # 試合ごとに-1にするデータを初期化する
             NoneClassSelector.ChangeClass(LeavingPlayer) # クラスをクラスなしに設定する
+            if: # 退出したプレイヤーをSpawnedPlayersから削除する
+                LeaveIndex := SpawnedPlayers.Find[LeavingPlayer]
+                NewArray := SpawnedPlayers.RemoveElement[LeaveIndex]
+                set SpawnedPlayers = NewArray
+            then:
+                Print("SpawnedPlayersから削除完了")
 
     OnEnterMutator(Agent:agent):void=
         PlayerStatsManager.InitializePlayerStat(Agent) # 持続データをプレイヤーに割り当てる
         PlayerStatsManager.ResetGameStats(Agent) # 試合ごとに-1にするデータを初期化する
         NoneClassSelector.ChangeClass(Agent) # クラスをクラスなしに設定する
+        if(Player := player[Agent], not SpawnedPlayers.Find[Player]):
+            set SpawnedPlayers += array{Player}
 
-    # チーム分けを行う関数。実際にはここではクラスを設定することでチームを分ける
+    # チーム分けを行う関数。
     SplitPlayersToTeams():void=
         Players := Shuffle(GamePlayers)
         PlayersNum := Players.Length
@@ -186,6 +209,17 @@ waiting_players_device := class(creative_device):
                 ClassSelector1.ChangeClass(Player)
             for(Player:T2):
                 ClassSelector2.ChangeClass(Player)
+                   
+        # クラスに合わせてチームを設定する
+        TeamCollection := GetPlayspace().GetTeamCollection()
+        TeamArray := TeamCollection.GetTeams()
+        for(Index->ClassDesigner:ClassDesigners, Team := TeamArray[Index]):
+            Agents := ClassDesigner.GetClassMembers()
+            for(Agent:Agents):
+                if:
+                    TeamCollection.AddToTeam[Agent, Team]
+                then:
+                    Print("チーム変更成功")
 
     # messageを結合する関数（間に改行を挟む）
     CombineMsg<localizes>(Msg:message, Msg2:message):message="{Msg}\n{Msg2}"
@@ -196,17 +230,17 @@ waiting_players_device := class(creative_device):
         TeamArray := TeamCollection.GetTeams()
         var TeamMsgMap:[team]message = map{}
 
-        for(Team:TeamArray, Agents := TeamCollection.GetAgents[Team]):
+        for(Index2->Team:TeamArray, Agents := TeamCollection.GetAgents[Team]):
             if(Agents.Length > 0):
-                for(Index->Agent:Agents, Player := player[Agent]):
+                for(Index->Agent:Agents, Player := player[Agent], Player.IsActive[]):
                     PlayerName := GetAgentName(Player)
                     if(Index = 0):
                         if. set TeamMsgMap[Team] = PlayerName
                     else if(DeforeMsg := TeamMsgMap[Team]):
                         AfterMsg := CombineMsg(DeforeMsg, PlayerName)
                         if. set TeamMsgMap[Team] = AfterMsg
-            else:
-                EmptyMsg := S2M("")
+            if(not TeamMsgMap[Team]):
+                EmptyMsg := S2M("     ")
                 if. set TeamMsgMap[Team] = EmptyMsg
 
         return TeamMsgMap
@@ -219,7 +253,7 @@ waiting_players_device := class(creative_device):
         TeamMsgMap := GenPlayerNamesMsg()
 
         for(Team:TeamArray, Agents := TeamCollection.GetAgents[Team]):
-            for(Agent:Agents):
+            for(Agent:Agents, Player := player[Agent], Player.IsActive[]):
                 for(Team2->Msg:TeamMsgMap):
                     if(Team2 = Team):
                         VsMTHudDevice.Show(Agent, Msg)

@@ -359,6 +359,7 @@ debug_game_flow_device := class(creative_device):
         # 爆弾を置けないようにする
         for(RiftPointVolume:RiftPointVolumes):
             RiftPointVolume.Disable()
+        BombStopEvent.Signal()
 
         # セレクトウェポンUIを削除する
         SelectPresetDevice.KillAllPresetsUI()
@@ -372,12 +373,17 @@ debug_game_flow_device := class(creative_device):
         if(RoundWinTeam := ORoundWinTeam?):
             # もし一方のチームが０人だったら、もう一方のチームを勝利状態にする
             var NoneTeamFlag:logic = false
-            for(Team:TeamArray, TeamCollection.GetAgents[Team].Length < 1):
-                set NoneTeamFlag = true
-                for(Team2:TeamArray, Team2 <> Team, Agents := TeamCollection.GetAgents[Team2]):
-                    for(Agent:Agents):
-                        PlayerStatsManager.UpdateRoundWinsStat(Agent, WinningPoints)
-                    if. set TeamWinsMap[Team2] = WinningPoints
+            for(Team:TeamArray, Agents := TeamCollection.GetAgents[Team]):
+                var PlayerNum:int = 0
+                for(Agent:Agents, GamePlayers.Find[Agent]):
+                    set PlayerNum += 1
+                if(PlayerNum < 1):
+                    Print("人数が０人です")
+                    set NoneTeamFlag = true
+                    for(Team2:TeamArray, Team2 <> Team, Agents2 := TeamCollection.GetAgents[Team2]):
+                        for(Agent:Agents2):
+                            PlayerStatsManager.UpdateRoundWinsStat(Agent, WinningPoints)
+                        if. set TeamWinsMap[Team2] = WinningPoints
 
             # 持続データのラウンド勝利数の更新
             for(Agent:TeamCollection.GetAgents[RoundWinTeam]):
@@ -630,6 +636,9 @@ debug_game_flow_device := class(creative_device):
         for(Team:TeamArray, not TeamWinsMap[Team]): # プレイヤーが１人もいない状況の対策
             for(Team2:TeamArray, not Team = Team2, ETWins := TeamWinsMap[Team2]):
                 if. set TeamWinsMap[Team] = (RoundCount - 1) - ETWins
+                if:
+                    TeamWinsMap[Team] < 0
+                    set TeamWinsMap[Team] = 0
 
         # OWinningTeam 作成
         for(Team->Wins:TeamWinsMap):

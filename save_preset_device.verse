@@ -351,8 +351,9 @@ presets_ui := class:
                         set PageNum -= 1
                 else if(SelectedBtn = "Save"):
                     Print("Saveボタンが押された")
-                    spawn{ShowSaveConfirmation(SaveEvent)}
-                    SaveConfirmed := SaveEvent.Await()
+                    SaveConfirmed := true
+                    # spawn{ShowSaveConfirmation(SaveEvent)}
+                    # SaveConfirmed := SaveEvent.Await()
                     if(SaveConfirmed?):
                         # 手持ちの武器がゴールドの最大枚数を超えていないかを確認（不正がないかを確認）
                         var Sum:int = 0
@@ -388,45 +389,46 @@ presets_ui := class:
 
         Print("ボタン待ち処理終了")
 
-    # 「本当に保存しますか？」というUIを表示する関数（Saveボタンを押したときに呼び出す）
-    ShowSaveConfirmation(SaveEvent:event(logic))<suspends>:void=
-        ConfirmText := text_block:
-            DefaultText:=S2M("このプリセットに上書きしてもよろしいですか？\nAre you sure you want to overwrite the save?")
-            DefaultJustification := text_justification.Center
-            DefaultTextColor := White
+    ### パッド系の機種で正常に機能しないから使うのをやめた。
+    # # 「本当に保存しますか？」というUIを表示する関数（Saveボタンを押したときに呼び出す）
+    # ShowSaveConfirmation(SaveEvent:event(logic))<suspends>:void=
+    #     ConfirmText := text_block:
+    #         DefaultText:=S2M("このプリセットに上書きしてもよろしいですか？\nAre you sure you want to overwrite the save?")
+    #         DefaultJustification := text_justification.Center
+    #         DefaultTextColor := White
             
-        SaveYesBtn := button_loud{DefaultText:=S2M("Yes")}
-        SaveNoBtn := button_regular{DefaultText:=S2M("No")}
+    #     SaveYesBtn := button_loud{DefaultText:=S2M("Yes")}
+    #     SaveNoBtn := button_regular{DefaultText:=S2M("No")}
 
-        ConfirmWidget := canvas:
-            Slots := array:
-                canvas_slot:
-                    Anchors := anchors{Minimum:=vector2{X:=0.5,Y:=0.5},Maximum:=vector2{X:=0.5,Y:=0.5}}
-                    Offsets := margin{Left := 0.0, Top := -150.0, Right := -0.0, Bottom := -0.0}
-                    Alignment := vector2{X:=0.5,Y:=0.5}
-                    SizeToContent := true
-                    Widget := ConfirmText
-                canvas_slot:
-                    Anchors := anchors{Minimum:=vector2{X:=0.5,Y:=0.5},Maximum:=vector2{X:=0.5,Y:=0.5}}
-                    Offsets := margin{Left := 175.0, Top := 0.0, Right := 250.0, Bottom := 100.0}
-                    Alignment := vector2{X:=0.5,Y:=0.5}
-                    SizeToContent := false
-                    Widget := SaveYesBtn
-                canvas_slot:
-                    Anchors := anchors{Minimum:=vector2{X:=0.5,Y:=0.5},Maximum:=vector2{X:=0.5,Y:=0.5}}
-                    Offsets := margin{Left := -175.0, Top := 0.0, Right := 250.0, Bottom := 100.0}
-                    Alignment := vector2{X:=0.5,Y:=0.5}
-                    SizeToContent := false
-                    Widget := SaveNoBtn
+    #     ConfirmWidget := canvas:
+    #         Slots := array:
+    #             canvas_slot:
+    #                 Anchors := anchors{Minimum:=vector2{X:=0.5,Y:=0.5},Maximum:=vector2{X:=0.5,Y:=0.5}}
+    #                 Offsets := margin{Left := 0.0, Top := -150.0, Right := -0.0, Bottom := -0.0}
+    #                 Alignment := vector2{X:=0.5,Y:=0.5}
+    #                 SizeToContent := true
+    #                 Widget := ConfirmText
+    #             canvas_slot:
+    #                 Anchors := anchors{Minimum:=vector2{X:=0.5,Y:=0.5},Maximum:=vector2{X:=0.5,Y:=0.5}}
+    #                 Offsets := margin{Left := 175.0, Top := 0.0, Right := 250.0, Bottom := 100.0}
+    #                 Alignment := vector2{X:=0.5,Y:=0.5}
+    #                 SizeToContent := false
+    #                 Widget := SaveYesBtn
+    #             canvas_slot:
+    #                 Anchors := anchors{Minimum:=vector2{X:=0.5,Y:=0.5},Maximum:=vector2{X:=0.5,Y:=0.5}}
+    #                 Offsets := margin{Left := -175.0, Top := 0.0, Right := 250.0, Bottom := 100.0}
+    #                 Alignment := vector2{X:=0.5,Y:=0.5}
+    #                 SizeToContent := false
+    #                 Widget := SaveNoBtn
       
-        if(PlayerUI := GetPlayerUI[Player]):
-            PlayerUI.AddWidget(ConfirmWidget, player_ui_slot{InputMode := ui_input_mode.All})
-            race:
-                KillEvent.Await()
-                block:
-                    SaveYesBtn.OnClick().Await()
-                    SaveEvent.Signal(true)
-                block:
-                    SaveNoBtn.OnClick().Await()
-                    SaveEvent.Signal(false)
-            PlayerUI.RemoveWidget(ConfirmWidget)
+    #     if(PlayerUI := GetPlayerUI[Player]):
+    #         PlayerUI.AddWidget(ConfirmWidget, player_ui_slot{InputMode := ui_input_mode.All})
+    #         race:
+    #             KillEvent.Await()
+    #             block:
+    #                 SaveYesBtn.OnClick().Await()
+    #                 SaveEvent.Signal(true)
+    #             block:
+    #                 SaveNoBtn.OnClick().Await()
+    #                 SaveEvent.Signal(false)
+    #         PlayerUI.RemoveWidget(ConfirmWidget)

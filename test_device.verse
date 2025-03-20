@@ -47,10 +47,7 @@ test_device := class(creative_device):
         Trigger.TriggeredEvent.Subscribe(OnTriggered)
         Trigger2.TriggeredEvent.Subscribe(OnTriggered2)
         Trigger3.TriggeredEvent.Subscribe(OnTriggered3)
-        Trigger4.TriggeredEvent.Subscribe(OnTriggered4)
-        Trigger5.TriggeredEvent.Subscribe(OnTriggered5)
         Button.InteractedWithEvent.Subscribe(OnPush)
-        Button2.InteractedWithEvent.Subscribe(ChangeTeam)
 
 
     OnTriggered(OAgent:?agent):void=
@@ -59,20 +56,8 @@ test_device := class(creative_device):
         return
             
     OnTriggered2(OAgent:?agent):void=
-        TeamCollection := GetPlayspace().GetTeamCollection()
-        TeamArray := TeamCollection.GetTeams()
-
-        Participants := GetPlayspace().GetParticipants()
-
-        for(Index->Team:TeamArray, Agents := TeamCollection.GetAgents[Team]):
-            Print("チーム{Index + 1}の長さ: {Agents.Length}人")
-            var C:int = 0
-            # for(Agent:Agents, Participants.Find[Agent]):
-            #     set C += 1
-            
-            for(Agent:Agents, player[Agent].IsActive[]):
-                set C += 1
-            Print("チーム{Index + 1}の人数: {C}人")
+        Print("マッチングできなくした")
+        RoundDevice.DisableMatchmaking()
         return
 
     OnTriggered3(OAgent:?agent):void=
@@ -81,9 +66,14 @@ test_device := class(creative_device):
         return
         
     OnTriggered4(OAgent:?agent):void=
+        if(Agent := OAgent?):
+            Print("ラウンドを更新")
+            RoundDevice.EndRound(Agent)
         return
 
     OnPush(Agent:agent):void=
+        Print("ラウンドを更新")
+        RoundDevice.EndRound(Agent)
         return
 
     OnTriggered5(fffAgent:?agent):void=

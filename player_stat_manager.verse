@@ -200,14 +200,19 @@ player_stat_manager := class():
 
     ### デバッグ用 ------------------------------------------------------------------------------------
     # WeaponPresetsの中身を表示する関数
-    ShowPresets(Agent:agent):void=
+    ShowPresets(Agent:agent):string=
+        var Str:string = ""
+
         if(Player := player[Agent], Player.IsActive[], CurrentPlayerStat := PlayerStatMap[Player]):
-            for(Index->Preset:CurrentPlayerStat.WeaponPresets):
-                Print("プリセット{Index}:")
+            for(Index->Preset:CurrentPlayerStat.WeaponPresets, Index = 0): ### Index = 0 追加
+                set Str += "プリセット{Index}, 長さ{Preset.Length}:\n"
                 for(Index2->Weapon:Preset):
-                    Print("{Index2}番目: {Weapon.ToString()}")
+                    set Str += "{Index2}番目: {Weapon.ToString()}\n"
+            Print(Str)
         else:
             Print("持続データが見つからない")
+        
+        return Str
 
     # すべての持続データを表示する関数
     ShowStats(Agent:agent):void=

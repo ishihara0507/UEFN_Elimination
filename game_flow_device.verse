@@ -26,9 +26,6 @@ game_flow_device := class(creative_device):
 
     # いろいろ
     @editable
-    StartPlayerSpawners:[]player_spawner_device = array{}
-
-    @editable
     ClassDesigners:[]class_designer_device = array{} # 要素１をクラス２のやつに、要素２をクラス３のやつに設定する必要がある
     @editable
     ClassSelectors:[]class_and_team_selector_device = array{}
@@ -130,6 +127,7 @@ game_flow_device := class(creative_device):
     BombStartEvent:event() = event(){} # 爆弾を起動したときに発火するイベント
     BombStopEvent:event() = event(){} # 爆弾を停止したときに発火するイベント
     BombEndEvent:event() = event(){} # 爆弾が爆発したときに発火するイベント
+    BombCountStopEvent:event() = event(){} # 爆弾のカウントを停止するイベント
     ### ----------------------------------------------------------------------------------
 
     OnBegin<override>()<suspends>:void=
@@ -169,10 +167,11 @@ game_flow_device := class(creative_device):
 
         set GamePlayers = GetPlayspace().GetPlayers()
 
-        for(Player:GamePlayers):
+        for(Player:GamePlayers, Fort := Player.GetFortCharacter[]):
             GoldHudDevice.Hide(Player)
             ItemRemover.Remove(Player)
             PlayerStatsManager.UpdateRoundCountStat(Player) # ラウンドカウント１増やす
+            Fort.SetVulnerability(false) # ダメージ受けないようにする
 
         # 現在のラウンド数を取得
         RoundCount := CalcRoundCount()
@@ -251,6 +250,9 @@ game_flow_device := class(creative_device):
         # バリアを無効化
         for(BarrierZone:BarrierZones):
             BarrierZone.Disable()
+
+        for(Player:GamePlayers, Fort := Player.GetFortCharacter[]):
+            Fort.SetVulnerability(true) # ダメージ受けるようにする
             
         # ラウンド終了待ち
         var ORoundWinTeam:?team = false
@@ -317,7 +319,7 @@ game_flow_device := class(creative_device):
 
             block: # 爆弾設置
                 BombStartEvent.Await()
-
+                Print("爆弾が設置された")
                 race:
                     block:
                         BombStopEvent.Await()
@@ -331,7 +333,7 @@ game_flow_device := class(creative_device):
         # 爆弾を置けないようにする
         for(RiftPointVolume:RiftPointVolumes):
             RiftPointVolume.Disable()
-        BombStopEvent.Signal()
+        BombCountStopEvent.Signal()
         
         # セレクトウェポンUIを削除する
         SelectPresetDevice.KillAllPresetsUI()
@@ -371,6 +373,9 @@ game_flow_device := class(creative_device):
                         set OWinAgent = option{Agent}
 
             if. set TeamWinsMap[RoundWinTeam] += 1
+
+            for(Index->Team:TeamArray, Wins := TeamWinsMap[Team]):
+                Print("チーム{Index+1}の勝利数: {Wins}")
 
             RoundUIDevice.ShowBackground(GamePlayers) # 暗転
 
@@ -455,8 +460,11 @@ game_flow_device := class(creative_device):
                 RoundUIDevice.UpdateBallisticTimeText(S2M("{CalcElapsedTime(Count)}"))
                 if(Count <= 0):
                     break
-            BombStopEvent.Await()
-            BombEndEvent.Await()
+            block:
+                BombEndEvent.Await()
+                RoundUIDevice.UpdateBallisticTimeText(S2M("00:00"))
+            block:
+                BombCountStopEvent.Await()
 
     # バリスティックの仕掛けを起動したときに実行する関数
     RiftPlant(Agent:agent):void=

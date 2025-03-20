@@ -7,6 +7,10 @@ using { /Fortnite.com/Characters }
 MatchPlayerNum:int = 8 # 偶数にする
 
 waiting_players_device := class(creative_device):
+    # テスト用
+    @editable
+    Hud:hud_message_device = hud_message_device{}
+    ###
 
     @editable
     GameFlowDevice:game_flow_device = game_flow_device{}
@@ -16,6 +20,9 @@ waiting_players_device := class(creative_device):
 
     @editable
     StartPlayerSpawners:[]player_spawner_device = array{} # マップに入ったときにスポーンするやつ
+
+    @editable
+    PlayerSpawners:[]player_spawner_device = array{} # DefenderPlayerSpawnersとAttackerPlayerSpawnersと試合終了後に出るスポナーを合わせたやつ
 
     @editable
     EnterMutator:mutator_zone_device = mutator_zone_device{}
@@ -74,6 +81,9 @@ waiting_players_device := class(creative_device):
     PlayerStatsManager:player_stat_manager = player_stat_manager{}
 
     OnBegin<override>()<suspends>:void=
+        for(PlayerSpawner:PlayerSpawners):
+            PlayerSpawner.SpawnedEvent.Subscribe(OnPlayerSpawn)
+
         for(PlayerSpawner:StartPlayerSpawners):
             Print("スポナーに登録した")
             PlayerSpawner.SpawnedEvent.Subscribe(OnStartPlayerSpawn)
@@ -93,13 +103,13 @@ waiting_players_device := class(creative_device):
             Print("プレイヤーを確認")
             for(Player:GetPlayspace().GetPlayers()):
                 OPlayerStats := PlayerStatsManager.GetPlayerStats(Player)
-                if(PlayerStats := OPlayerStats?):
+                if(PlayerStats := OPlayerStats?, SpawnedPlayers.Find[Player]):
                     set CheckedPlayerCount += 1
                     if(PlayerStats.RoundWins = -1):
                         set NotGameStarted = true
                 else:
                     Print("プレイヤーを正常に確認できなかった")
-            if(CheckedPlayerCount >= 2):
+            if(CheckedPlayerCount >= 1):
                 Print("プレイヤーを正常に確認できた")
                 break
             else:
@@ -109,9 +119,15 @@ waiting_players_device := class(creative_device):
         var WaitedTime:int = 0
         if(NotGameStarted?):
             loop: # プレイヤー待ちループ
+                # リスポーン済みのプレイヤーの人数を算出
+                Players := GetPlayspace().GetPlayers()
+                var SpawnedNum:int = 0
+                for(Player:Players, SpawnedPlayers.Find[Player]):
+                    set SpawnedNum += 1
+
                 # 3分経過して8人に達していなかったら、試合を始めてるかの投票を行う
-                PlayerNum := GetPlayspace().GetPlayers().Length
-                if(WaitedTime > WaitMinutes * 60, PlayerNum < ThisMatchPlayerNum): 
+                PlayerNum := Players.Length
+                if(WaitedTime > WaitMinutes * 60, 2 <= SpawnedNum, PlayerNum < ThisMatchPlayerNum):
                     spawn{DisplayVoteStarting(PlayerNum)} # 投票を行う
                     CompleteVoteEvent.Await() # 投票が完了するまで待機
 
@@ -123,10 +139,6 @@ waiting_players_device := class(creative_device):
                     set WaitedTime = 0
 
                 # 人数が揃っているかを確認
-                Players := GetPlayspace().GetPlayers()
-                var SpawnedNum:int = 0
-                for(Player:Players, SpawnedPlayers.Find[Player]):
-                    set SpawnedNum += 1
                 if(SpawnedNum >= ThisMatchPlayerNum, Players.Length <= SpawnedNum):
                     Print("プレイヤーが揃ったのでゲームを開始する")
                     RoundSettingDevice.DisableMatchmaking() # 新しくマップにマッチングできないようにする
@@ -158,10 +170,19 @@ waiting_players_device := class(creative_device):
                     set GameFlowDevice.GameStarted = true # 試合開始の合図
                     break
 
-                NeedPlayerNum:int = MatchPlayerNum - SpawnedNum
-                MessageHud.Show(S2M("あと {NeedPlayerNum} 人のプレイヤーの参加を待っています。\nWaiting for {NeedPlayerNum} more players to join.\n{WaitMinutes * 60 - WaitedTime}")) # プレイヤー全員にHUDを表示
+                var Str:string = "他のプレイヤーの参加を待っています。現在 {SpawnedNum} 人です。\n"
+                if(SpawnedNum <= 1):
+                    set Str += "Waiting for other players to join. Currently 1 player.\n"
+                else:
+                    set Str += "Waiting for other players to join. Currently {SpawnedNum} players.\n"
+                set Str += "{WaitMinutes * 60 - WaitedTime}"
+                MessageHud.Show(S2M(Str)) # プレイヤー全員にHUDを表示
+
                 Sleep(1.0)
-                set WaitedTime += 1
+                if(2 <= SpawnedNum):
+                    set WaitedTime += 1
+                else:
+                    set WaitedTime = 0
         else:
             set GameFlowDevice.GameStarted = true # ラウンド開始の合図
             Print("試合は始まっている")
@@ -173,6 +194,15 @@ waiting_players_device := class(creative_device):
         PlayerStatsManager.InitializePlayerStat(Agent) # 持続データをプレイヤーに割り当てる
         PlayerStatsManager.ResetGameStats(Agent) # 試合ごとに-1にするデータを初期化する
         if(Player := player[Agent]):
+            Print("プレイヤーがスポーンした")
+            set SpawnedPlayers += array{Player}
+
+        ### テスト用
+        Str := PlayerStatsManager.ShowPresets(Agent)
+        Hud.Show(S2M(Str))
+
+    OnPlayerSpawn(Agent:agent):void=
+        if(Player := player[Agent], not SpawnedPlayers.Find[Player]):
             Print("プレイヤーがスポーンした")
             set SpawnedPlayers += array{Player}
 
@@ -190,6 +220,10 @@ waiting_players_device := class(creative_device):
                 set SpawnedPlayers = NewArray
             then:
                 Print("SpawnedPlayersから削除完了")
+            
+            ### テスト用
+            Str := PlayerStatsManager.ShowPresets(LeavingPlayer)
+            Hud.Show(S2M(Str))
 
     OnEnterMutator(Agent:agent):void=
         PlayerStatsManager.InitializePlayerStat(Agent) # 持続データをプレイヤーに割り当てる
@@ -197,6 +231,16 @@ waiting_players_device := class(creative_device):
         NoneClassSelector.ChangeClass(Agent) # クラスをクラスなしに設定する
         if(Player := player[Agent], not SpawnedPlayers.Find[Player]):
             set SpawnedPlayers += array{Player}
+
+        ### テスト用
+        spawn{AA(Agent)}
+
+    ### テスト用
+    AA(Agent:agent)<suspends>:void=
+        loop:
+            Str := PlayerStatsManager.ShowPresets(Agent)
+            Hud.Show(S2M(Str))
+            Sleep(1.0)
 
     # チーム分けを行う関数。
     SplitPlayersToTeams():void=

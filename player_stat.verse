@@ -33,6 +33,18 @@ player_stat := class<final><persistable>:
         array{}
         array{}
 
+    # テスト用
+    Weapon:[][]weapon_enum = array:
+        weapon_enum.PumpShotgun_L1, weapon_enum.SideArmPistol_L1, weapon_enum.SubmachineGun_L1, weapon_enum.AssaultRifle_L1, weapon_enum.FalconEyeSniper_L1
+        array{}
+        array{}
+
+    # テスト用
+    Values:[][]int = array:
+        array{0, 0, 0, 0}
+        array{0, 0, 0, 0}
+        array{0, 0, 0, 0}
+
 # 前の player_stats_table と同じ値を持つ新しい player_stats_table を作成するコンストラクタ関数
 MakeUpdatedPlayerStat<constructor>(OldStats:player_stat)<transacts> := player_stat:
     Version := OldStats.Version

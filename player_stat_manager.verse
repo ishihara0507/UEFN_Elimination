@@ -135,6 +135,37 @@ player_stat_manager := class():
                 TotalStopBombs := CurrentPlayerStat.TotalStopBombs + AddValue
             if. set PlayerStatMap[Player] = NewStat
 
+    # SetIndex 番目の Preset を SetPreset に変更する
+    UpdatePresetStat(Agent:agent, SetIndex:int, SetPreset:[]weapon_enum):void=
+        if(Player := player[Agent], Player.IsActive[], CurrentPlayerStat := PlayerStatMap[Player]):
+            var NewStat:player_stat = player_stat{}
+            
+            case(SetIndex):
+                0 =>
+                    set NewStat = player_stat:
+                        MakeUpdatedPlayerStat<constructor>(CurrentPlayerStat)
+                        Preset0 := SetPreset
+                1 =>
+                    set NewStat = player_stat:
+                        MakeUpdatedPlayerStat<constructor>(CurrentPlayerStat)
+                        Preset1 := SetPreset
+                2 =>
+                    set NewStat = player_stat:
+                        MakeUpdatedPlayerStat<constructor>(CurrentPlayerStat)
+                        Preset2 := SetPreset
+                3 =>
+                    set NewStat = player_stat:
+                        MakeUpdatedPlayerStat<constructor>(CurrentPlayerStat)
+                        Preset3 := SetPreset
+                4 =>
+                    set NewStat = player_stat:
+                        MakeUpdatedPlayerStat<constructor>(CurrentPlayerStat)
+                        Preset4 := SetPreset
+                _ =>
+                    set NewStat = CurrentPlayerStat # 何も変更しない
+
+            if. set PlayerStatMap[Player] = NewStat
+
     # # InMatch を Flag に変更する
     # UpdateInMatchStat(Agent:agent, Flag:logic):void=
     #     if(Player := player[Agent], Player.IsActive[], CurrentPlayerStat := PlayerStatMap[Player]):
@@ -151,23 +182,23 @@ player_stat_manager := class():
     #             PenaltyEndTime := EndTime
     #         if. set PlayerStatMap[Player] = NewStat
 
-    # WeaponPresets の SetIndex 番目の要素を SetPreset に変更する
-    UpdateWeaponPresetsStat(Agent:agent, SetIndex:int, SetPreset:[]weapon_enum):void=
-        if(Player := player[Agent], Player.IsActive[], CurrentPlayerStat := PlayerStatMap[Player]):
-            var NewWeaponPresets:[][]weapon_enum = array{}
-            CurrentWeaponPresets := CurrentPlayerStat.WeaponPresets
+    # # WeaponPresets の SetIndex 番目の要素を SetPreset に変更する
+    # UpdateWeaponPresetsStat(Agent:agent, SetIndex:int, SetPreset:[]weapon_enum):void=
+    #     if(Player := player[Agent], Player.IsActive[], CurrentPlayerStat := PlayerStatMap[Player]):
+    #         var NewWeaponPresets:[][]weapon_enum = array{}
+    #         CurrentWeaponPresets := CurrentPlayerStat.WeaponPresets
 
-            for(Index->Preset:CurrentWeaponPresets):
-                if(Index = SetIndex):
-                    set NewWeaponPresets += array{SetPreset}
-                else:
-                    set NewWeaponPresets += array{Preset}
+    #         for(Index->Preset:CurrentWeaponPresets):
+    #             if(Index = SetIndex):
+    #                 set NewWeaponPresets += array{SetPreset}
+    #             else:
+    #                 set NewWeaponPresets += array{Preset}
 
-            NewStat := player_stat:
-                MakeUpdatedPlayerStat<constructor>(CurrentPlayerStat)
-                WeaponPresets := NewWeaponPresets
+    #         NewStat := player_stat:
+    #             MakeUpdatedPlayerStat<constructor>(CurrentPlayerStat)
+    #             WeaponPresets := NewWeaponPresets
 
-            if. set PlayerStatMap[Player] = NewStat
+    #         if. set PlayerStatMap[Player] = NewStat
 
     # プレイヤーの統計データを初期値にリセットする関数
     ResetPlayerStat(Agent:agent):void=
@@ -204,14 +235,21 @@ player_stat_manager := class():
         var Str:string = ""
 
         if(Player := player[Agent], Player.IsActive[], CurrentPlayerStat := PlayerStatMap[Player]):
-            for(Index->Preset:CurrentPlayerStat.WeaponPresets, Index = 0): ### Index = 0 追加
-                set Str += "プリセット{Index}, 長さ{Preset.Length}:\n"
-                for(Index2->Weapon:Preset):
-                    set Str += "{Index2}番目: {Weapon.ToString()}\n"
-            Print(Str)
-        else:
-            Print("持続データが見つからない")
-        
+            var Preset:[]weapon_enum = array{}
+            for(Index := 0..4):
+                var Tmp:string = "Preset{Index}:\n"
+                case(Index):
+                    0 => set Preset = CurrentPlayerStat.Preset0
+                    1 => set Preset = CurrentPlayerStat.Preset1
+                    2 => set Preset = CurrentPlayerStat.Preset2
+                    3 => set Preset = CurrentPlayerStat.Preset3
+                    4 => set Preset = CurrentPlayerStat.Preset4
+                    _ => # 何もしない
+                for(Weapon:Preset):
+                    set Tmp += "{Weapon.ToString()}\n"
+                Print(Tmp)
+                set Str += Tmp
+
         return Str
 
     # すべての持続データを表示する関数

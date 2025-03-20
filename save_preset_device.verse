@@ -102,7 +102,12 @@ presets_ui := class:
 
         OPlayerStat := PlayerStatsManager.GetPlayerStats(Player)
         if(PlayerStat := OPlayerStat?):
-            set Presets = PlayerStat.WeaponPresets # 武器プリセットの取得
+            set Presets = array:
+                PlayerStat.Preset0
+                PlayerStat.Preset1
+                PlayerStat.Preset2
+                PlayerStat.Preset3
+                PlayerStat.Preset4
 
         set MaxPage = Presets.Length # 最大ページ数を設定
 
@@ -362,7 +367,7 @@ presets_ui := class:
                                 set Sum += WeaponData.RequireGolds
                         Print("合計ゴールド枚数: {Sum}")
                         if(Sum <= WeaponsSelectDevice.MaxGolds):
-                            PlayerStatsManager.UpdateWeaponPresetsStat(Player, PageNum, HoldingWeapons) # セーブ処理
+                            PlayerStatsManager.UpdatePresetStat(Player, PageNum, HoldingWeapons) # セーブ処理
                             Print("セーブしました")
                         else:
                             Print("不正な武器プリセットを検知")
@@ -370,7 +375,12 @@ presets_ui := class:
                         # 直前で持続データを更新したので取り直す
                         OPlayerStat := PlayerStatsManager.GetPlayerStats(Player)
                         if(PlayerStat := OPlayerStat?):
-                            set Presets = PlayerStat.WeaponPresets # 武器プリセットの取得
+                            set Presets = array: # 武器プリセットの取得
+                                PlayerStat.Preset0
+                                PlayerStat.Preset1
+                                PlayerStat.Preset2
+                                PlayerStat.Preset3
+                                PlayerStat.Preset4
 
                     else:
                         Print("セーブがキャンセルされました")

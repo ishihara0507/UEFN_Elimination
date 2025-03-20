@@ -22,28 +22,25 @@ player_stat := class<final><persistable>:
     TotalStartBombs:int = 0
     TotalStopBombs:int = 0
 
+    # 武器プリセット系
+    Preset0:[]weapon_enum = array{weapon_enum.PumpShotgun_L1, weapon_enum.SideArmPistol_L1, weapon_enum.SubmachineGun_L1, weapon_enum.AssaultRifle_L1, weapon_enum.FalconEyeSniper_L1}
+    Preset1:[]weapon_enum = array{}
+    Preset2:[]weapon_enum = array{}
+    Preset3:[]weapon_enum = array{}
+    Preset4:[]weapon_enum = array{}
+
     # ペナルティ系
     # InMatch:logic = false # 試合中か否かを保持。試合中に抜けたらこれが true のままロビーに参加してくることになる。
     # PenaltyEndTime:float = -1.0 # ペナルティが解除される日時
 
+    # この配列は公開マップでバグったので使わないことにした。
+    # 同じセッション中はちゃんと機能するが、別のセッションになるとマップに入った時点で空になった。0番目の配列が空になったので、初期化でもない。
     WeaponPresets:[][]weapon_enum = array: # 武器のプリセット登録を保存。ここの要素の数が登録できるプリセットの個数になる
-        array{weapon_enum.PumpShotgun_L1, weapon_enum.SideArmPistol_L1, weapon_enum.SubmachineGun_L1, weapon_enum.AssaultRifle_L1, weapon_enum.FalconEyeSniper_L1}
         array{}
         array{}
         array{}
         array{}
-
-    # テスト用
-    Weapon:[][]weapon_enum = array:
-        weapon_enum.PumpShotgun_L1, weapon_enum.SideArmPistol_L1, weapon_enum.SubmachineGun_L1, weapon_enum.AssaultRifle_L1, weapon_enum.FalconEyeSniper_L1
         array{}
-        array{}
-
-    # テスト用
-    Values:[][]int = array:
-        array{0, 0, 0, 0}
-        array{0, 0, 0, 0}
-        array{0, 0, 0, 0}
 
 # 前の player_stats_table と同じ値を持つ新しい player_stats_table を作成するコンストラクタ関数
 MakeUpdatedPlayerStat<constructor>(OldStats:player_stat)<transacts> := player_stat:
@@ -65,10 +62,17 @@ MakeUpdatedPlayerStat<constructor>(OldStats:player_stat)<transacts> := player_st
     TotalStartBombs := OldStats.TotalStartBombs
     TotalStopBombs := OldStats.TotalStopBombs
 
+    # 武器プリセット系
+    Preset0 := OldStats.Preset0
+    Preset1 := OldStats.Preset1
+    Preset2 := OldStats.Preset2
+    Preset3 := OldStats.Preset3
+    Preset4 := OldStats.Preset4
+
     # ペナルティ系
     # PenaltyEndTime := OldStats.PenaltyEndTime
 
-    # 武器プリセット
+    # 武器プリセット（バグったから使わない）
     WeaponPresets := OldStats.WeaponPresets
 
 # プレイヤーを、そのプレイヤーの統計テーブルにマッピングします。

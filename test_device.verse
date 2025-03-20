@@ -14,71 +14,33 @@ using { /Fortnite.com/Teams }
 test_device := class(creative_device):
 
     @editable
-    RoundDevice:round_settings_device = round_settings_device{}
-
-    @editable
     Trigger:trigger_device = trigger_device{}
-
     @editable
     Trigger2:trigger_device = trigger_device{}
+
     @editable
-    Trigger3:trigger_device = trigger_device{}
-    @editable
-    Trigger4:trigger_device = trigger_device{}
-    @editable
-    Trigger5:trigger_device = trigger_device{}
+    SelectPresetDevice:select_preset_device = select_preset_device{}
 
     @editable
     HudDevice:hud_message_device = hud_message_device{}
+
     PlayerStatsManager:player_stat_manager = player_stat_manager{}
-
-    @editable
-    Button:button_device = button_device{}
-    @editable
-    Button2:button_device = button_device{}
-
     
-    var TeamRemainingMap:[team]int = map{}
-    var TeamWinsMap:[team]int = map{}
-
-    var GameAgents:[]agent = array{}
-
     OnBegin<override>()<suspends>:void=
         Trigger.TriggeredEvent.Subscribe(OnTriggered)
         Trigger2.TriggeredEvent.Subscribe(OnTriggered2)
-        Trigger3.TriggeredEvent.Subscribe(OnTriggered3)
-        Button.InteractedWithEvent.Subscribe(OnPush)
-
 
     OnTriggered(OAgent:?agent):void=
+        if(Agent := OAgent?, Player := player[Agent]):
+            spawn{SelectPresetDevice.MakePresetsUI(Player)}
+        return
+
+    
+    OnTriggered2(OAgent:?agent):void=
         if(Agent := OAgent?):
-            PlayerStatsManager.ShowStats(Agent)
+            PlayerStatsManager.ShowPresets(Agent)
         return
             
-    OnTriggered2(OAgent:?agent):void=
-        Print("マッチングできなくした")
-        RoundDevice.DisableMatchmaking()
-        return
-
-    OnTriggered3(OAgent:?agent):void=
-        Print("マッチングできるようにした")
-        RoundDevice.EnableMatchmaking()
-        return
-        
-    OnTriggered4(OAgent:?agent):void=
-        if(Agent := OAgent?):
-            Print("ラウンドを更新")
-            RoundDevice.EndRound(Agent)
-        return
-
-    OnPush(Agent:agent):void=
-        Print("ラウンドを更新")
-        RoundDevice.EndRound(Agent)
-        return
-
-    OnTriggered5(fffAgent:?agent):void=
-        return
-
     # OnTriggered(OAgent:?agent):void=
     #     TeamCollection := GetPlayspace().GetTeamCollection()
     #     TeamArray := TeamCollection.GetTeams()

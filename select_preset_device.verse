@@ -35,7 +35,14 @@ select_preset_device := class(creative_device):
     MakePresetsUI(Player:player)<suspends>:void=
         Print("UI作成")
         OPlayerStat := PlayerStatsManager.GetPlayerStats(Player)
-        if(PlayerStat := OPlayerStat?, Presets := PlayerStat.WeaponPresets):
+        if(PlayerStat := OPlayerStat?):
+            var Presets:[][]weapon_enum = array:
+                PlayerStat.Preset0
+                PlayerStat.Preset1
+                PlayerStat.Preset2
+                PlayerStat.Preset3
+                PlayerStat.Preset4
+                
             NewSelectPresetUI := select_preset_ui{Presets := Presets}
             NewSelectPresetUI.Init()
 

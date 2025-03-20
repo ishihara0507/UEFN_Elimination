@@ -7,11 +7,6 @@ using { /Fortnite.com/Characters }
 MatchPlayerNum:int = 8 # 偶数にする
 
 waiting_players_device := class(creative_device):
-    # テスト用
-    @editable
-    Hud:hud_message_device = hud_message_device{}
-    ###
-
     @editable
     GameFlowDevice:game_flow_device = game_flow_device{}
 
@@ -197,10 +192,6 @@ waiting_players_device := class(creative_device):
             Print("プレイヤーがスポーンした")
             set SpawnedPlayers += array{Player}
 
-        ### テスト用
-        Str := PlayerStatsManager.ShowPresets(Agent)
-        Hud.Show(S2M(Str))
-
     OnPlayerSpawn(Agent:agent):void=
         if(Player := player[Agent], not SpawnedPlayers.Find[Player]):
             Print("プレイヤーがスポーンした")
@@ -220,10 +211,6 @@ waiting_players_device := class(creative_device):
                 set SpawnedPlayers = NewArray
             then:
                 Print("SpawnedPlayersから削除完了")
-            
-            ### テスト用
-            Str := PlayerStatsManager.ShowPresets(LeavingPlayer)
-            Hud.Show(S2M(Str))
 
     OnEnterMutator(Agent:agent):void=
         PlayerStatsManager.InitializePlayerStat(Agent) # 持続データをプレイヤーに割り当てる
@@ -231,16 +218,6 @@ waiting_players_device := class(creative_device):
         NoneClassSelector.ChangeClass(Agent) # クラスをクラスなしに設定する
         if(Player := player[Agent], not SpawnedPlayers.Find[Player]):
             set SpawnedPlayers += array{Player}
-
-        ### テスト用
-        spawn{AA(Agent)}
-
-    ### テスト用
-    AA(Agent:agent)<suspends>:void=
-        loop:
-            Str := PlayerStatsManager.ShowPresets(Agent)
-            Hud.Show(S2M(Str))
-            Sleep(1.0)
 
     # チーム分けを行う関数。
     SplitPlayersToTeams():void=

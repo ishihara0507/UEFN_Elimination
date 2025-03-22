@@ -32,9 +32,47 @@ test_device := class(creative_device):
 
     OnTriggered(OAgent:?agent):void=
         if(Agent := OAgent?, Player := player[Agent]):
-            spawn{SelectPresetDevice.MakePresetsUI(Player)}
+            spawn{AddUI(Player)}
         return
 
+    AddUI(Player:player)<suspends>:void=
+        if(PlayerUI := GetPlayerUI[Player]):
+            var Btn:button_quiet = button_quiet{DefaultText:=S2M("quiet 閉じる")}
+
+            Widget := canvas:
+                Slots := array:
+                    canvas_slot:
+                        Anchors := anchors{Minimum:=vector2{X:=0.5,Y:=0.5},Maximum:=vector2{X:=0.5,Y:=0.5}}
+                        Offsets := margin{Left := 0.0, Top := 0.0, Right := 100.0, Bottom := 100.0}
+                        Alignment := vector2{X:=0.5,Y:=0.5}
+                        SizeToContent := true
+                        ZOrder := 1
+                        Widget := color_block{}
+                    canvas_slot:
+                        Anchors := anchors{Minimum:=vector2{X:=0.5,Y:=0.5},Maximum:=vector2{X:=0.5,Y:=0.5}}
+                        Offsets := margin{Left := -0.0, Top := 0.0, Right := -0.0, Bottom := -0.0}
+                        Alignment := vector2{X:=0.5,Y:=0.5}
+                        SizeToContent := true
+                        ZOrder := 0
+                        Widget := Btn
+                    canvas_slot:
+                        Anchors := anchors{Minimum:=vector2{X:=0.5,Y:=0.5},Maximum:=vector2{X:=0.5,Y:=0.5}}
+                        Offsets := margin{Left := -400.0, Top := 0.0, Right := -0.0, Bottom := -0.0}
+                        Alignment := vector2{X:=0.5,Y:=0.5}
+                        SizeToContent := true
+                        ZOrder := 0
+                        Widget := button_loud{DefaultText:=S2M("loud")}
+                    canvas_slot:
+                        Anchors := anchors{Minimum:=vector2{X:=0.5,Y:=0.5},Maximum:=vector2{X:=0.5,Y:=0.5}}
+                        Offsets := margin{Left := -200.0, Top := 0.0, Right := -0.0, Bottom := -0.0}
+                        Alignment := vector2{X:=0.5,Y:=0.5}
+                        SizeToContent := true
+                        ZOrder := 0
+                        Widget := button_regular{DefaultText:=S2M("regular")}
+
+            PlayerUI.AddWidget(Widget, player_ui_slot{InputMode := ui_input_mode.All})
+            Btn.OnClick().Await()
+            PlayerUI.RemoveWidget(Widget)
     
     OnTriggered2(OAgent:?agent):void=
         if(Agent := OAgent?):

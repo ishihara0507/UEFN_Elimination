@@ -18,6 +18,7 @@ using { /Verse.org/Colors/NamedColors }
 # 試合中にプレイヤーが保持しているアイテムに関するデータ
 player_item := class:
     ItemEnum:item_enum # アイテムの識別名
+    RarityEnum:rarity_enum # アイテムのレアリティ
     var CarryOverCount:int = 0 # 以前のラウンドから持ち越された数（捨てるというボタンになる）
     var BuyCount:int = 0 # その購入フェーズで購入した数（売るというボタンになる）
 
@@ -28,11 +29,14 @@ condbtn_struct := struct<concrete>:
     
     @editable
     ItemEnum:item_enum = item_enum.AssaultRifle
+    @editable
+    RarityEnum:rarity_enum = rarity_enum.L1_Common
 
 # 条件付きボタンとアイテムを紐づけるためのクラス。以前のラウンドからの持ち越しアイテムを特定するために必要
 condbtn_item_lick := class:
     CondBtn:conditional_button_device
     ItemEnum:item_enum
+    RarityEnum:rarity_enum
     ShopUIDevice:shop_ui_device
 
     ActivateCondBtn(Agent:agent):void=
@@ -43,7 +47,7 @@ condbtn_item_lick := class:
                     if(0 < ItemNum):
                         N := Min(ItemEnum.ToItemData().MaxCapacity, ItemNum)
                         if:
-                            set ShopUIDevice.PlayerItemsMap[Player] += array{player_item{ItemEnum := ItemEnum, CarryOverCount := N}}
+                            set ShopUIDevice.PlayerItemsMap[Player] += array{player_item{ItemEnum := ItemEnum, RarityEnum := RarityEnum, CarryOverCount := N}}
                             set ItemNum -= N
                     else:
                         break
@@ -63,13 +67,10 @@ shop_ui_device := class(creative_device):
     HoldGoldsHudDevice:hud_message_device = hud_message_device{}
 
     var CondBtnItemLinks:[]condbtn_item_lick = array{}
-
     var PlayerItemsMap:[player][]player_item = map{}
-
     var PlayerShopUIMap:[player]shop_ui = map{}
 
     ShopDatas:shop_datas = shop_datas{} # アイテムのデータを定義したクラス
-
     KillUIEvent:event() = event(){}
     
     OnBegin<override>()<suspends>:void=
@@ -77,6 +78,7 @@ shop_ui_device := class(creative_device):
             CondBtnItemLink := condbtn_item_lick{
                 CondBtn := CondBtnStruct.CondBtn
                 ItemEnum := CondBtnStruct.ItemEnum
+                RarityEnum := CondBtnStruct.RarityEnum
                 ShopUIDevice := Self
             }
             CondBtnItemLink.CondBtn.ActivatedEvent.Subscribe(CondBtnItemLink.ActivateCondBtn)
@@ -230,6 +232,13 @@ shop_ui := class:
 
     # 変数
     var PageNum:int = 0 # 現在開いているページを保持
+
+    var PlayerHealth:float = 100.0
+    var PlayerShield:float = 100.0
+    var PlayerGolds:int = 1000
+    
+    var ShopItems:[]item_enum = array{} # 現在ショップ部分に表示されているアイテムを保持する
+    var SelectRearity:rarity_enum = rarity_enum.L1_Common # 現在どのレアリティが選択されているか
 
     # 定数
     HoldingNum:int = 5 # 手持ちのアイテムの最大個数
@@ -405,7 +414,7 @@ shop_ui := class:
                                             Alignment := vector2{X:=0.0,Y:=0.0}
                                             SizeToContent := false
                                             Widget := ExitBtn
-                                       
+
         set Widget = NewWidget
         return
 
@@ -628,10 +637,6 @@ shop_ui := class:
                                 VerticalAlignment := vertical_alignment.Center
                                 Widget := Page_RightBtn
 
-
-
-
-
         return NewWidget
 
     # UIのアイテム詳細の部分を作成して返す関数
@@ -750,6 +755,7 @@ shop_ui := class:
                                             Alignment := vector2{X:=0.0,Y:=0.0}
                                             SizeToContent := false
                                             Widget := Desc_BuyBtn
+
         return NewWidget
 
     # そのプレイヤーに合わせて、UI全体にデータを適用して初期化する関数
@@ -761,6 +767,26 @@ shop_ui := class:
 
     # プレイヤーのステータスと手持ちアイテムの部分を更新する関数
     UpdatePlayerStatus():void=
+        # ステータステキストの更新
+        PlayerIconHudDevice.SetText(S2M("Health: {PlayerHealth}\nShield: {PlayerShield}"))
+        HoldGoldsHudDevice.SetText(S2M("{PlayerGolds}"))
+
+        # 手持ちアイテムの更新
+        for(Index->Item:PlayerItems, RarityTexture := Holding_RarityTextures[Index], ItemTexture := Holding_ItemTextures[Index], ItemCountText := Holding_ItemCountText[Index]):
+            RarityTexture.SetImage()
+
+            ItemTexture.SetImage(Item.ItemEnum.ToTexture())
+
+            Count := Item.CarrayOverCount + Item.BuyCount
+            if(1 < Count):
+                ItemCountText.SetText(S2M("{Count}"))
+            else:
+                ItemCountText.SetText(S2M(""))
+        
+        # 空領域の表示
+        if(PlayerItems.Length < 5):
+
+
         
     # アイテム詳細の部分を更新する関数
     UpdateItemDetail():void=

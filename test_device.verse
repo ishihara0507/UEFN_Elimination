@@ -25,58 +25,27 @@ test_device := class(creative_device):
     HudDevice:hud_message_device = hud_message_device{}
 
     PlayerStatsManager:player_stat_manager = player_stat_manager{}
+
+    @editable
+    CondBtn:conditional_button_device = conditional_button_device{}
+
+    @editable
+    ShopUIDevice:shop_ui_device = shop_ui_device{}
     
     OnBegin<override>()<suspends>:void=
         Trigger.TriggeredEvent.Subscribe(OnTriggered)
         Trigger2.TriggeredEvent.Subscribe(OnTriggered2)
+        
 
     OnTriggered(OAgent:?agent):void=
         if(Agent := OAgent?, Player := player[Agent]):
-            spawn{AddUI(Player)}
+            Print("持っている数: {CondBtn.GetItemCount(Agent, 0)}個")
+            ShopUIDevice.CarryOverItemsToData(Player)
         return
 
-    AddUI(Player:player)<suspends>:void=
-        if(PlayerUI := GetPlayerUI[Player]):
-            var Btn:button_quiet = button_quiet{DefaultText:=S2M("quiet 閉じる")}
-
-            Widget := canvas:
-                Slots := array:
-                    canvas_slot:
-                        Anchors := anchors{Minimum:=vector2{X:=0.5,Y:=0.5},Maximum:=vector2{X:=0.5,Y:=0.5}}
-                        Offsets := margin{Left := 0.0, Top := 0.0, Right := 100.0, Bottom := 100.0}
-                        Alignment := vector2{X:=0.5,Y:=0.5}
-                        SizeToContent := true
-                        ZOrder := 1
-                        Widget := color_block{}
-                    canvas_slot:
-                        Anchors := anchors{Minimum:=vector2{X:=0.5,Y:=0.5},Maximum:=vector2{X:=0.5,Y:=0.5}}
-                        Offsets := margin{Left := -0.0, Top := 0.0, Right := -0.0, Bottom := -0.0}
-                        Alignment := vector2{X:=0.5,Y:=0.5}
-                        SizeToContent := true
-                        ZOrder := 0
-                        Widget := Btn
-                    canvas_slot:
-                        Anchors := anchors{Minimum:=vector2{X:=0.5,Y:=0.5},Maximum:=vector2{X:=0.5,Y:=0.5}}
-                        Offsets := margin{Left := -400.0, Top := 0.0, Right := -0.0, Bottom := -0.0}
-                        Alignment := vector2{X:=0.5,Y:=0.5}
-                        SizeToContent := true
-                        ZOrder := 0
-                        Widget := button_loud{DefaultText:=S2M("loud")}
-                    canvas_slot:
-                        Anchors := anchors{Minimum:=vector2{X:=0.5,Y:=0.5},Maximum:=vector2{X:=0.5,Y:=0.5}}
-                        Offsets := margin{Left := -200.0, Top := 0.0, Right := -0.0, Bottom := -0.0}
-                        Alignment := vector2{X:=0.5,Y:=0.5}
-                        SizeToContent := true
-                        ZOrder := 0
-                        Widget := button_regular{DefaultText:=S2M("regular")}
-
-            PlayerUI.AddWidget(Widget, player_ui_slot{InputMode := ui_input_mode.All})
-            Btn.OnClick().Await()
-            PlayerUI.RemoveWidget(Widget)
-    
     OnTriggered2(OAgent:?agent):void=
-        if(Agent := OAgent?):
-            PlayerStatsManager.ShowPresets(Agent)
+        if(Agent := OAgent?, Player := player[Agent]):
+            ShopUIDevice.AddShopUIForAll(array{Player})
         return
             
     # OnTriggered(OAgent:?agent):void=

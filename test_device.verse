@@ -39,13 +39,11 @@ test_device := class(creative_device):
 
     OnTriggered(OAgent:?agent):void=
         if(Agent := OAgent?, Player := player[Agent]):
-            Print("持っている数: {CondBtn.GetItemCount(Agent, 0)}個")
-            ShopUIDevice.CarryOverItemsToData(Player)
         return
 
     OnTriggered2(OAgent:?agent):void=
         if(Agent := OAgent?, Player := player[Agent]):
-            ShopUIDevice.AddShopUIForAll(array{Player})
+            spawn{ShopUIDevice.AddShopUIForAll(array{Player})}
         return
             
     # OnTriggered(OAgent:?agent):void=

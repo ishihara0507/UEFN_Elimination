@@ -1,4 +1,5 @@
 using { /Verse.org/Assets }
+using { /Verse.org/Colors }
 
 ## ショップで購入できる武器やアイテム、パワーアップなどの定義を行うファイル
 
@@ -61,6 +62,27 @@ rarity_enum := enum:
         rarity_enum.L6_Mythic => ShopTextures_Rarities.square_L6_mythic
         rarity_enum.L7_Exotic => ShopTextures_Rarities.square_L7_exotic
 
+(RE:rarity_enum).ToString():string=
+    case(RE):
+        rarity_enum.L1_Common => "Common"
+        rarity_enum.L2_Uncommon => "Uncommon"
+        rarity_enum.L3_Rare => "Rare"
+        rarity_enum.L4_Epic => "Epic"
+        rarity_enum.L5_Legend => "Legend"
+        rarity_enum.L6_Mythic => "Mythic"
+        rarity_enum.L7_Exotic => "Exotic"
+
+(RE:rarity_enum).ToTextColor():color=
+    case(RE):
+        rarity_enum.L1_Common => color{R := 0.148, G := 0.148, B := 0.148}
+        rarity_enum.L2_Uncommon => color{R := 0.0, G := 0.513, B := 0.0}
+        rarity_enum.L3_Rare => color{R := 0.0, G := 0.1, B := 1.0}
+        rarity_enum.L4_Epic => color{R := 0.275, G := 0.0, B := 0.753}
+        rarity_enum.L5_Legend => color{R := 0.905, G := 0.122, B := 0.0}
+        rarity_enum.L6_Mythic => color{R := 0.578, G := 0.275, B := 0.0}
+        rarity_enum.L7_Exotic => color{R := 0.0, G := 0.52, B := 0.48}
+
+
 item_data := struct:
     Item:item_enum # アイテムの識別名
     MaxCapacity:int # １スロットでそのアイテムを保持できる数
@@ -78,8 +100,8 @@ item_data := struct:
 
 shop_datas := class:
     # 引数で与えられたカテゴリーに分類されたアイテムを配列で返す関数
-    GetItemsByCategory(Category:item_category_enum):[]item_data=
-        var ReturnItems:[]item_data = array{}
+    GetItemsByCategory(Category:item_category_enum):[]item_enum=
+        var ReturnItems:[]item_enum = array{}
 
         case(Category):
             item_category_enum.SG => set ReturnItems = array:
@@ -87,7 +109,7 @@ shop_datas := class:
             item_category_enum.SMG => set ReturnItems = array:
             item_category_enum.AR => set ReturnItems = array:
             item_category_enum.SR => set ReturnItems = array:
-                AssaultRifle
+                item_enum.AssaultRifle
             item_category_enum.SP => set ReturnItems = array:
             item_category_enum.ITEM => set ReturnItems = array:
             item_category_enum.PU => set ReturnItems = array:

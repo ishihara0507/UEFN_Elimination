@@ -40,6 +40,7 @@ condbtn_item_lick := class:
     ShopUIDevice:shop_ui_device
 
     ActivateCondBtn(Agent:agent):void=
+        Print("該当するアイテムを持っている！！！")
         var ItemNum:int = CondBtn.GetItemCount(Agent, 0) # プレイヤーがそのアイテムを持っている個数（同じ武器を２つ持っていたら、ちゃんと２と表示される）
         if(Player := player[Agent], PlayerItems := ShopUIDevice.PlayerItemsMap[Player]):
             if(PlayerItems.Length < 5): # 一応
@@ -85,10 +86,12 @@ shop_ui_device := class(creative_device):
             set CondBtnItemLinks += array{CondBtnItemLink}
 
     # すべてのプレイヤーにショップUIを付与する関数
-    AddShopUIForAll(GamePlayers:[]player):void=
+    AddShopUIForAll(GamePlayers:[]player)<suspends>:void=
         # 以前のラウンドからの持ち越しアイテムをデータ化
         for(Player:GamePlayers):
             CarryOverItemsToData(Player)
+
+        Sleep(0.0) # ディレイを設けないと、条件付きボタンの処理が終わる前にUIを作成してしまう
 
         # ショップUIを付与
         for(Player:GamePlayers, PlayerUI := GetPlayerUI[Player], PlayerItems := PlayerItemsMap[Player]):
@@ -115,20 +118,22 @@ shop_ui_device := class(creative_device):
         for(P->PlayerItems:PlayerItemsMap):
             PlayerName := GetAgentName(P)
             Print(PlayerName)
+            Print("PlayerItems.Length: {PlayerItems.Length}")
             for(Index->Item:PlayerItems):
                 ItemName := Item.ItemEnum.ToString()
+                ItemRarity := Item.RarityEnum.ToString()
                 ItemNum := Item.CarryOverCount
-                Print("{Index}番目: {ItemName}が{ItemNum}個")
+                Print("{Index}番目: {ItemRarity}の{ItemName}が{ItemNum}個")
 
 
 # ボタンを識別するための列挙型
 btn_enum := enum:
     # 手持ちアイテム
-    Sell_0
-    Sell_1
-    Sell_2
-    Sell_3
-    Sell_4
+    Holding_0
+    Holding_1
+    Holding_2
+    Holding_3
+    Holding_4
 
     # タブ
     Tab_SG
@@ -194,7 +199,7 @@ shop_ui := class:
     Tab_ARBtn:button_loud = button_loud{}
     Tab_SRBtn:button_loud = button_loud{}
     Tab_SPBtn:button_loud = button_loud{}
-    Tab_ItemBtn:button_loud = button_loud{}
+    Tab_ITEMBtn:button_loud = button_loud{}
     Tab_PUBtn:button_loud = button_loud{}
 
     # アイテム
@@ -213,6 +218,9 @@ shop_ui := class:
     Item_SelectBtn9:button_quiet = button_quiet{}
 
     # ページネーション
+    var Page_Borders:[]color_block = array{}
+    var Page_Backgrounds:[]color_block = array{}
+    var Page_NumTexts:[]text_block = array{}
     Page_LeftBtn:button_loud = button_loud{}
     Page_RightBtn:button_loud = button_loud{}
 
@@ -232,13 +240,16 @@ shop_ui := class:
 
     # 変数
     var PageNum:int = 0 # 現在開いているページを保持
+    var CategoryMaxPageNum:int = 1 # そのカテゴリーは何ページあるか
 
     var PlayerHealth:float = 100.0
     var PlayerShield:float = 100.0
     var PlayerGolds:int = 1000
     
-    var ShopItems:[]item_enum = array{} # 現在ショップ部分に表示されているアイテムを保持する
-    var SelectRearity:rarity_enum = rarity_enum.L1_Common # 現在どのレアリティが選択されているか
+    var SelectedCategoryItems:[]item_enum = array{} # 現在選択されているカテゴリーに属しているアイテムすべてを保持
+    var DisplayedItems:[]item_enum = array{} # 現在ショップ部分に表示されているアイテムを保持する
+    var SelectedItem:item_enum = item_enum.AssaultRifle # 現在選択されているアイテム
+    var SelectedRarity:rarity_enum = rarity_enum.L1_Common # 現在選択されているレアリティ
 
     # 定数
     HoldingNum:int = 5 # 手持ちのアイテムの最大個数
@@ -248,9 +259,13 @@ shop_ui := class:
     MaxPageNum:int = 5 # 1カテゴリーにおける最大のページ数
     DescTextNum:int = 5 # アイテム説明の箇条書き行数
 
+    ShopDatas:shop_datas = shop_datas{}
+
     Init()<suspends>:void=
         if(PlayerUI := GetPlayerUI[AddPlayer]):
             SetUpWidgetElem() # ウィジェット要素のセットアップ
+
+            OnTabClick(item_category_enum.SG) # 各種変数に初期値を設定
 
             CreateUI() # UIの作成
             InitializeUI() # UIにデータを適用し、初期化する
@@ -295,7 +310,7 @@ shop_ui := class:
         Tab_ARBtn.SetText(S2M("AR"))
         Tab_SRBtn.SetText(S2M("SR"))
         Tab_SPBtn.SetText(S2M("SP"))
-        Tab_ItemBtn.SetText(S2M("ITEM"))
+        Tab_ITEMBtn.SetText(S2M("ITEM"))
         Tab_PUBtn.SetText(S2M("PU"))
         set Tab_Btns = array:
             Tab_SGBtn
@@ -304,7 +319,7 @@ shop_ui := class:
             Tab_ARBtn
             Tab_SRBtn
             Tab_SPBtn
-            Tab_ItemBtn
+            Tab_ITEMBtn
             Tab_PUBtn
 
         # アイテム
@@ -337,6 +352,10 @@ shop_ui := class:
         # ページネーション
         Page_LeftBtn.SetText(S2M("<"))
         Page_RightBtn.SetText(S2M(">"))
+        for(Index := 0..MaxPageNum - 1):
+            set Page_Borders += array{color_block{DefaultColor := Red, DefaultDesiredSize := vector2{X := 50.0, Y := 50.0}}}
+            set Page_Backgrounds += array{color_block{DefaultColor := White, DefaultDesiredSize := vector2{X := 38.0, Y := 38.0}}}
+            set Page_NumTexts += array{text_block{DefaultText := S2M("0")}}
 
         # アイテム詳細
         Desc_ItemNameText.SetText(S2M("Assault Rifle"))
@@ -605,7 +624,7 @@ shop_ui := class:
                                 VerticalAlignment := vertical_alignment.Center
                                 Widget := stack_box:
                                     Orientation := orientation.Horizontal
-                                    Slots := for(Index := 0..MaxPageNum - 1):
+                                    Slots := for(Index := 0..MaxPageNum - 1, Border := Page_Borders[Index], Background := Page_Backgrounds[Index], NumText := Page_NumTexts[Index]):
                                         var PaddingLeft:float = 0.0
                                         if(0 < Index):
                                             set PaddingLeft = 20.0
@@ -620,17 +639,17 @@ shop_ui := class:
                                                         Padding := margin{Left := 0.0, Top := 0.0, Right := 0.0, Bottom := 0.0}
                                                         HorizontalAlignment := horizontal_alignment.Center
                                                         VerticalAlignment := vertical_alignment.Center
-                                                        Widget := color_block{DefaultColor := Red, DefaultDesiredSize := vector2{X := 50.0, Y := 50.0}}
+                                                        Widget := Border
                                                     overlay_slot: # 数字背景
                                                         Padding := margin{Left := 0.0, Top := 0.0, Right := 0.0, Bottom := 0.0}
                                                         HorizontalAlignment := horizontal_alignment.Center
                                                         VerticalAlignment := vertical_alignment.Center
-                                                        Widget := color_block{DefaultColor := White, DefaultDesiredSize := vector2{X := 38.0, Y := 38.0}}
+                                                        Widget := Background
                                                     overlay_slot: # 数字テキスト
                                                         Padding := margin{Left := 0.0, Top := 0.0, Right := 0.0, Bottom := 0.0}
                                                         HorizontalAlignment := horizontal_alignment.Center
                                                         VerticalAlignment := vertical_alignment.Center
-                                                        Widget := text_block{DefaultText := S2M("{Index + 1}")}
+                                                        Widget := NumText
                             stack_box_slot: # 右ボタン
                                 Padding := margin{Left := 0.0, Top := 0.0, Right := 0.0, Bottom := 0.0}
                                 HorizontalAlignment := horizontal_alignment.Center
@@ -762,7 +781,7 @@ shop_ui := class:
     InitializeUI():void=
         UpdatePlayerStatus()
         UpdateItemDetail()
-        UpdateShop()
+        UpdateDisplayedItems()
         UpdatePageNation()
 
     # プレイヤーのステータスと手持ちアイテムの部分を更新する関数
@@ -772,36 +791,361 @@ shop_ui := class:
         HoldGoldsHudDevice.SetText(S2M("{PlayerGolds}"))
 
         # 手持ちアイテムの更新
-        for(Index->Item:PlayerItems, RarityTexture := Holding_RarityTextures[Index], ItemTexture := Holding_ItemTextures[Index], ItemCountText := Holding_ItemCountText[Index]):
-            RarityTexture.SetImage()
+        for(Index := 0..HoldingNum - 1):
+            if:
+                RarityTexture := Holding_RarityTextures[Index]
+                ItemTexture := Holding_ItemTextures[Index]
+                ItemCountText := Holding_ItemCountText[Index]
+                HoldingBtn := Holding_Btns[Index]
+            then:
+                if(Item := PlayerItems[Index]):
+                    RarityTexture.SetImage(Item.RarityEnum.ToSquare())
+                    ItemTexture.SetImage(Item.ItemEnum.ToTexture())
 
-            ItemTexture.SetImage(Item.ItemEnum.ToTexture())
+                    Count := Item.CarryOverCount + Item.BuyCount
+                    if(1 < Count):
+                        ItemCountText.SetText(S2M("{Count}"))
+                    else:
+                        ItemCountText.SetText(S2M(""))
 
-            Count := Item.CarrayOverCount + Item.BuyCount
-            if(1 < Count):
-                ItemCountText.SetText(S2M("{Count}"))
-            else:
-                ItemCountText.SetText(S2M(""))
-        
-        # 空領域の表示
-        if(PlayerItems.Length < 5):
-
-
-        
+                    if(0 < Item.BuyCount):
+                        HoldingBtn.SetText(S2M("SELL"))
+                    else:
+                        HoldingBtn.SetText(S2M("TRASH"))
+                else:
+                    ItemTexture.SetImage(ShopTextures_Items.Empty) # 空領域として表示
+                    HoldingBtn.SetText(S2M(""))
+            
     # アイテム詳細の部分を更新する関数
     UpdateItemDetail():void=
+        ItemData := SelectedItem.ToItemData()
+
+        Desc_RarityTexture.SetImage(SelectedRarity.ToSquare())
+        Desc_ItemTexture.SetImage(SelectedItem.ToTexture())
+        Desc_ItemNameText.SetText(S2M(SelectedItem.ToString()))
+        for(Index := 0..DescTextNum - 1):
+            if:
+                DescText := Desc_DescTexts[Index]
+                Descs := ItemData.RarityDescMap[SelectedRarity]
+                Desc := Descs[Index]
+            then:
+                DescText.SetText(S2M(Desc))
+        if(Price := ItemData.RarityPriceMap[SelectedRarity]):
+            Desc_GoldsText.SetText(S2M("{Price}"))
+        Desc_RarityText.SetText(S2M(SelectedRarity.ToString()))
+        Desc_RarityText.SetTextColor(SelectedRarity.ToTextColor())
 
     # アイテム一覧の部分を更新する関数
-    UpdateShop():void=
+    UpdateDisplayedItems():void=
+        for(Index := 0..ItemPerRow * RowPerPage - 1):
+            if:
+                RarityTexture := Item_RarityTextures[Index]
+                ItemTexture := Item_ItemTextures[Index]
+                GoldsText := Item_GoldsTexts[Index]
+                SelectBtn := Item_SelectBtns[Index]
+            then:
+                if(DisplayedItem := DisplayedItems[Index]):
+                    ItemData := DisplayedItem.ToItemData()
+
+                    # 最低レアリティで表示する
+                    if(LowestRarity := ItemData.Rarities[0], LowestPrice := ItemData.RarityPriceMap[LowestRarity]):
+                        RarityTexture.SetImage(LowestRarity.ToBackground())
+                        ItemTexture.SetImage(DisplayedItem.ToTexture())
+                        GoldsText.SetText(S2M("{LowestPrice}"))
+
+                    # 表示する
+                    RarityTexture.SetVisibility(widget_visibility.Visible)
+                    ItemTexture.SetVisibility(widget_visibility.Visible)
+                    GoldsText.SetVisibility(widget_visibility.Visible)
+                    SelectBtn.SetVisibility(widget_visibility.Visible)
+                else:
+                    # 非表示する
+                    RarityTexture.SetVisibility(widget_visibility.Hidden)
+                    ItemTexture.SetVisibility(widget_visibility.Hidden)
+                    GoldsText.SetVisibility(widget_visibility.Hidden)
+                    SelectBtn.SetVisibility(widget_visibility.Hidden)
 
     # ページネーションの部分を更新する関数
     UpdatePageNation():void=
+        # ページ番号ボックスの表示非表示を更新
+        for(Index := 0..MaxPageNum - 1):
+            if(Border := Page_Borders[Index], Background := Page_Backgrounds[Index], NumText := Page_NumTexts[Index]):
+                if(Index < CategoryMaxPageNum):
+                    Border.SetVisibility(widget_visibility.Hidden)
+                    Background.SetVisibility(widget_visibility.Visible)
+                    NumText.SetVisibility(widget_visibility.Visible)
+                else:
+                    Border.SetVisibility(widget_visibility.Collapsed) # Collapsed: 場所も取らない
+                    Background.SetVisibility(widget_visibility.Collapsed)
+                    NumText.SetVisibility(widget_visibility.Collapsed)
+
+        # ボーダーの表示非表示を更新
+        for(Index := 0..MaxPageNum - 1, Border := Page_Borders[Index]):
+            if(Index = PageNum):
+                Border.SetVisibility(widget_visibility.Visible)
+            else:
+                Border.SetVisibility(widget_visibility.Hidden)
+
+    # 手持ちアイテムのボタンが押されたときに呼び出す関数
+    OnHoldingClick(ItemIndex:int):void=
+        if(Item := PlayerItems[ItemIndex]):
+            if(0 < Item.BuyCount):
+                ItemData := Item.ItemEnum.ToItemData()
+                if(SoldPrice := ItemData.RarityPriceMap[Item.RarityEnum]):
+                    set Item.BuyCount -= 1
+                    set PlayerGolds += SoldPrice
+                    Print("{Item.RarityEnum.ToString()}の{Item.ItemEnum.ToString()}を{SoldPrice}ゴールドで売却した")
+            else if(0 < Item.CarryOverCount):
+                set Item.CarryOverCount -= 1
+                Print("{Item.RarityEnum.ToString()}の{Item.ItemEnum.ToString()}を捨てた")
+
+            # 所持数が０になったら配列から削除する
+            if:
+                Item.BuyCount = 0
+                Item.CarryOverCount = 0
+                PlayerItems.RemoveElement[ItemIndex]
+        else:
+            Print("空のスロットのボタンが押された")
+
+        # UIを更新
+        UpdatePlayerStatus()
+
+    # タブボタンが押されたときに呼び出す関数
+    OnTabClick(ItemCategoryEnum:item_category_enum):void=
+        set SelectedCategoryItems = ShopDatas.GetItemsByCategory(ItemCategoryEnum)
+        for(Index := 0..ItemPerRow * RowPerPage - 1, Item := SelectedCategoryItems[Index]):
+            set DisplayedItems += array{Item}
+        if(Item := DisplayedItems[0]):
+            set SelectedItem = Item
+        ItemData := SelectedItem.ToItemData()
+        if(LowestRarity := ItemData.Rarities[0]):
+            set SelectedRarity = LowestRarity
+        if(N := Ceil[SelectedCategoryItems.Length * 1.0 / (ItemPerRow * RowPerPage * 1.0)]):
+            set CategoryMaxPageNum = N
+
+        set PageNum = 0 # ページ数をリセット
+
+        # UIを更新
+        UpdateDisplayedItems()
+
+        Print("カテゴリーが変更された")
+
+    # セレクトボタンが押されたときに呼び出す関数
+    OnSelectClick(ItemIndex:int):void=
+        if(Item := DisplayedItems[ItemIndex]):
+            ItemData := Item.ToItemData()
+            if(LowestRarity := ItemData.Rarities[0]):
+                set SelectedItem = Item
+                set SelectedRarity = LowestRarity
+
+        # UIを更新
+        UpdateItemDetail()
+
+    # ページネーションのボタンが押されたときに呼び出す関数
+    OnPageNationClick(IsLeft:logic):void=
+        if(IsLeft?): # 左ボタン
+            if(PageNum = 0):
+                set PageNum = CategoryMaxPageNum - 1
+            else:
+                set PageNum -= 1
+        else: # 右ボタン
+            if(PageNum = CategoryMaxPageNum - 1):
+                set PageNum = 0
+            else:
+                set PageNum += 1
+
+        # アイテム一覧に表示するアイテムを設定
+        var Items:[]item_enum = array{}
+        ItemPerPage := ItemPerRow * RowPerPage
+        for(Index := ItemPerPage * PageNum .. ItemPerPage * (PageNum + 1) - 1, Item := SelectedCategoryItems[Index]):
+            set Items += array{Item}
+        set DisplayedItems = Items
+
+        # アイテム詳細に表示するアイテムを設定
+        if(Item := DisplayedItems[0]):
+            set SelectedItem = Item
+        ItemData := SelectedItem.ToItemData()
+        if(LowestRarity := ItemData.Rarities[0]):
+            set SelectedRarity = LowestRarity
+
+        # UIを更新
+        UpdatePageNation()
+        UpdateDisplayedItems()
+        UpdateItemDetail()
+
+    # アイテム詳細部分のレアリティ変更ボタンが押されたときに呼び出す関数
+    OnRarityClick(IsLeft:logic):void=
+        Rarities := SelectedItem.ToItemData().Rarities
+        MaxIndex := Rarities.Length - 1
+        if(SelectedIndex := Rarities.Find[SelectedRarity]):
+            if(IsLeft?): # 左ボタン
+                if(SelectedIndex = 0, Rarity := Rarities[MaxIndex]):
+                    set SelectedRarity = Rarity
+                else if(Rarity := Rarities[SelectedIndex - 1]):
+                    set SelectedRarity = Rarity
+            else: # 右ボタン
+                if(SelectedIndex = MaxIndex, Rarity := Rarities[0]):
+                    set SelectedRarity = Rarity
+                else if(Rarity := Rarities[SelectedIndex + 1]):
+                    set SelectedRarity = Rarity
+
+        # UIの更新
+        UpdateItemDetail()
+
+    # 購入ボタンが押されたときに呼び出す関数
+    OnBuyClick():void=
+        # パワーアップとそうでない場合で分ける必要がある
+
 
     # ボタンが押されるのを待機し、押されたボタンに応じて処理を実行する関数
     HandleButtonClick()<suspends>:void=
+        var ClickedBtn:btn_enum = btn_enum.Desc_Right
+        
+        # ボタンのクリックを待機し、クリックされたボタンに応じて処理を実行する
         race:
             block:
                 KillUIEvent.Await()
                 Print("ショップUIが削除された")
             loop:
-                Sleep(1.0)
+                race:
+                    # 手持ちアイテムボタン
+                    block: # ０
+                        Holding_Btn0.OnClick().Await()
+                        set ClickedBtn = btn_enum.Holding_0
+                    block: # １
+                        Holding_Btn1.OnClick().Await()
+                        set ClickedBtn = btn_enum.Holding_1
+                    block: # ２
+                        Holding_Btn2.OnClick().Await()
+                        set ClickedBtn = btn_enum.Holding_2
+                    block: # ３
+                        Holding_Btn3.OnClick().Await()
+                        set ClickedBtn = btn_enum.Holding_3
+                    block: # ４
+                        Holding_Btn4.OnClick().Await()
+                        set ClickedBtn = btn_enum.Holding_4
+
+                    # タブボタン
+                    block: # SG
+                        Tab_SGBtn.OnClick().Await()
+                        set ClickedBtn = btn_enum.Tab_SG
+                    block: # P
+                        Tab_PBtn.OnClick().Await()
+                        set ClickedBtn = btn_enum.Tab_P
+                    block: # SMG
+                        Tab_SMGBtn.OnClick().Await()
+                        set ClickedBtn = btn_enum.Tab_SMG
+                    block: # AR
+                        Tab_ARBtn.OnClick().Await()
+                        set ClickedBtn = btn_enum.Tab_AR
+                    block: # SR
+                        Tab_SRBtn.OnClick().Await()
+                        set ClickedBtn = btn_enum.Tab_SR
+                    block: # SP
+                        Tab_SPBtn.OnClick().Await()
+                        set ClickedBtn = btn_enum.Tab_SP
+                    block: # ITEM
+                        Tab_ITEMBtn.OnClick().Await()
+                        set ClickedBtn = btn_enum.Tab_ITEM
+                    block: # PU
+                        Tab_PUBtn.OnClick().Await()
+                        set ClickedBtn = btn_enum.Tab_PU
+
+                    # ディスプレイアイテムボタン
+                    block: # ０
+                        Item_SelectBtn0.OnClick().Await()
+                        set ClickedBtn = btn_enum.Select_0
+                    block: # １
+                        Item_SelectBtn1.OnClick().Await()
+                        set ClickedBtn = btn_enum.Select_1
+                    block: # ２
+                        Item_SelectBtn2.OnClick().Await()
+                        set ClickedBtn = btn_enum.Select_2
+                    block: # ３
+                        Item_SelectBtn3.OnClick().Await()
+                        set ClickedBtn = btn_enum.Select_3
+                    block: # ４
+                        Item_SelectBtn4.OnClick().Await()
+                        set ClickedBtn = btn_enum.Select_4
+                    block: # ５
+                        Item_SelectBtn5.OnClick().Await()
+                        set ClickedBtn = btn_enum.Select_5
+                    block: # ６
+                        Item_SelectBtn6.OnClick().Await()
+                        set ClickedBtn = btn_enum.Select_6
+                    block: # ７
+                        Item_SelectBtn7.OnClick().Await()
+                        set ClickedBtn = btn_enum.Select_7
+                    block: # ８
+                        Item_SelectBtn8.OnClick().Await()
+                        set ClickedBtn = btn_enum.Select_8
+                    block: # ９
+                        Item_SelectBtn9.OnClick().Await()
+                        set ClickedBtn = btn_enum.Select_9
+
+                    # ページネーションのボタン
+                    block: # 左
+                        Page_LeftBtn.OnClick().Await()
+                        set ClickedBtn = btn_enum.Page_Left
+                    block: # 右
+                        Page_RightBtn.OnClick().Await()
+                        set ClickedBtn = btn_enum.Page_Right
+
+                    # アイテム詳細
+                    block: # 左
+                        Desc_LeftBtn.OnClick().Await()
+                        set ClickedBtn = btn_enum.Desc_Left
+                    block: # 右
+                        Desc_RightBtn.OnClick().Await()
+                        set ClickedBtn = btn_enum.Desc_Right
+                    block: # 購入
+                        Desc_BuyBtn.OnClick().Await()
+                        set ClickedBtn = btn_enum.Desc_Buy
+
+                    # 閉じるボタン
+                    block:
+                        ExitBtn.OnClick().Await()
+                        set ClickedBtn = btn_enum.Exit
+
+                case(ClickedBtn):
+                    # 手持ちアイテムボタン
+                    btn_enum.Holding_0 => OnHoldingClick(0)
+                    btn_enum.Holding_1 => OnHoldingClick(1)
+                    btn_enum.Holding_2 => OnHoldingClick(2)
+                    btn_enum.Holding_3 => OnHoldingClick(3)
+                    btn_enum.Holding_4 => OnHoldingClick(4)
+
+                    # タブボタン
+                    btn_enum.Tab_SG => OnTabClick(item_category_enum.SG)
+                    btn_enum.Tab_P => OnTabClick(item_category_enum.P)
+                    btn_enum.Tab_SMG => OnTabClick(item_category_enum.SMG)
+                    btn_enum.Tab_AR => OnTabClick(item_category_enum.AR)
+                    btn_enum.Tab_SR => OnTabClick(item_category_enum.SR)
+                    btn_enum.Tab_SP => OnTabClick(item_category_enum.SP)
+                    btn_enum.Tab_ITEM => OnTabClick(item_category_enum.ITEM)
+                    btn_enum.Tab_PU => OnTabClick(item_category_enum.PU)
+
+                    # ディスプレイアイテムボタン
+                    btn_enum.Select_0 => OnSelectClick(0)
+                    btn_enum.Select_1 => OnSelectClick(1)
+                    btn_enum.Select_2 => OnSelectClick(2)
+                    btn_enum.Select_3 => OnSelectClick(3)
+                    btn_enum.Select_4 => OnSelectClick(4)
+                    btn_enum.Select_5 => OnSelectClick(5)
+                    btn_enum.Select_6 => OnSelectClick(6)
+                    btn_enum.Select_7 => OnSelectClick(7)
+                    btn_enum.Select_8 => OnSelectClick(8)
+                    btn_enum.Select_9 => OnSelectClick(9)
+
+                    # ページネーションのボタン
+                    btn_enum.Page_Left => OnPageNationClick(true)
+                    btn_enum.Page_Right => OnPageNationClick(false)
+
+                    # アイテム詳細
+                    btn_enum.Desc_Left => OnRarityClick(true)
+                    btn_enum.Desc_Right => OnRarityClick(false)
+                    btn_enum.Desc_Buy => OnBuyClick()
+
+                    # 閉じるボタン
+                    btn_enum.Exit => KillUIEvent.Signal()
+                    

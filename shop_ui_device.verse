@@ -63,9 +63,11 @@ shop_ui_device := class(creative_device):
     ItemGranter:item_granter_device = item_granter_device{} # 購入したアイテムをプレイヤーに渡すために必要
 
     @editable
-    PlayerIconHudDevice:hud_message_device = hud_message_device{}
+    PlayerGoldsHudDevice:hud_message_device = hud_message_device{}
     @editable
-    HoldGoldsHudDevice:hud_message_device = hud_message_device{}
+    PlayerHealthHudDevice:hud_message_device = hud_message_device{}
+    @editable
+    PlayerShieldHudDevice:hud_message_device = hud_message_device{}
 
     var CondBtnItemLinks:[]condbtn_item_lick = array{}
     var PlayerItemsMap:[player][]player_item = map{}
@@ -99,8 +101,9 @@ shop_ui_device := class(creative_device):
                 AddPlayer := Player
                 PlayerItems := PlayerItems
                 KillUIEvent := KillUIEvent
-                PlayerIconHudDevice := PlayerIconHudDevice
-                HoldGoldsHudDevice := HoldGoldsHudDevice
+                PlayerGoldsHudDevice := PlayerGoldsHudDevice
+                PlayerHealthHudDevice := PlayerHealthHudDevice
+                PlayerShieldHudDevice := PlayerShieldHudDevice
             spawn{NewShopUI.Init()}
             if. set PlayerShopUIMap[Player] = NewShopUI
 
@@ -141,9 +144,9 @@ btn_enum := enum:
     Tab_SMG
     Tab_AR
     Tab_SR
-    Tab_SP
     Tab_ITEM
-    Tab_PU
+    Tab_SP
+    Tab_EX
 
     # アイテム
     Select_0
@@ -171,12 +174,14 @@ btn_enum := enum:
 
 shop_ui := class:
     AddPlayer:player
-    PlayerItems:[]player_item
+    var PlayerItems:[]player_item
     KillUIEvent:event()
-    PlayerIconHudDevice:hud_message_device
-    HoldGoldsHudDevice:hud_message_device
+    PlayerGoldsHudDevice:hud_message_device
+    PlayerHealthHudDevice:hud_message_device
+    PlayerShieldHudDevice:hud_message_device
 
     var Widget:widget = canvas{}
+    var BackgroundWidget:widget = canvas{}
     
     var Holding_Btns:[]button_quiet = array{}
     var Tab_Btns:[]button_loud = array{}
@@ -200,11 +205,12 @@ shop_ui := class:
     Tab_SRBtn:button_loud = button_loud{}
     Tab_SPBtn:button_loud = button_loud{}
     Tab_ITEMBtn:button_loud = button_loud{}
-    Tab_PUBtn:button_loud = button_loud{}
+    Tab_EXBtn:button_loud = button_loud{}
 
     # アイテム
     var Item_RarityTextures:[]texture_block = array{}
     var Item_ItemTextures:[]texture_block = array{}
+    var Item_GoldTextures:[]texture_block = array{}
     var Item_GoldsTexts:[]text_block = array{}
     Item_SelectBtn0:button_quiet = button_quiet{}
     Item_SelectBtn1:button_quiet = button_quiet{}
@@ -221,6 +227,7 @@ shop_ui := class:
     var Page_Borders:[]color_block = array{}
     var Page_Backgrounds:[]color_block = array{}
     var Page_NumTexts:[]text_block = array{}
+    var Page_PaddingRights:[]color_block = array{}
     Page_LeftBtn:button_loud = button_loud{}
     Page_RightBtn:button_loud = button_loud{}
 
@@ -229,7 +236,7 @@ shop_ui := class:
     Desc_ItemTexture:texture_block = texture_block{DefaultImage := ShopTextures_Items.AssaultRifle, DefaultDesiredSize := vector2{X := 300.0, Y := 300.0}}
     Desc_ItemNameText:text_block = text_block{}
     var Desc_DescTexts:[]text_block = array{}
-    Desc_GoldsText:text_block = text_block{}
+    Desc_GoldsText:text_block = text_block{DefaultTextColor := color{R := 0.516, G := 0.272, B := 0.0}}
     Desc_LeftBtn:button_loud = button_loud{}
     Desc_RarityText:text_block = text_block{}
     Desc_RightBtn:button_loud = button_loud{}
@@ -242,9 +249,9 @@ shop_ui := class:
     var PageNum:int = 0 # 現在開いているページを保持
     var CategoryMaxPageNum:int = 1 # そのカテゴリーは何ページあるか
 
-    var PlayerHealth:float = 100.0
-    var PlayerShield:float = 100.0
-    var PlayerGolds:int = 1000
+    var PlayerHealth:int = 10
+    var PlayerShield:int = 10
+    var PlayerGolds:int = 99999
     
     var SelectedCategoryItems:[]item_enum = array{} # 現在選択されているカテゴリーに属しているアイテムすべてを保持
     var DisplayedItems:[]item_enum = array{} # 現在ショップ部分に表示されているアイテムを保持する
@@ -262,25 +269,31 @@ shop_ui := class:
     ShopDatas:shop_datas = shop_datas{}
 
     Init()<suspends>:void=
-        if(PlayerUI := GetPlayerUI[AddPlayer]):
+        if(PlayerUI := GetPlayerUI[AddPlayer], Fort := AddPlayer.GetFortCharacter[]):
             SetUpWidgetElem() # ウィジェット要素のセットアップ
 
-            OnTabClick(item_category_enum.SG) # 各種変数に初期値を設定
+            OnTabClick(item_category_enum.SG) # UI系の各種変数に初期値を設定
+            if(Health := Int[Fort.GetMaxHealth()], Shield := Int[Fort.GetMaxShield()]):
+                set PlayerHealth = Health
+                set PlayerShield = Shield
+            # ゴールドの値の設定も行う
 
+            CreateBackgroundWidget() # 背景を作成
             CreateUI() # UIの作成
             InitializeUI() # UIにデータを適用し、初期化する
             
+            PlayerUI.AddWidget(BackgroundWidget)
             PlayerUI.AddWidget(Widget, player_ui_slot{InputMode := ui_input_mode.All})
-            PlayerIconHudDevice.Show(AddPlayer)
-            HoldGoldsHudDevice.Show(AddPlayer)
             spawn{HandleButtonClick()}
             Print("ショップUIを付与した")
 
             KillUIEvent.Await()
 
+            PlayerGoldsHudDevice.Hide(AddPlayer)
+            PlayerHealthHudDevice.Hide(AddPlayer)
+            PlayerShieldHudDevice.Hide(AddPlayer)
             PlayerUI.RemoveWidget(Widget)
-            PlayerIconHudDevice.Hide(AddPlayer)
-            HoldGoldsHudDevice.Hide(AddPlayer)
+            PlayerUI.RemoveWidget(BackgroundWidget)
             Print("ショップUIを削除した")
         return
 
@@ -309,24 +322,25 @@ shop_ui := class:
         Tab_SMGBtn.SetText(S2M("SMG"))
         Tab_ARBtn.SetText(S2M("AR"))
         Tab_SRBtn.SetText(S2M("SR"))
-        Tab_SPBtn.SetText(S2M("SP"))
         Tab_ITEMBtn.SetText(S2M("ITEM"))
-        Tab_PUBtn.SetText(S2M("PU"))
+        Tab_SPBtn.SetText(S2M("SP"))
+        Tab_EXBtn.SetText(S2M("EX"))
         set Tab_Btns = array:
             Tab_SGBtn
             Tab_PBtn
             Tab_SMGBtn
             Tab_ARBtn
             Tab_SRBtn
-            Tab_SPBtn
             Tab_ITEMBtn
-            Tab_PUBtn
+            Tab_SPBtn
+            Tab_EXBtn
 
         # アイテム
         for(Index := 0..RowPerPage * ItemPerRow - 1):
             set Item_RarityTextures += array{texture_block{DefaultImage := rarity_enum.L1_Common.ToBackground(), DefaultDesiredSize := vector2{X := 220.0, Y := 260.0}}}
             set Item_ItemTextures += array{texture_block{DefaultImage := item_enum.AssaultRifle.ToTexture(), DefaultDesiredSize := vector2{X := 220.0, Y := 220.0}}}
-            set Item_GoldsTexts += array{text_block{DefaultText := S2M("99999")}}
+            set Item_GoldTextures += array{texture_block{DefaultImage := Textures.Creative_Coin, DefaultDesiredSize := vector2{X := 35.0, Y := 35.0}}}
+            set Item_GoldsTexts += array{text_block{DefaultText := S2M("99999"), DefaultTextColor := Black}}
         Item_SelectBtn0.SetText(S2M("SELECT"))
         Item_SelectBtn1.SetText(S2M("SELECT"))
         Item_SelectBtn2.SetText(S2M("SELECT"))
@@ -355,7 +369,8 @@ shop_ui := class:
         for(Index := 0..MaxPageNum - 1):
             set Page_Borders += array{color_block{DefaultColor := Red, DefaultDesiredSize := vector2{X := 50.0, Y := 50.0}}}
             set Page_Backgrounds += array{color_block{DefaultColor := White, DefaultDesiredSize := vector2{X := 38.0, Y := 38.0}}}
-            set Page_NumTexts += array{text_block{DefaultText := S2M("0")}}
+            set Page_NumTexts += array{text_block{DefaultText := S2M("{Index + 1}")}}
+            set Page_PaddingRights += array{color_block{DefaultDesiredSize := vector2{X := 20.0, Y := 10.0}}}
 
         # アイテム詳細
         Desc_ItemNameText.SetText(S2M("Assault Rifle"))
@@ -370,6 +385,27 @@ shop_ui := class:
         # 閉じるボタン
         ExitBtn.SetText(S2M("X"))
 
+    # UI全体の白背景を作成する関数
+    CreateBackgroundWidget():void=
+        NewWidget := canvas:
+            Slots := array:
+                canvas_slot: # 暗転背景
+                    Anchors := anchors{Minimum:=vector2{X:=0.0,Y:=0.0},Maximum:=vector2{X:=1.0,Y:=1.0}}
+                    Offsets := margin{Left := 0.0, Top := 0.0, Right := 0.0, Bottom := 0.0}
+                    Alignment := vector2{X:=0.0,Y:=0.0}
+                    SizeToContent := false
+                    ZOrder := 0
+                    Widget := color_block{DefaultColor := color{R := 0.0, G := 0.0, B := 0.0}, DefaultOpacity := 0.6}
+                canvas_slot: # 白半透明背景
+                    Anchors := anchors{Minimum:=vector2{X:=0.5,Y:=0.5},Maximum:=vector2{X:=0.5,Y:=0.5}}
+                    Offsets := margin{Left := 0.0, Top := 7.0, Right := 0.0, Bottom := 0.0}
+                    Alignment := vector2{X:=0.5,Y:=0.5}
+                    SizeToContent := true
+                    ZOrder := 1
+                    Widget := texture_block{DefaultImage := ShopTextures_Items.WhiteBackground, DefaultDesiredSize := vector2{X := 1610.0, Y := 1010.0}}
+
+        set BackgroundWidget = NewWidget
+
     # UI全体を作成する関数
     CreateUI():void=
         NewWidget := canvas:
@@ -381,46 +417,30 @@ shop_ui := class:
                     SizeToContent := true
                     Widget := overlay:
                         Slots := array:
-                            overlay_slot: # 暗転背景
-                                Padding := margin{Left := 0.0, Top := 0.0, Right := 0.0, Bottom := 0.0}
-                                HorizontalAlignment := horizontal_alignment.Fill
-                                VerticalAlignment := vertical_alignment.Fill
-                                Widget := color_block{DefaultColor := color{R := 0.0, G := 0.0, B := 0.0}, DefaultOpacity := 0.6}  
                             overlay_slot: # メインコンテンツ
                                 Padding := margin{Left := 0.0, Top := 0.0, Right := 0.0, Bottom := 0.0}
                                 HorizontalAlignment := horizontal_alignment.Fill
                                 VerticalAlignment := vertical_alignment.Fill
-                                Widget := overlay:
+                                Widget := canvas:
                                     Slots := array:
-                                        overlay_slot: # 白半透明背景
-                                            Padding := margin{Left := 0.0, Top := 7.0, Right := 0.0, Bottom := 0.0}
-                                            HorizontalAlignment := horizontal_alignment.Center
-                                            VerticalAlignment := vertical_alignment.Center
-                                            Widget := texture_block{DefaultImage := ShopTextures_Items.WhiteBackground, DefaultDesiredSize := vector2{X := 1610.0, Y := 1010.0}}
-                                        overlay_slot: # メインコンテンツ
-                                            Padding := margin{Left := 0.0, Top := 0.0, Right := 0.0, Bottom := 0.0}
-                                            HorizontalAlignment := horizontal_alignment.Fill
-                                            VerticalAlignment := vertical_alignment.Fill
-                                            Widget := canvas:
-                                                Slots := array:
-                                                    canvas_slot: # 手持ちアイテム部分
-                                                        Anchors := anchors{Minimum:=vector2{X:=0.0,Y:=0.0},Maximum:=vector2{X:=0.0,Y:=0.0}}
-                                                        Offsets := margin{Left := 780.0, Top := 64.0, Right := 0.0, Bottom := 0.0}
-                                                        Alignment := vector2{X:=0.0,Y:=0.0}
-                                                        SizeToContent := true
-                                                        Widget := CreateHoldingItemStackBox()
-                                                    canvas_slot: # ショップ部分
-                                                        Anchors := anchors{Minimum:=vector2{X:=0.5,Y:=1.0},Maximum:=vector2{X:=0.5,Y:=1.0}}
-                                                        Offsets := margin{Left := -165.0, Top := -45.0, Right := 0.0, Bottom := 0.0}
-                                                        Alignment := vector2{X:=0.5,Y:=1.0}
-                                                        SizeToContent := true
-                                                        Widget := CreateShopUIStackBox()
-                                                    canvas_slot: # アイテム詳細部分
-                                                        Anchors := anchors{Minimum:=vector2{X:=0.5,Y:=1.0},Maximum:=vector2{X:=0.5,Y:=1.0}}
-                                                        Offsets := margin{Left := 625.0, Top := -50.0, Right := 0.0, Bottom := 0.0}
-                                                        Alignment := vector2{X:=0.5,Y:=1.0}
-                                                        SizeToContent := true
-                                                        Widget := CreateItemDetailStackBox()
+                                        canvas_slot: # 手持ちアイテム部分
+                                            Anchors := anchors{Minimum:=vector2{X:=0.0,Y:=0.0},Maximum:=vector2{X:=0.0,Y:=0.0}}
+                                            Offsets := margin{Left := 780.0, Top := 64.0, Right := 0.0, Bottom := 0.0}
+                                            Alignment := vector2{X:=0.0,Y:=0.0}
+                                            SizeToContent := true
+                                            Widget := CreateHoldingItemStackBox()
+                                        canvas_slot: # ショップ部分
+                                            Anchors := anchors{Minimum:=vector2{X:=0.5,Y:=1.0},Maximum:=vector2{X:=0.5,Y:=1.0}}
+                                            Offsets := margin{Left := -165.0, Top := -45.0, Right := 0.0, Bottom := 0.0}
+                                            Alignment := vector2{X:=0.5,Y:=1.0}
+                                            SizeToContent := true
+                                            Widget := CreateShopUIStackBox()
+                                        canvas_slot: # アイテム詳細部分
+                                            Anchors := anchors{Minimum:=vector2{X:=0.5,Y:=1.0},Maximum:=vector2{X:=0.5,Y:=1.0}}
+                                            Offsets := margin{Left := 625.0, Top := -50.0, Right := 0.0, Bottom := 0.0}
+                                            Alignment := vector2{X:=0.5,Y:=1.0}
+                                            SizeToContent := true
+                                            Widget := CreateItemDetailStackBox()
                             overlay_slot: # 閉じるボタン
                                 Padding := margin{Left := 0.0, Top := 42.5, Right := 45.0, Bottom := 0.0}
                                 HorizontalAlignment := horizontal_alignment.Right
@@ -556,7 +576,15 @@ shop_ui := class:
                                 VerticalAlignment := vertical_alignment.Fill
                                 Widget := stack_box:
                                     Orientation := orientation.Horizontal
-                                    Slots := for(Index2 := 0..ItemPerRow - 1, ItemIndex := ItemPerRow * Index + Index2, RarityTexture := Item_RarityTextures[ItemIndex], ItemTexture := Item_ItemTextures[ItemIndex], GoldsText := Item_GoldsTexts[ItemIndex], SelectBtn := Item_SelectBtns[ItemIndex]):
+                                    Slots := for(
+                                        Index2 := 0..ItemPerRow - 1
+                                        ItemIndex := ItemPerRow * Index + Index2
+                                        RarityTexture := Item_RarityTextures[ItemIndex]
+                                        ItemTexture := Item_ItemTextures[ItemIndex]
+                                        GoldTexture := Item_GoldTextures[ItemIndex]
+                                        GoldsText := Item_GoldsTexts[ItemIndex]
+                                        SelectBtn := Item_SelectBtns[ItemIndex]
+                                    ):
                                         var PaddingLeft:float = 0.0
                                         if(0 < Index2):
                                             set PaddingLeft = 30.0
@@ -588,7 +616,7 @@ shop_ui := class:
                                                                     Padding := margin{Left := 0.0, Top := 0.0, Right := 3.0, Bottom := 0.0}
                                                                     HorizontalAlignment := horizontal_alignment.Center
                                                                     VerticalAlignment := vertical_alignment.Center
-                                                                    Widget := texture_block{DefaultImage := Textures.Creative_Coin, DefaultDesiredSize := vector2{X := 35.0, Y := 35.0}}
+                                                                    Widget := GoldTexture
                                                                 stack_box_slot: # 値段テキスト
                                                                     Padding := margin{Left := 0.0, Top := 0.0, Right := 0.0, Bottom := 0.0}
                                                                     HorizontalAlignment := horizontal_alignment.Center
@@ -618,38 +646,7 @@ shop_ui := class:
                                 HorizontalAlignment := horizontal_alignment.Center
                                 VerticalAlignment := vertical_alignment.Center
                                 Widget := Page_LeftBtn
-                            stack_box_slot: # 番号列部分
-                                Padding := margin{Left := 30.0, Top := 0.0, Right := 30.0, Bottom := 0.0}
-                                HorizontalAlignment := horizontal_alignment.Center
-                                VerticalAlignment := vertical_alignment.Center
-                                Widget := stack_box:
-                                    Orientation := orientation.Horizontal
-                                    Slots := for(Index := 0..MaxPageNum - 1, Border := Page_Borders[Index], Background := Page_Backgrounds[Index], NumText := Page_NumTexts[Index]):
-                                        var PaddingLeft:float = 0.0
-                                        if(0 < Index):
-                                            set PaddingLeft = 20.0
-
-                                        stack_box_slot: # 数字ボックス
-                                            Padding := margin{Left := PaddingLeft, Top := 0.0, Right := 0.0, Bottom := 0.0}
-                                            HorizontalAlignment := horizontal_alignment.Center
-                                            VerticalAlignment := vertical_alignment.Center
-                                            Widget := overlay:
-                                                Slots := array:
-                                                    overlay_slot: # ボーダー
-                                                        Padding := margin{Left := 0.0, Top := 0.0, Right := 0.0, Bottom := 0.0}
-                                                        HorizontalAlignment := horizontal_alignment.Center
-                                                        VerticalAlignment := vertical_alignment.Center
-                                                        Widget := Border
-                                                    overlay_slot: # 数字背景
-                                                        Padding := margin{Left := 0.0, Top := 0.0, Right := 0.0, Bottom := 0.0}
-                                                        HorizontalAlignment := horizontal_alignment.Center
-                                                        VerticalAlignment := vertical_alignment.Center
-                                                        Widget := Background
-                                                    overlay_slot: # 数字テキスト
-                                                        Padding := margin{Left := 0.0, Top := 0.0, Right := 0.0, Bottom := 0.0}
-                                                        HorizontalAlignment := horizontal_alignment.Center
-                                                        VerticalAlignment := vertical_alignment.Center
-                                                        Widget := NumText
+                            CreatePageNationNumBox() # 番号列
                             stack_box_slot: # 右ボタン
                                 Padding := margin{Left := 0.0, Top := 0.0, Right := 0.0, Bottom := 0.0}
                                 HorizontalAlignment := horizontal_alignment.Center
@@ -657,6 +654,57 @@ shop_ui := class:
                                 Widget := Page_RightBtn
 
         return NewWidget
+
+    # UIのショップ部分に配置するページネーションの、番号列部分を作成して返す関数
+    CreatePageNationNumBox():stack_box_slot=
+        var NewSlots:[]stack_box_slot = array{}
+
+        for(Index := 0..MaxPageNum - 1):
+            if:
+                Border := Page_Borders[Index]
+                Background := Page_Backgrounds[Index]
+                NumText := Page_NumTexts[Index]
+                PaddingRight := Page_PaddingRights[Index]
+            then:
+                set NewSlots += array:
+                    stack_box_slot: # 数字ボックス
+                        Padding := margin{Left := 0.0, Top := 0.0, Right := 0.0, Bottom := 0.0}
+                        HorizontalAlignment := horizontal_alignment.Center
+                        VerticalAlignment := vertical_alignment.Center
+                        Widget := overlay:
+                            Slots := array:
+                                overlay_slot: # ボーダー
+                                    Padding := margin{Left := 0.0, Top := 0.0, Right := 0.0, Bottom := 0.0}
+                                    HorizontalAlignment := horizontal_alignment.Center
+                                    VerticalAlignment := vertical_alignment.Center
+                                    Widget := Border
+                                overlay_slot: # 数字背景
+                                    Padding := margin{Left := 0.0, Top := 0.0, Right := 0.0, Bottom := 0.0}
+                                    HorizontalAlignment := horizontal_alignment.Center
+                                    VerticalAlignment := vertical_alignment.Center
+                                    Widget := Background
+                                overlay_slot: # 数字テキスト
+                                    Padding := margin{Left := 0.0, Top := 0.0, Right := 0.0, Bottom := 0.0}
+                                    HorizontalAlignment := horizontal_alignment.Center
+                                    VerticalAlignment := vertical_alignment.Center
+                                    Widget := NumText
+                
+                set NewSlots += array:
+                    stack_box_slot: # 右パディング
+                        Padding := margin{Left := 0.0, Top := 0.0, Right := 0.0, Bottom := 0.0}
+                        HorizontalAlignment := horizontal_alignment.Center
+                        VerticalAlignment := vertical_alignment.Center
+                        Widget := PaddingRight
+
+        NewStackBoxSlot := stack_box_slot: # 番号列部分
+            Padding := margin{Left := 30.0, Top := 0.0, Right := 30.0, Bottom := 0.0}
+            HorizontalAlignment := horizontal_alignment.Center
+            VerticalAlignment := vertical_alignment.Center
+            Widget := stack_box:
+                Orientation := orientation.Horizontal
+                Slots := NewSlots
+
+        return NewStackBoxSlot
 
     # UIのアイテム詳細の部分を作成して返す関数
     CreateItemDetailStackBox():widget=
@@ -787,8 +835,9 @@ shop_ui := class:
     # プレイヤーのステータスと手持ちアイテムの部分を更新する関数
     UpdatePlayerStatus():void=
         # ステータステキストの更新
-        PlayerIconHudDevice.SetText(S2M("Health: {PlayerHealth}\nShield: {PlayerShield}"))
-        HoldGoldsHudDevice.SetText(S2M("{PlayerGolds}"))
+        PlayerGoldsHudDevice.Show(AddPlayer, S2M("{PlayerGolds}"))
+        PlayerHealthHudDevice.Show(AddPlayer, S2M("Health: {PlayerHealth}"))
+        PlayerShieldHudDevice.Show(AddPlayer, S2M("Shield: {PlayerShield}"))
 
         # 手持ちアイテムの更新
         for(Index := 0..HoldingNum - 1):
@@ -804,14 +853,18 @@ shop_ui := class:
 
                     Count := Item.CarryOverCount + Item.BuyCount
                     if(1 < Count):
+                        Print("aaa")
                         ItemCountText.SetText(S2M("{Count}"))
                     else:
+                        Print("bbb")
                         ItemCountText.SetText(S2M(""))
 
                     if(0 < Item.BuyCount):
                         HoldingBtn.SetText(S2M("SELL"))
-                    else:
+                    else if(0 < Item.CarryOverCount):
                         HoldingBtn.SetText(S2M("TRASH"))
+                    else:
+                        HoldingBtn.SetText(S2M(""))
                 else:
                     ItemTexture.SetImage(ShopTextures_Items.Empty) # 空領域として表示
                     HoldingBtn.SetText(S2M(""))
@@ -841,6 +894,7 @@ shop_ui := class:
             if:
                 RarityTexture := Item_RarityTextures[Index]
                 ItemTexture := Item_ItemTextures[Index]
+                GoldTexture := Item_GoldTextures[Index]
                 GoldsText := Item_GoldsTexts[Index]
                 SelectBtn := Item_SelectBtns[Index]
             then:
@@ -856,12 +910,14 @@ shop_ui := class:
                     # 表示する
                     RarityTexture.SetVisibility(widget_visibility.Visible)
                     ItemTexture.SetVisibility(widget_visibility.Visible)
+                    GoldTexture.SetVisibility(widget_visibility.Visible)
                     GoldsText.SetVisibility(widget_visibility.Visible)
                     SelectBtn.SetVisibility(widget_visibility.Visible)
                 else:
                     # 非表示する
                     RarityTexture.SetVisibility(widget_visibility.Hidden)
                     ItemTexture.SetVisibility(widget_visibility.Hidden)
+                    GoldTexture.SetVisibility(widget_visibility.Hidden)
                     GoldsText.SetVisibility(widget_visibility.Hidden)
                     SelectBtn.SetVisibility(widget_visibility.Hidden)
 
@@ -869,25 +925,30 @@ shop_ui := class:
     UpdatePageNation():void=
         # ページ番号ボックスの表示非表示を更新
         for(Index := 0..MaxPageNum - 1):
-            if(Border := Page_Borders[Index], Background := Page_Backgrounds[Index], NumText := Page_NumTexts[Index]):
+            if(Border := Page_Borders[Index], Background := Page_Backgrounds[Index], NumText := Page_NumTexts[Index], PaddingRight := Page_PaddingRights[Index]):
                 if(Index < CategoryMaxPageNum):
-                    Border.SetVisibility(widget_visibility.Hidden)
+                    if(Index = PageNum):
+                        Border.SetVisibility(widget_visibility.Visible) # ボーダーを表示
+                    else:
+                        Border.SetVisibility(widget_visibility.Hidden) # ボーダーを非表示
                     Background.SetVisibility(widget_visibility.Visible)
                     NumText.SetVisibility(widget_visibility.Visible)
                 else:
+                    Print("{Index + 1}ページボックスを Collapsed にした")
                     Border.SetVisibility(widget_visibility.Collapsed) # Collapsed: 場所も取らない
                     Background.SetVisibility(widget_visibility.Collapsed)
                     NumText.SetVisibility(widget_visibility.Collapsed)
-
-        # ボーダーの表示非表示を更新
-        for(Index := 0..MaxPageNum - 1, Border := Page_Borders[Index]):
-            if(Index = PageNum):
-                Border.SetVisibility(widget_visibility.Visible)
-            else:
-                Border.SetVisibility(widget_visibility.Hidden)
+                
+                # 右パディングの表示非表示を設定
+                if(Index < CategoryMaxPageNum - 1):
+                    PaddingRight.SetVisibility(widget_visibility.Hidden)
+                else:
+                    PaddingRight.SetVisibility(widget_visibility.Collapsed)
 
     # 手持ちアイテムのボタンが押されたときに呼び出す関数
     OnHoldingClick(ItemIndex:int):void=
+        Print("手持ちボタンが押された")
+        
         if(Item := PlayerItems[ItemIndex]):
             if(0 < Item.BuyCount):
                 ItemData := Item.ItemEnum.ToItemData()
@@ -903,7 +964,8 @@ shop_ui := class:
             if:
                 Item.BuyCount = 0
                 Item.CarryOverCount = 0
-                PlayerItems.RemoveElement[ItemIndex]
+                NewPlayerItems := PlayerItems.RemoveElement[ItemIndex]
+                set PlayerItems = NewPlayerItems
         else:
             Print("空のスロットのボタンが押された")
 
@@ -912,7 +974,10 @@ shop_ui := class:
 
     # タブボタンが押されたときに呼び出す関数
     OnTabClick(ItemCategoryEnum:item_category_enum):void=
+        Print("「{ItemCategoryEnum.ToString()}」カテゴリー変更ボタンが押された")
+        
         set SelectedCategoryItems = ShopDatas.GetItemsByCategory(ItemCategoryEnum)
+        set DisplayedItems = array{} # 配列をリセット
         for(Index := 0..ItemPerRow * RowPerPage - 1, Item := SelectedCategoryItems[Index]):
             set DisplayedItems += array{Item}
         if(Item := DisplayedItems[0]):
@@ -927,11 +992,13 @@ shop_ui := class:
 
         # UIを更新
         UpdateDisplayedItems()
-
-        Print("カテゴリーが変更された")
+        UpdateItemDetail()
+        UpdatePageNation()
 
     # セレクトボタンが押されたときに呼び出す関数
     OnSelectClick(ItemIndex:int):void=
+        Print("セレクトボタンが押された")
+        
         if(Item := DisplayedItems[ItemIndex]):
             ItemData := Item.ToItemData()
             if(LowestRarity := ItemData.Rarities[0]):
@@ -943,38 +1010,53 @@ shop_ui := class:
 
     # ページネーションのボタンが押されたときに呼び出す関数
     OnPageNationClick(IsLeft:logic):void=
-        if(IsLeft?): # 左ボタン
-            if(PageNum = 0):
-                set PageNum = CategoryMaxPageNum - 1
-            else:
-                set PageNum -= 1
-        else: # 右ボタン
-            if(PageNum = CategoryMaxPageNum - 1):
-                set PageNum = 0
-            else:
-                set PageNum += 1
+        Print("ページネーションボタンが押された")
 
-        # アイテム一覧に表示するアイテムを設定
-        var Items:[]item_enum = array{}
-        ItemPerPage := ItemPerRow * RowPerPage
-        for(Index := ItemPerPage * PageNum .. ItemPerPage * (PageNum + 1) - 1, Item := SelectedCategoryItems[Index]):
-            set Items += array{Item}
-        set DisplayedItems = Items
+        var IsPageChanged:logic = false
+        
+        if(1 < CategoryMaxPageNum):
+            if(IsLeft?): # 左ボタン
+                if(PageNum = 0):
+                    set PageNum = CategoryMaxPageNum - 1
+                else:
+                    set PageNum -= 1
+            else: # 右ボタン
+                if(PageNum = CategoryMaxPageNum - 1):
+                    set PageNum = 0
+                else:
+                    set PageNum += 1
+                
+            set IsPageChanged = true
+            Print("{PageNum + 1}ページ目に変更した")
+        else:
+            Print("このカテゴリーは１ページしかありません。")
 
-        # アイテム詳細に表示するアイテムを設定
-        if(Item := DisplayedItems[0]):
-            set SelectedItem = Item
-        ItemData := SelectedItem.ToItemData()
-        if(LowestRarity := ItemData.Rarities[0]):
-            set SelectedRarity = LowestRarity
+        # ページが更新されたら
+        if(IsPageChanged?):
+            # アイテム一覧に表示するアイテムを設定
+            var Items:[]item_enum = array{}
+            ItemPerPage := ItemPerRow * RowPerPage
+            for(Index := ItemPerPage * PageNum .. ItemPerPage * (PageNum + 1) - 1, Item := SelectedCategoryItems[Index]):
+                set Items += array{Item}
+            set DisplayedItems = Items
+
+            # アイテム詳細に表示するアイテムを設定
+            if(Item := DisplayedItems[0]):
+                set SelectedItem = Item
+            ItemData := SelectedItem.ToItemData()
+            if(LowestRarity := ItemData.Rarities[0]):
+                set SelectedRarity = LowestRarity
 
         # UIを更新
         UpdatePageNation()
-        UpdateDisplayedItems()
-        UpdateItemDetail()
+        if(IsPageChanged?):
+            UpdateDisplayedItems()
+            UpdateItemDetail()
 
     # アイテム詳細部分のレアリティ変更ボタンが押されたときに呼び出す関数
     OnRarityClick(IsLeft:logic):void=
+        Print("レアリティ変更ボタンが押された")
+        
         Rarities := SelectedItem.ToItemData().Rarities
         MaxIndex := Rarities.Length - 1
         if(SelectedIndex := Rarities.Find[SelectedRarity]):
@@ -992,10 +1074,52 @@ shop_ui := class:
         # UIの更新
         UpdateItemDetail()
 
-    # 購入ボタンが押されたときに呼び出す関数
+    # 購入ボタンが押されたときに呼び出す関数（パワーアップとそうでない場合で処理を分ける必要がある）
     OnBuyClick():void=
-        # パワーアップとそうでない場合で分ける必要がある
+        Print("購入ボタンが押された")
 
+        var Price:int = 100000
+        SelectedItemData := SelectedItem.ToItemData()
+        if(P := SelectedItemData.RarityPriceMap[SelectedRarity]):
+            set Price = P
+        
+        # 所持金が足りていなかったら処理を終了する
+        if(PlayerGolds < Price):
+            Print("所持金が足りなかった")
+            return
+
+        # 購入予定のアイテムを手持ちに追加できるかを確認する --------------------------------
+        var IsNotBought:logic = true
+
+        # 既存スロットに重ねて追加できるか
+        for(Item:PlayerItems, IsNotBought?): 
+            if(SelectedItem = Item.ItemEnum, SelectedRarity = Item.RarityEnum):
+                ItemData := Item.ItemEnum.ToItemData()
+                if(Item.CarryOverCount + Item.BuyCount < ItemData.MaxCapacity):
+                    set Item.BuyCount += 1
+                    set PlayerGolds -= Price
+                    set IsNotBought = false
+                    Print("アイテムを既存スロットに追加した: {Item.CarryOverCount + Item.BuyCount} => {Item.CarryOverCount + Item.BuyCount}")
+                else:
+                    Print("同じアイテムを所持していたが、重ねられなかった: {Item.CarryOverCount + Item.BuyCount}")
+
+        # 重ねて追加できなかった場合に、新規スロットに追加できるか
+        if(IsNotBought?):
+            if(PlayerItems.Length < HoldingNum):
+                set PlayerItems += array:
+                    player_item:
+                        ItemEnum := SelectedItem
+                        RarityEnum := SelectedRarity
+                        BuyCount := 1
+                set PlayerGolds -= Price
+                Print("アイテムを新規スロットに追加した")
+            else:
+                Print("手持ちスロットに空きがなかった")
+                return
+        # ----------------------------------------------------------------
+
+        # UIの更新
+        UpdatePlayerStatus()
 
     # ボタンが押されるのを待機し、押されたボタンに応じて処理を実行する関数
     HandleButtonClick()<suspends>:void=
@@ -1041,15 +1165,15 @@ shop_ui := class:
                     block: # SR
                         Tab_SRBtn.OnClick().Await()
                         set ClickedBtn = btn_enum.Tab_SR
-                    block: # SP
-                        Tab_SPBtn.OnClick().Await()
-                        set ClickedBtn = btn_enum.Tab_SP
                     block: # ITEM
                         Tab_ITEMBtn.OnClick().Await()
                         set ClickedBtn = btn_enum.Tab_ITEM
-                    block: # PU
-                        Tab_PUBtn.OnClick().Await()
-                        set ClickedBtn = btn_enum.Tab_PU
+                    block: # SP
+                        Tab_SPBtn.OnClick().Await()
+                        set ClickedBtn = btn_enum.Tab_SP
+                    block: # EX
+                        Tab_EXBtn.OnClick().Await()
+                        set ClickedBtn = btn_enum.Tab_EX
 
                     # ディスプレイアイテムボタン
                     block: # ０
@@ -1121,9 +1245,9 @@ shop_ui := class:
                     btn_enum.Tab_SMG => OnTabClick(item_category_enum.SMG)
                     btn_enum.Tab_AR => OnTabClick(item_category_enum.AR)
                     btn_enum.Tab_SR => OnTabClick(item_category_enum.SR)
-                    btn_enum.Tab_SP => OnTabClick(item_category_enum.SP)
                     btn_enum.Tab_ITEM => OnTabClick(item_category_enum.ITEM)
-                    btn_enum.Tab_PU => OnTabClick(item_category_enum.PU)
+                    btn_enum.Tab_SP => OnTabClick(item_category_enum.SP)
+                    btn_enum.Tab_EX => OnTabClick(item_category_enum.EX)
 
                     # ディスプレイアイテムボタン
                     btn_enum.Select_0 => OnSelectClick(0)

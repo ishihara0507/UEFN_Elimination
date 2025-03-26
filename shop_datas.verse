@@ -27,9 +27,20 @@ item_category_enum := enum:
     SMG
     AR
     SR
-    SP
     ITEM
-    PU
+    SP
+    EX
+
+(ICE:item_category_enum).ToString():string=
+    case(ICE):
+        item_category_enum.SG => "SG"
+        item_category_enum.P => "P"
+        item_category_enum.SMG => "SMG"
+        item_category_enum.AR => "AR"
+        item_category_enum.SR => "SR"
+        item_category_enum.ITEM => "ITEM"
+        item_category_enum.SP => "SP"
+        item_category_enum.EX => "EX"
 
 rarity_enum := enum:
     L1_Common
@@ -78,7 +89,7 @@ rarity_enum := enum:
         rarity_enum.L2_Uncommon => color{R := 0.0, G := 0.513, B := 0.0}
         rarity_enum.L3_Rare => color{R := 0.0, G := 0.1, B := 1.0}
         rarity_enum.L4_Epic => color{R := 0.275, G := 0.0, B := 0.753}
-        rarity_enum.L5_Legend => color{R := 0.905, G := 0.122, B := 0.0}
+        rarity_enum.L5_Legend => color{R := 1.0, G := 0.25, B := 0.0}
         rarity_enum.L6_Mythic => color{R := 0.578, G := 0.275, B := 0.0}
         rarity_enum.L7_Exotic => color{R := 0.0, G := 0.52, B := 0.48}
 
@@ -105,14 +116,80 @@ shop_datas := class:
 
         case(Category):
             item_category_enum.SG => set ReturnItems = array:
+                item_enum.AssaultRifle
+                item_enum.AssaultRifle
+                item_enum.AssaultRifle
+                item_enum.AssaultRifle
+                item_enum.AssaultRifle
+                item_enum.AssaultRifle
+                item_enum.AssaultRifle
+                item_enum.AssaultRifle
+                item_enum.AssaultRifle
+                item_enum.AssaultRifle
+                item_enum.AssaultRifle
+                item_enum.AssaultRifle
+                item_enum.AssaultRifle
             item_category_enum.P => set ReturnItems = array:
+                item_enum.AssaultRifle
+                item_enum.AssaultRifle
+                item_enum.AssaultRifle
+                item_enum.AssaultRifle
+                item_enum.AssaultRifle
+                item_enum.AssaultRifle
+                item_enum.AssaultRifle
+                item_enum.AssaultRifle
+                item_enum.AssaultRifle
+                item_enum.AssaultRifle
+                item_enum.AssaultRifle
+                item_enum.AssaultRifle
+                item_enum.AssaultRifle
+                item_enum.AssaultRifle
+                item_enum.AssaultRifle
+                item_enum.AssaultRifle
+                item_enum.AssaultRifle
+                item_enum.AssaultRifle
+                item_enum.AssaultRifle
+                item_enum.AssaultRifle
+                item_enum.AssaultRifle
             item_category_enum.SMG => set ReturnItems = array:
+                item_enum.AssaultRifle
+                item_enum.AssaultRifle
+                item_enum.AssaultRifle
+                item_enum.AssaultRifle
+                item_enum.AssaultRifle
             item_category_enum.AR => set ReturnItems = array:
+                item_enum.AssaultRifle
             item_category_enum.SR => set ReturnItems = array:
                 item_enum.AssaultRifle
-            item_category_enum.SP => set ReturnItems = array:
+                item_enum.AssaultRifle
+                item_enum.AssaultRifle
+                item_enum.AssaultRifle
+                item_enum.AssaultRifle
+                item_enum.AssaultRifle
+                item_enum.AssaultRifle
+                item_enum.AssaultRifle
+                item_enum.AssaultRifle
             item_category_enum.ITEM => set ReturnItems = array:
-            item_category_enum.PU => set ReturnItems = array:
+                item_enum.AssaultRifle
+                item_enum.AssaultRifle
+                item_enum.AssaultRifle
+                item_enum.AssaultRifle
+                item_enum.AssaultRifle
+                item_enum.AssaultRifle
+                item_enum.AssaultRifle
+                item_enum.AssaultRifle
+                item_enum.AssaultRifle
+                item_enum.AssaultRifle
+                item_enum.AssaultRifle
+                item_enum.AssaultRifle
+            item_category_enum.SP => set ReturnItems = array:
+                item_enum.AssaultRifle
+                item_enum.AssaultRifle
+                item_enum.AssaultRifle
+                item_enum.AssaultRifle
+            item_category_enum.EX => set ReturnItems = array:
+                item_enum.AssaultRifle
+                item_enum.AssaultRifle
 
         return ReturnItems
 
@@ -141,26 +218,26 @@ shop_datas := class:
                 "Fire Rate: 100"
                 "Reload: 100"
             rarity_enum.L2_Uncommon => array:
-                "DPS: 100"
-                "DMG: 100"
-                "Mag Size: 100"
-                "Fire Rate: 100"
-                "Reload: 100"
+                "DPS: 200"
+                "DMG: 200"
+                "Mag Size: 200"
+                "Fire Rate: 200"
+                "Reload: 200"
             rarity_enum.L3_Rare => array:
-                "DPS: 100"
-                "DMG: 100"
-                "Mag Size: 100"
-                "Fire Rate: 100"
-                "Reload: 100"
+                "DPS: 300"
+                "DMG: 300"
+                "Mag Size: 300"
+                "Fire Rate: 300"
+                "Reload: 300"
             rarity_enum.L4_Epic => array:
-                "DPS: 100"
-                "DMG: 100"
-                "Mag Size: 100"
-                "Fire Rate: 100"
-                "Reload: 100"
+                "DPS: 400"
+                "DMG: 400"
+                "Mag Size: 400"
+                "Fire Rate: 400"
+                "Reload: 400"
             rarity_enum.L5_Legend => array:
-                "DPS: 100"
-                "DMG: 100"
-                "Mag Size: 100"
-                "Fire Rate: 100"
-                "Reload: 100"
+                "DPS: 500"
+                "DMG: 500"
+                "Mag Size: 500"
+                "Fire Rate: 500"
+                "Reload: 500"

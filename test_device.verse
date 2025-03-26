@@ -38,7 +38,6 @@ test_device := class(creative_device):
         
 
     OnTriggered(OAgent:?agent):void=
-        if(Agent := OAgent?, Player := player[Agent]):
         return
 
     OnTriggered2(OAgent:?agent):void=

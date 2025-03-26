@@ -1,7 +1,7 @@
 using { /Verse.org/Assets }
 using { /Verse.org/Colors }
 
-## ショップで購入できる武器やアイテム、パワーアップなどの定義を行うファイル
+### ショップで購入できるアイテムの定義を行うファイル ###
 
 # ショップで購入できる武器やアイテム、パワーアップなどの名前を定義。レアリティが複数ある場合でも、同名のアイテムは１つ定義すればいい。
 item_enum := enum:
@@ -19,6 +19,130 @@ item_enum := enum:
 (IE:item_enum).ToString():string=
     case(IE):
         item_enum.AssaultRifle => "Assault Rifle"
+
+# rarity_enum.L1_Common
+# rarity_enum.L2_Uncommon
+# rarity_enum.L3_Rare
+# rarity_enum.L4_Epic
+# rarity_enum.L5_Legend
+# rarity_enum.L6_Mythic
+# rarity_enum.L7_Exotic
+
+shop_datas := class:
+    ### ↓ 新しいアイテムを追加する際に加筆する必要がある -------------------------------------------------------
+
+    # 実際にアイテムのデータの中身を定義
+    AssaultRifle:item_data = item_data: # アサルトライフル
+        Item := item_enum.AssaultRifle
+        MaxCapacity := 3
+        Rarities := array:
+            rarity_enum.L1_Common
+            rarity_enum.L2_Uncommon
+            rarity_enum.L3_Rare
+            rarity_enum.L4_Epic
+            rarity_enum.L5_Legend
+        RarityPriceMap := map:
+            rarity_enum.L1_Common => 200
+            rarity_enum.L2_Uncommon => 300
+            rarity_enum.L3_Rare => 400
+            rarity_enum.L4_Epic => 500
+            rarity_enum.L5_Legend => 600
+        RarityDescMap := map:
+            rarity_enum.L1_Common => array:
+                "DPS: 100"
+                "DMG: 100"
+                "Mag Size: 100"
+                "Fire Rate: 100"
+                "Reload: 100"
+            rarity_enum.L2_Uncommon => array:
+                "DPS: 200"
+                "DMG: 200"
+                "Mag Size: 200"
+                "Fire Rate: 200"
+                "Reload: 200"
+            rarity_enum.L3_Rare => array:
+                "DPS: 300"
+                "DMG: 300"
+                "Mag Size: 300"
+                "Fire Rate: 300"
+                "Reload: 300"
+            rarity_enum.L4_Epic => array:
+                "DPS: 400"
+                "DMG: 400"
+                "Mag Size: 400"
+                "Fire Rate: 400"
+                "Reload: 400"
+            rarity_enum.L5_Legend => array:
+                "DPS: 500"
+                "DMG: 500"
+                "Mag Size: 500"
+                "Fire Rate: 500"
+                "Reload: 500"
+
+    # 引数で与えられたカテゴリーに分類されたアイテムを配列で返す関数
+    # ルール：空のカテゴリーは作成してはいけない。同じアイテム名を２度追加してはいけない。
+    GetItemsByCategory(Category:item_category_enum):[]item_enum=
+        var ReturnItems:[]item_enum = array{}
+
+        case(Category):
+            item_category_enum.SG => set ReturnItems = array:
+            item_category_enum.P => set ReturnItems = array:
+            item_category_enum.SMG => set ReturnItems = array:
+            item_category_enum.AR => set ReturnItems = array:
+                item_enum.AssaultRifle
+            item_category_enum.SR => set ReturnItems = array:
+            item_category_enum.ITEM => set ReturnItems = array:
+            item_category_enum.SP => set ReturnItems = array:
+            item_category_enum.EX => set ReturnItems = array:
+
+        return ReturnItems
+
+    ### ↓ 新しいアイテムを追加する際に加筆する必要はない -------------------------------------------------------
+
+    # カテゴリー配列
+    AllCategories:[]item_category_enum = array:
+        item_category_enum.SG
+        item_category_enum.P
+        item_category_enum.SMG 
+        item_category_enum.AR
+        item_category_enum.SR
+        item_category_enum.ITEM
+        item_category_enum.SP
+        item_category_enum.EX
+    
+    # レアリティ配列
+    AllRarities:[]rarity_enum = array:
+        rarity_enum.L1_Common
+        rarity_enum.L2_Uncommon
+        rarity_enum.L3_Rare
+        rarity_enum.L4_Epic
+        rarity_enum.L5_Legend
+        rarity_enum.L6_Mythic
+        rarity_enum.L7_Exotic
+
+    # アイテムのアイテムグランター上でのインデックスを返す関数
+    GetIndexByItemAndRarity(ItemEnum:item_enum, RarityEnum:rarity_enum):int=
+        var Result:int = 0
+
+        # アイテム配列を定義
+        var AllItems:[]item_enum = array{}
+        for(Category:AllCategories):
+            set AllItems += GetItemsByCategory(Category)
+
+        # インデックスを特定
+        for(Index->Item:AllItems):
+            if(ItemEnum = Item):
+                for(Rarity:AllRarities):
+                    if(RarityEnum = Rarity):
+                        return Result
+                    else:
+                        set Result += 1
+            else:
+                set Result += ItemEnum.ToItemData().Rarities.Length
+
+        return -1 # 失敗
+
+### ↓ 新しいアイテムを追加する際に加筆する必要はない -------------------------------------------------------
 
 # アイテムのカテゴリー
 item_category_enum := enum:
@@ -100,144 +224,3 @@ item_data := struct:
     Rarities:[]rarity_enum # レアリティの種類
     RarityPriceMap:[rarity_enum]int # レアリティと値段のペア
     RarityDescMap:[rarity_enum][]string # レアリティと説明配列のペア
-    
-# rarity_enum.L1_Common
-# rarity_enum.L2_Uncommon
-# rarity_enum.L3_Rare
-# rarity_enum.L4_Epic
-# rarity_enum.L5_Legend
-# rarity_enum.L6_Mythic
-# rarity_enum.L7_Exotic
-
-shop_datas := class:
-    # 引数で与えられたカテゴリーに分類されたアイテムを配列で返す関数
-    GetItemsByCategory(Category:item_category_enum):[]item_enum=
-        var ReturnItems:[]item_enum = array{}
-
-        case(Category):
-            item_category_enum.SG => set ReturnItems = array:
-                item_enum.AssaultRifle
-                item_enum.AssaultRifle
-                item_enum.AssaultRifle
-                item_enum.AssaultRifle
-                item_enum.AssaultRifle
-                item_enum.AssaultRifle
-                item_enum.AssaultRifle
-                item_enum.AssaultRifle
-                item_enum.AssaultRifle
-                item_enum.AssaultRifle
-                item_enum.AssaultRifle
-                item_enum.AssaultRifle
-                item_enum.AssaultRifle
-            item_category_enum.P => set ReturnItems = array:
-                item_enum.AssaultRifle
-                item_enum.AssaultRifle
-                item_enum.AssaultRifle
-                item_enum.AssaultRifle
-                item_enum.AssaultRifle
-                item_enum.AssaultRifle
-                item_enum.AssaultRifle
-                item_enum.AssaultRifle
-                item_enum.AssaultRifle
-                item_enum.AssaultRifle
-                item_enum.AssaultRifle
-                item_enum.AssaultRifle
-                item_enum.AssaultRifle
-                item_enum.AssaultRifle
-                item_enum.AssaultRifle
-                item_enum.AssaultRifle
-                item_enum.AssaultRifle
-                item_enum.AssaultRifle
-                item_enum.AssaultRifle
-                item_enum.AssaultRifle
-                item_enum.AssaultRifle
-            item_category_enum.SMG => set ReturnItems = array:
-                item_enum.AssaultRifle
-                item_enum.AssaultRifle
-                item_enum.AssaultRifle
-                item_enum.AssaultRifle
-                item_enum.AssaultRifle
-            item_category_enum.AR => set ReturnItems = array:
-                item_enum.AssaultRifle
-            item_category_enum.SR => set ReturnItems = array:
-                item_enum.AssaultRifle
-                item_enum.AssaultRifle
-                item_enum.AssaultRifle
-                item_enum.AssaultRifle
-                item_enum.AssaultRifle
-                item_enum.AssaultRifle
-                item_enum.AssaultRifle
-                item_enum.AssaultRifle
-                item_enum.AssaultRifle
-            item_category_enum.ITEM => set ReturnItems = array:
-                item_enum.AssaultRifle
-                item_enum.AssaultRifle
-                item_enum.AssaultRifle
-                item_enum.AssaultRifle
-                item_enum.AssaultRifle
-                item_enum.AssaultRifle
-                item_enum.AssaultRifle
-                item_enum.AssaultRifle
-                item_enum.AssaultRifle
-                item_enum.AssaultRifle
-                item_enum.AssaultRifle
-                item_enum.AssaultRifle
-            item_category_enum.SP => set ReturnItems = array:
-                item_enum.AssaultRifle
-                item_enum.AssaultRifle
-                item_enum.AssaultRifle
-                item_enum.AssaultRifle
-            item_category_enum.EX => set ReturnItems = array:
-                item_enum.AssaultRifle
-                item_enum.AssaultRifle
-
-        return ReturnItems
-
-
-    # 実際にアイテムのデータの中身を定義
-    AssaultRifle:item_data = item_data: # アサルトライフル
-        Item := item_enum.AssaultRifle
-        MaxCapacity := 3
-        Rarities := array:
-            rarity_enum.L1_Common
-            rarity_enum.L2_Uncommon
-            rarity_enum.L3_Rare
-            rarity_enum.L4_Epic
-            rarity_enum.L5_Legend
-        RarityPriceMap := map:
-            rarity_enum.L1_Common => 200
-            rarity_enum.L2_Uncommon => 300
-            rarity_enum.L3_Rare => 400
-            rarity_enum.L4_Epic => 500
-            rarity_enum.L5_Legend => 600
-        RarityDescMap := map:
-            rarity_enum.L1_Common => array:
-                "DPS: 100"
-                "DMG: 100"
-                "Mag Size: 100"
-                "Fire Rate: 100"
-                "Reload: 100"
-            rarity_enum.L2_Uncommon => array:
-                "DPS: 200"
-                "DMG: 200"
-                "Mag Size: 200"
-                "Fire Rate: 200"
-                "Reload: 200"
-            rarity_enum.L3_Rare => array:
-                "DPS: 300"
-                "DMG: 300"
-                "Mag Size: 300"
-                "Fire Rate: 300"
-                "Reload: 300"
-            rarity_enum.L4_Epic => array:
-                "DPS: 400"
-                "DMG: 400"
-                "Mag Size: 400"
-                "Fire Rate: 400"
-                "Reload: 400"
-            rarity_enum.L5_Legend => array:
-                "DPS: 500"
-                "DMG: 500"
-                "Mag Size: 500"
-                "Fire Rate: 500"
-                "Reload: 500"

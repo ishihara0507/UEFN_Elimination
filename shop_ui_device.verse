@@ -60,6 +60,9 @@ shop_ui_device := class(creative_device):
     CondBtnStructs:[]condbtn_struct = array{} # 以前のラウンドからの持ち越しアイテムを特定するために必要
 
     @editable
+    ItemRemover:item_remover_device = item_remover_device{} # 手持ちアイテムをデータ化した後に削除するために必要
+
+    @editable
     ItemGranter:item_granter_device = item_granter_device{} # 購入したアイテムをプレイヤーに渡すために必要
 
     @editable
@@ -95,6 +98,8 @@ shop_ui_device := class(creative_device):
 
         Sleep(0.0) # ディレイを設けないと、条件付きボタンの処理が終わる前にUIを作成してしまう
 
+        RemovePlayersItems(GamePlayers) # 手持ちアイテムの削除
+
         # ショップUIを付与
         for(Player:GamePlayers, PlayerUI := GetPlayerUI[Player], PlayerItems := PlayerItemsMap[Player]):
             NewShopUI := shop_ui:
@@ -104,6 +109,7 @@ shop_ui_device := class(creative_device):
                 PlayerGoldsHudDevice := PlayerGoldsHudDevice
                 PlayerHealthHudDevice := PlayerHealthHudDevice
                 PlayerShieldHudDevice := PlayerShieldHudDevice
+                ItemGranter := ItemGranter
             spawn{NewShopUI.Init()}
             if. set PlayerShopUIMap[Player] = NewShopUI
 
@@ -128,6 +134,10 @@ shop_ui_device := class(creative_device):
                 ItemNum := Item.CarryOverCount
                 Print("{Index}番目: {ItemRarity}の{ItemName}が{ItemNum}個")
 
+    # すべてのプレイヤーからアイテムを削除する関数
+    RemovePlayersItems(Players:[]player):void=
+        for(Player:Players):
+            ItemRemover.Remove(Player)
 
 # ボタンを識別するための列挙型
 btn_enum := enum:
@@ -179,9 +189,9 @@ shop_ui := class:
     PlayerGoldsHudDevice:hud_message_device
     PlayerHealthHudDevice:hud_message_device
     PlayerShieldHudDevice:hud_message_device
+    ItemGranter:item_granter_device
 
     var Widget:widget = canvas{}
-    var BackgroundWidget:widget = canvas{}
     
     var Holding_Btns:[]button_quiet = array{}
     var Tab_Btns:[]button_loud = array{}
@@ -276,25 +286,25 @@ shop_ui := class:
             if(Health := Int[Fort.GetMaxHealth()], Shield := Int[Fort.GetMaxShield()]):
                 set PlayerHealth = Health
                 set PlayerShield = Shield
-            # ゴールドの値の設定も行う
+            ### ゴールドの値の設定も行う #####################
 
-            CreateBackgroundWidget() # 背景を作成
             CreateUI() # UIの作成
             InitializeUI() # UIにデータを適用し、初期化する
             
-            PlayerUI.AddWidget(BackgroundWidget)
             PlayerUI.AddWidget(Widget, player_ui_slot{InputMode := ui_input_mode.All})
             spawn{HandleButtonClick()}
             Print("ショップUIを付与した")
 
-            KillUIEvent.Await()
+            KillUIEvent.Await() # UIの終了を待機
 
             PlayerGoldsHudDevice.Hide(AddPlayer)
             PlayerHealthHudDevice.Hide(AddPlayer)
             PlayerShieldHudDevice.Hide(AddPlayer)
             PlayerUI.RemoveWidget(Widget)
-            PlayerUI.RemoveWidget(BackgroundWidget)
             Print("ショップUIを削除した")
+
+            GrantAllSelectedItems()
+            Print("プレイヤーにアイテムを与えた")
         return
 
     # ウィジェット要素を初期化する関数
@@ -384,27 +394,6 @@ shop_ui := class:
 
         # 閉じるボタン
         ExitBtn.SetText(S2M("X"))
-
-    # UI全体の白背景を作成する関数
-    CreateBackgroundWidget():void=
-        NewWidget := canvas:
-            Slots := array:
-                canvas_slot: # 暗転背景
-                    Anchors := anchors{Minimum:=vector2{X:=0.0,Y:=0.0},Maximum:=vector2{X:=1.0,Y:=1.0}}
-                    Offsets := margin{Left := 0.0, Top := 0.0, Right := 0.0, Bottom := 0.0}
-                    Alignment := vector2{X:=0.0,Y:=0.0}
-                    SizeToContent := false
-                    ZOrder := 0
-                    Widget := color_block{DefaultColor := color{R := 0.0, G := 0.0, B := 0.0}, DefaultOpacity := 0.6}
-                canvas_slot: # 白半透明背景
-                    Anchors := anchors{Minimum:=vector2{X:=0.5,Y:=0.5},Maximum:=vector2{X:=0.5,Y:=0.5}}
-                    Offsets := margin{Left := 0.0, Top := 7.0, Right := 0.0, Bottom := 0.0}
-                    Alignment := vector2{X:=0.5,Y:=0.5}
-                    SizeToContent := true
-                    ZOrder := 1
-                    Widget := texture_block{DefaultImage := ShopTextures_Items.WhiteBackground, DefaultDesiredSize := vector2{X := 1610.0, Y := 1010.0}}
-
-        set BackgroundWidget = NewWidget
 
     # UI全体を作成する関数
     CreateUI():void=
@@ -853,10 +842,8 @@ shop_ui := class:
 
                     Count := Item.CarryOverCount + Item.BuyCount
                     if(1 < Count):
-                        Print("aaa")
                         ItemCountText.SetText(S2M("{Count}"))
                     else:
-                        Print("bbb")
                         ItemCountText.SetText(S2M(""))
 
                     if(0 < Item.BuyCount):
@@ -1273,3 +1260,9 @@ shop_ui := class:
                     # 閉じるボタン
                     btn_enum.Exit => KillUIEvent.Signal()
                     
+    # すべての選んだアイテムをプレイヤーに与える関数
+    GrantAllSelectedItems():void=
+        for(Item:PlayerItems):
+            ItemIndex := ShopDatas.GetIndexByItemAndRarity(Item.ItemEnum, Item.RarityEnum)
+            for(Index := 0..(Item.CarryOverCount + Item.BuyCount) - 1):
+                ItemGranter.GrantItemIndex(AddPlayer, ItemIndex)

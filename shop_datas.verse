@@ -6,6 +6,15 @@ using { /Verse.org/Colors }
 # ショップで購入できる武器やアイテム、パワーアップなどの名前を定義。レアリティが複数ある場合でも、同名のアイテムは１つ定義すればいい。
 item_enum := enum:
     AssaultRifle
+    SidearmPistol
+    CombatShotgun
+    SubmachineGun
+    FalconEyeSniper
+    SmallShieldPotion
+    ShieldPot
+    Bandage
+    Medkit
+    NitroFists
 
 (IE:item_enum).ToTexture():texture=
     case(IE):
@@ -31,10 +40,84 @@ item_enum := enum:
 shop_datas := class:
     ### ↓ 新しいアイテムを追加する際に加筆する必要がある -------------------------------------------------------
 
+    # 引数で与えられたカテゴリーに分類されたアイテムを配列で返す関数
+    # ルール：空のカテゴリーは作成してはいけない。同じアイテム名を２度追加してはいけない。
+    GetItemsByCategory(Category:item_category_enum):[]item_enum=
+        var ReturnItems:[]item_enum = array{}
+
+        case(Category):
+            item_category_enum.SG => set ReturnItems = array:
+                item_enum.CombatShotgun
+            item_category_enum.P => set ReturnItems = array:
+                item_enum.SidearmPistol
+            item_category_enum.SMG => set ReturnItems = array:
+                item_enum.SubmachineGun
+            item_category_enum.AR => set ReturnItems = array:
+                item_enum.AssaultRifle
+            item_category_enum.SR => set ReturnItems = array:
+                item_enum.FalconEyeSniper
+            item_category_enum.ITEM => set ReturnItems = array:
+                item_enum.Bandage
+                item_enum.Medkit
+                item_enum.SmallShieldPotion
+                item_enum.ShieldPot
+            item_category_enum.SP => set ReturnItems = array:
+                item_enum.NitroFists
+            item_category_enum.EX => set ReturnItems = array:
+
+        return ReturnItems
+
+    # :item_data = item_data: # 
+    #     Item := item_enum.
+    #     MaxCapacity := 1
+    #     Rarities := array:
+    #         rarity_enum.L1_Common
+    #         rarity_enum.L2_Uncommon
+    #         rarity_enum.L3_Rare
+    #         rarity_enum.L4_Epic
+    #         rarity_enum.L5_Legend
+    #     RarityPriceMap := map:
+    #         rarity_enum.L1_Common => 200
+    #         rarity_enum.L2_Uncommon => 300
+    #         rarity_enum.L3_Rare => 400
+    #         rarity_enum.L4_Epic => 500
+    #         rarity_enum.L5_Legend => 600
+    #     RarityDescMap := map:
+    #         rarity_enum.L1_Common => array:
+    #             "DMG: "
+    #             "Fire Rate: "
+    #             "Mag Size: "
+    #             "Reload: "
+    #             ""
+    #         rarity_enum.L2_Uncommon => array:
+    #             "DMG: "
+    #             "Fire Rate: "
+    #             "Mag Size: "
+    #             "Reload: "
+    #             ""
+    #         rarity_enum.L3_Rare => array:
+    #             "DMG: "
+    #             "Fire Rate: "
+    #             "Mag Size: "
+    #             "Reload: "
+    #             ""
+    #         rarity_enum.L4_Epic => array:
+    #             "DMG: "
+    #             "Fire Rate: "
+    #             "Mag Size: "
+    #             "Reload: "
+    #             ""
+    #         rarity_enum.L5_Legend => array:
+    #             "DMG: "
+    #             "Fire Rate: "
+    #             "Mag Size: "
+    #             "Reload: "
+    #             ""
+
     # 実際にアイテムのデータの中身を定義
     AssaultRifle:item_data = item_data: # アサルトライフル
         Item := item_enum.AssaultRifle
-        MaxCapacity := 3
+        MaxCapacity := 1
         Rarities := array:
             rarity_enum.L1_Common
             rarity_enum.L2_Uncommon
@@ -49,53 +132,306 @@ shop_datas := class:
             rarity_enum.L5_Legend => 600
         RarityDescMap := map:
             rarity_enum.L1_Common => array:
-                "DPS: 100"
-                "DMG: 100"
-                "Mag Size: 100"
-                "Fire Rate: 100"
-                "Reload: 100"
+                "DMG: 30"
+                "Fire Rate: 5.5"
+                "Mag Size: 30"
+                "Reload: 2.75"
+                ""
             rarity_enum.L2_Uncommon => array:
-                "DPS: 200"
-                "DMG: 200"
-                "Mag Size: 200"
-                "Fire Rate: 200"
-                "Reload: 200"
+                "DMG: 31"
+                "Fire Rate: 5.5"
+                "Mag Size: 30"
+                "Reload: 2.62"
+                ""
             rarity_enum.L3_Rare => array:
-                "DPS: 300"
-                "DMG: 300"
-                "Mag Size: 300"
-                "Fire Rate: 300"
-                "Reload: 300"
+                "DMG: 33"
+                "Fire Rate: 5.5"
+                "Mag Size: 30"
+                "Reload: 2.5"
+                ""
             rarity_enum.L4_Epic => array:
-                "DPS: 400"
-                "DMG: 400"
-                "Mag Size: 400"
-                "Fire Rate: 400"
-                "Reload: 400"
+                "DMG: 35"
+                "Fire Rate: 5.5"
+                "Mag Size: 30"
+                "Reload: 2.38"
+                ""
             rarity_enum.L5_Legend => array:
-                "DPS: 500"
-                "DMG: 500"
-                "Mag Size: 500"
-                "Fire Rate: 500"
-                "Reload: 500"
+                "DMG: 36"
+                "Fire Rate: 5.5"
+                "Mag Size: 30"
+                "Reload: 2.25"
+                ""
 
-    # 引数で与えられたカテゴリーに分類されたアイテムを配列で返す関数
-    # ルール：空のカテゴリーは作成してはいけない。同じアイテム名を２度追加してはいけない。
-    GetItemsByCategory(Category:item_category_enum):[]item_enum=
-        var ReturnItems:[]item_enum = array{}
-
-        case(Category):
-            item_category_enum.SG => set ReturnItems = array:
-            item_category_enum.P => set ReturnItems = array:
-            item_category_enum.SMG => set ReturnItems = array:
-            item_category_enum.AR => set ReturnItems = array:
-                item_enum.AssaultRifle
-            item_category_enum.SR => set ReturnItems = array:
-            item_category_enum.ITEM => set ReturnItems = array:
-            item_category_enum.SP => set ReturnItems = array:
-            item_category_enum.EX => set ReturnItems = array:
-
-        return ReturnItems
+    SidearmPistol:item_data = item_data: # サイドアームピストル
+        Item := item_enum.SidearmPistol
+        MaxCapacity := 1
+        Rarities := array:
+            rarity_enum.L1_Common
+            rarity_enum.L2_Uncommon
+            rarity_enum.L3_Rare
+            rarity_enum.L4_Epic
+            rarity_enum.L5_Legend
+        RarityPriceMap := map:
+            rarity_enum.L1_Common => 200
+            rarity_enum.L2_Uncommon => 300
+            rarity_enum.L3_Rare => 400
+            rarity_enum.L4_Epic => 500
+            rarity_enum.L5_Legend => 600
+        RarityDescMap := map:
+            rarity_enum.L1_Common => array:
+                "DMG: 25"
+                "Fire Rate: 6.75"
+                "Mag Size: 15"
+                "Reload: 1.54"
+                ""
+            rarity_enum.L2_Uncommon => array:
+                "DMG: 27"
+                "Fire Rate: 6.75"
+                "Mag Size: 15"
+                "Reload: 1.47"
+                ""
+            rarity_enum.L3_Rare => array:
+                "DMG: 28"
+                "Fire Rate: 6.75"
+                "Mag Size: 15"
+                "Reload: 1.4"
+                ""
+            rarity_enum.L4_Epic => array:
+                "DMG: 29"
+                "Fire Rate: 6.75"
+                "Mag Size: 15"
+                "Reload: 1.33"
+                ""
+            rarity_enum.L5_Legend => array:
+                "DMG: 31"
+                "Fire Rate: 6.75"
+                "Mag Size: 15"
+                "Reload: 1.26"
+                ""
+                
+    CombatShotgun:item_data = item_data: # コンバットショットガン
+        Item := item_enum.CombatShotgun
+        MaxCapacity := 1
+        Rarities := array:
+            rarity_enum.L1_Common
+            rarity_enum.L2_Uncommon
+            rarity_enum.L3_Rare
+            rarity_enum.L4_Epic
+            rarity_enum.L5_Legend
+        RarityPriceMap := map:
+            rarity_enum.L1_Common => 200
+            rarity_enum.L2_Uncommon => 300
+            rarity_enum.L3_Rare => 400
+            rarity_enum.L4_Epic => 500
+            rarity_enum.L5_Legend => 600
+        RarityDescMap := map:
+            rarity_enum.L1_Common => array:
+                "DMG: 60"
+                "Fire Rate: 1.7"
+                "Mag Size: 8"
+                "Reload: 5.79"
+                ""
+            rarity_enum.L2_Uncommon => array:
+                "DMG: 64"
+                "Fire Rate: 1.7"
+                "Mag Size: 8"
+                "Reload: 5.53"
+                ""
+            rarity_enum.L3_Rare => array:
+                "DMG: 67"
+                "Fire Rate: 1.7"
+                "Mag Size: 8"
+                "Reload: 5.27"
+                ""
+            rarity_enum.L4_Epic => array:
+                "DMG: 70"
+                "Fire Rate: 1.7"
+                "Mag Size: 8"
+                "Reload: 5"
+                ""
+            rarity_enum.L5_Legend => array:
+                "DMG: 74"
+                "Fire Rate: 1.7"
+                "Mag Size: 8"
+                "Reload: 4.74"
+                ""
+                
+    SubmachineGun:item_data = item_data: # サブマシンガン
+        Item := item_enum.SubmachineGun
+        MaxCapacity := 1
+        Rarities := array:
+            rarity_enum.L1_Common
+            rarity_enum.L2_Uncommon
+            rarity_enum.L3_Rare
+            rarity_enum.L4_Epic
+            rarity_enum.L5_Legend
+        RarityPriceMap := map:
+            rarity_enum.L1_Common => 200
+            rarity_enum.L2_Uncommon => 300
+            rarity_enum.L3_Rare => 400
+            rarity_enum.L4_Epic => 500
+            rarity_enum.L5_Legend => 600
+        RarityDescMap := map:
+            rarity_enum.L1_Common => array:
+                "DMG: 16"
+                "Fire Rate: 11"
+                "Mag Size: 30"
+                "Reload: 2.31"
+                ""
+            rarity_enum.L2_Uncommon => array:
+                "DMG: 17"
+                "Fire Rate: 11"
+                "Mag Size: 30"
+                "Reload: 2.2"
+                ""
+            rarity_enum.L3_Rare => array:
+                "DMG: 18"
+                "Fire Rate: 11"
+                "Mag Size: 30"
+                "Reload: 2.1"
+                ""
+            rarity_enum.L4_Epic => array:
+                "DMG: 19"
+                "Fire Rate: 11"
+                "Mag Size: 30"
+                "Reload: 2"
+                ""
+            rarity_enum.L5_Legend => array:
+                "DMG: 20"
+                "Fire Rate: 11"
+                "Mag Size: 30"
+                "Reload: 1.89"
+                ""
+                
+    FalconEyeSniper:item_data = item_data: # ファルコンアイスナイパー
+        Item := item_enum.FalconEyeSniper
+        MaxCapacity := 1
+        Rarities := array:
+            rarity_enum.L1_Common
+            rarity_enum.L2_Uncommon
+            rarity_enum.L3_Rare
+            rarity_enum.L4_Epic
+            rarity_enum.L5_Legend
+        RarityPriceMap := map:
+            rarity_enum.L1_Common => 200
+            rarity_enum.L2_Uncommon => 300
+            rarity_enum.L3_Rare => 400
+            rarity_enum.L4_Epic => 500
+            rarity_enum.L5_Legend => 600
+        RarityDescMap := map:
+            rarity_enum.L1_Common => array:
+                "DMG: 76"
+                "Fire Rate: 1.1"
+                "Mag Size: 3"
+                "Reload: 4.4"
+                ""
+            rarity_enum.L2_Uncommon => array:
+                "DMG: 80"
+                "Fire Rate: 1.1"
+                "Mag Size: 3"
+                "Reload: 4.2"
+                ""
+            rarity_enum.L3_Rare => array:
+                "DMG: 84"
+                "Fire Rate: 1.1"
+                "Mag Size: 3"
+                "Reload: 4"
+                ""
+            rarity_enum.L4_Epic => array:
+                "DMG: 88"
+                "Fire Rate: 1.1"
+                "Mag Size: 3"
+                "Reload: 3.8"
+                ""
+            rarity_enum.L5_Legend => array:
+                "DMG: 92"
+                "Fire Rate: 1.1"
+                "Mag Size: 3"
+                "Reload: 3.6"
+                ""
+                
+    SmallShieldPotion:item_data = item_data: # ミニシールドポーション
+        Item := item_enum.SmallShieldPotion
+        MaxCapacity := 6
+        Rarities := array:
+            rarity_enum.L2_Uncommon
+        RarityPriceMap := map:
+            rarity_enum.L2_Uncommon => 300
+        RarityDescMap := map:
+            rarity_enum.L2_Uncommon => array:
+                "Use Time: 2 sec"
+                "Heal: 25 Shield"
+                "Max: 50 Shield"
+                "Stack: 6"
+                ""
+                
+    ShieldPot:item_data = item_data: # シールドポーション
+        Item := item_enum.ShieldPot
+        MaxCapacity := 3
+        Rarities := array:
+            rarity_enum.L3_Rare
+        RarityPriceMap := map:
+            rarity_enum.L3_Rare => 400
+        RarityDescMap := map:
+            rarity_enum.L3_Rare => array:
+                "Use Time: 5 sec"
+                "Heal: 50 Shield"
+                "Stack: 3"
+                ""
+                ""
+                
+    Bandage:item_data = item_data: # 包帯
+        Item := item_enum.Bandage
+        MaxCapacity := 15
+        Rarities := array:
+            rarity_enum.L1_Common
+        RarityPriceMap := map:
+            rarity_enum.L1_Common => 200
+        RarityDescMap := map:
+            rarity_enum.L1_Common => array:
+                "Use Time: 3 sec"
+                "Heal: 15 Health"
+                "Max: 75 Health"
+                "Stack: 15"
+                ""
+                
+    Medkit:item_data = item_data: # 医療キット
+        Item := item_enum.Medkit
+        MaxCapacity := 3
+        Rarities := array:
+            rarity_enum.L2_Uncommon
+        RarityPriceMap := map:
+            rarity_enum.L2_Uncommon => 300
+        RarityDescMap := map:
+            rarity_enum.L2_Uncommon => array:
+                "Use Time: 10 sec"
+                "Heal: Full Health"
+                "Stack: 3"
+                ""
+                ""
+                
+    NitroFists:item_data = item_data: # ニトロフィスト
+        Item := item_enum.NitroFists
+        MaxCapacity := 1
+        Rarities := array:
+            rarity_enum.L4_Epic
+            rarity_enum.L6_Mythic
+        RarityPriceMap := map:
+            rarity_enum.L4_Epic => 500
+            rarity_enum.L6_Mythic => 600
+        RarityDescMap := map:
+            rarity_enum.L4_Epic => array:
+                "Punch: 55 55 70"
+                "Air Punch: 50"
+                "Uppercut: 60"
+                "Ammo Capacity: 4"
+                "Cooldown: 11 sec"
+            rarity_enum.L6_Mythic => array:
+                "Punch: 55 55 70"
+                "Air Punch: 50"
+                "Uppercut: 60"
+                "Ammo Capacity: 5"
+                "Cooldown: 11 sec"
 
     ### ↓ 新しいアイテムを追加する際に加筆する必要はない -------------------------------------------------------
 

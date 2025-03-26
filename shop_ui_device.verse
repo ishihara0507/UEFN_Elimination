@@ -282,7 +282,7 @@ shop_ui := class:
         if(PlayerUI := GetPlayerUI[AddPlayer], Fort := AddPlayer.GetFortCharacter[]):
             SetUpWidgetElem() # ウィジェット要素のセットアップ
 
-            OnTabClick(item_category_enum.SG) # UI系の各種変数に初期値を設定
+            OnTabClick(item_category_enum.AR) # UI系の各種変数に初期値を設定
             if(Health := Int[Fort.GetMaxHealth()], Shield := Int[Fort.GetMaxShield()]):
                 set PlayerHealth = Health
                 set PlayerShield = Shield
@@ -1264,5 +1264,5 @@ shop_ui := class:
     GrantAllSelectedItems():void=
         for(Item:PlayerItems):
             ItemIndex := ShopDatas.GetIndexByItemAndRarity(Item.ItemEnum, Item.RarityEnum)
-            for(Index := 0..(Item.CarryOverCount + Item.BuyCount) - 1):
+            for(Index := 0..(Item.CarryOverCount + Item.BuyCount) - 1, ItemIndex <> -1):
                 ItemGranter.GrantItemIndex(AddPlayer, ItemIndex)

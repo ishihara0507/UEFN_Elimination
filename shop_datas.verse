@@ -18,16 +18,44 @@ item_enum := enum:
 
 (IE:item_enum).ToTexture():texture=
     case(IE):
-        item_enum.AssaultRifle => ShopTextures_Items.AssaultRifle # フォルダ名.テクスチャ名
+        item_enum.AssaultRifle => ShopTextures_Items.AssaultRifle1 # フォルダ名.テクスチャ名
+        item_enum.SidearmPistol => ShopTextures_Items.SidearmPistol
+        item_enum.CombatShotgun => ShopTextures_Items.CombatShotgun
+        item_enum.SubmachineGun => ShopTextures_Items.SubmachineGun
+        item_enum.FalconEyeSniper => ShopTextures_Items.FalconEyeSniper
+        item_enum.SmallShieldPotion => ShopTextures_Items.SmallShieldPotion
+        item_enum.ShieldPot => ShopTextures_Items.ShieldPot
+        item_enum.Bandage => ShopTextures_Items.Bandage
+        item_enum.Medkit => ShopTextures_Items.Medkit
+        item_enum.NitroFists => ShopTextures_Items.NitroFists
 
 (IE:item_enum).ToItemData():item_data=
     ShopDatas:shop_datas = shop_datas{}
     case(IE):
         item_enum.AssaultRifle => ShopDatas.AssaultRifle
+        item_enum.SidearmPistol => ShopDatas.SidearmPistol
+        item_enum.CombatShotgun => ShopDatas.CombatShotgun
+        item_enum.SubmachineGun => ShopDatas.SubmachineGun
+        item_enum.FalconEyeSniper => ShopDatas.FalconEyeSniper
+        item_enum.SmallShieldPotion => ShopDatas.SmallShieldPotion
+        item_enum.ShieldPot => ShopDatas.ShieldPot
+        item_enum.Bandage => ShopDatas.Bandage
+        item_enum.Medkit => ShopDatas.Medkit
+        item_enum.NitroFists => ShopDatas.NitroFists
+
 
 (IE:item_enum).ToString():string=
     case(IE):
         item_enum.AssaultRifle => "Assault Rifle"
+        item_enum.SidearmPistol => "Sidearm Pistol"
+        item_enum.CombatShotgun => "Combat Shotgun"
+        item_enum.SubmachineGun => "Submachine Gun"
+        item_enum.FalconEyeSniper => "Falcon Eye Sniper"
+        item_enum.SmallShieldPotion => "Small Shield Potion"
+        item_enum.ShieldPot => "Shield Pot"
+        item_enum.Bandage => "Bandage"
+        item_enum.Medkit => "Medkit"
+        item_enum.NitroFists => "Nitro Fists"
 
 # rarity_enum.L1_Common
 # rarity_enum.L2_Uncommon
@@ -39,6 +67,19 @@ item_enum := enum:
 
 shop_datas := class:
     ### ↓ 新しいアイテムを追加する際に加筆する必要がある -------------------------------------------------------
+
+    # アイテム配列を定義
+    AllItems:[]item_enum = array:
+        item_enum.CombatShotgun
+        item_enum.SidearmPistol
+        item_enum.SubmachineGun
+        item_enum.AssaultRifle
+        item_enum.FalconEyeSniper
+        item_enum.Bandage
+        item_enum.Medkit
+        item_enum.SmallShieldPotion
+        item_enum.ShieldPot
+        item_enum.NitroFists
 
     # 引数で与えられたカテゴリーに分類されたアイテムを配列で返す関数
     # ルール：空のカテゴリーは作成してはいけない。同じアイテム名を２度追加してはいけない。
@@ -69,6 +110,7 @@ shop_datas := class:
 
     # :item_data = item_data: # 
     #     Item := item_enum.
+    #     CanBuyMultiple := true
     #     MaxCapacity := 1
     #     Rarities := array:
     #         rarity_enum.L1_Common
@@ -117,6 +159,7 @@ shop_datas := class:
     # 実際にアイテムのデータの中身を定義
     AssaultRifle:item_data = item_data: # アサルトライフル
         Item := item_enum.AssaultRifle
+        CanBuyMultiple := true
         MaxCapacity := 1
         Rarities := array:
             rarity_enum.L1_Common
@@ -164,6 +207,7 @@ shop_datas := class:
 
     SidearmPistol:item_data = item_data: # サイドアームピストル
         Item := item_enum.SidearmPistol
+        CanBuyMultiple := true
         MaxCapacity := 1
         Rarities := array:
             rarity_enum.L1_Common
@@ -211,6 +255,7 @@ shop_datas := class:
                 
     CombatShotgun:item_data = item_data: # コンバットショットガン
         Item := item_enum.CombatShotgun
+        CanBuyMultiple := true
         MaxCapacity := 1
         Rarities := array:
             rarity_enum.L1_Common
@@ -258,6 +303,7 @@ shop_datas := class:
                 
     SubmachineGun:item_data = item_data: # サブマシンガン
         Item := item_enum.SubmachineGun
+        CanBuyMultiple := true
         MaxCapacity := 1
         Rarities := array:
             rarity_enum.L1_Common
@@ -305,6 +351,7 @@ shop_datas := class:
                 
     FalconEyeSniper:item_data = item_data: # ファルコンアイスナイパー
         Item := item_enum.FalconEyeSniper
+        CanBuyMultiple := true
         MaxCapacity := 1
         Rarities := array:
             rarity_enum.L1_Common
@@ -352,6 +399,7 @@ shop_datas := class:
                 
     SmallShieldPotion:item_data = item_data: # ミニシールドポーション
         Item := item_enum.SmallShieldPotion
+        CanBuyMultiple := true
         MaxCapacity := 6
         Rarities := array:
             rarity_enum.L2_Uncommon
@@ -367,6 +415,7 @@ shop_datas := class:
                 
     ShieldPot:item_data = item_data: # シールドポーション
         Item := item_enum.ShieldPot
+        CanBuyMultiple := true
         MaxCapacity := 3
         Rarities := array:
             rarity_enum.L3_Rare
@@ -382,6 +431,7 @@ shop_datas := class:
                 
     Bandage:item_data = item_data: # 包帯
         Item := item_enum.Bandage
+        CanBuyMultiple := true
         MaxCapacity := 15
         Rarities := array:
             rarity_enum.L1_Common
@@ -397,6 +447,7 @@ shop_datas := class:
                 
     Medkit:item_data = item_data: # 医療キット
         Item := item_enum.Medkit
+        CanBuyMultiple := true
         MaxCapacity := 3
         Rarities := array:
             rarity_enum.L2_Uncommon
@@ -412,6 +463,7 @@ shop_datas := class:
                 
     NitroFists:item_data = item_data: # ニトロフィスト
         Item := item_enum.NitroFists
+        CanBuyMultiple := false
         MaxCapacity := 1
         Rarities := array:
             rarity_enum.L4_Epic
@@ -460,21 +512,17 @@ shop_datas := class:
     GetIndexByItemAndRarity(ItemEnum:item_enum, RarityEnum:rarity_enum):int=
         var Result:int = 0
 
-        # アイテム配列を定義
-        var AllItems:[]item_enum = array{}
-        for(Category:AllCategories):
-            set AllItems += GetItemsByCategory(Category)
-
         # インデックスを特定
-        for(Index->Item:AllItems):
+        for(Item:AllItems):
             if(ItemEnum = Item):
-                for(Rarity:AllRarities):
+                Rarities := Item.ToItemData().Rarities
+                for(Rarity:Rarities):
                     if(RarityEnum = Rarity):
                         return Result
                     else:
                         set Result += 1
             else:
-                set Result += ItemEnum.ToItemData().Rarities.Length
+                set Result += Item.ToItemData().Rarities.Length
 
         return -1 # 失敗
 
@@ -556,6 +604,7 @@ rarity_enum := enum:
 
 item_data := struct:
     Item:item_enum # アイテムの識別名
+    CanBuyMultiple:logic # 複数スロットに持てるかを保持（スロットに空きがあっても１つしか持てないアイテムがある）。true: 複数持てる, false: 1スロット分しか持てない
     MaxCapacity:int # １スロットでそのアイテムを保持できる数
     Rarities:[]rarity_enum # レアリティの種類
     RarityPriceMap:[rarity_enum]int # レアリティと値段のペア

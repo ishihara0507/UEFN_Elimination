@@ -138,6 +138,7 @@ shop_ui_device := class(creative_device):
     RemovePlayersItems(Players:[]player):void=
         for(Player:Players):
             ItemRemover.Remove(Player)
+        Print("アイテムを削除した")
 
 # ボタンを識別するための列挙型
 btn_enum := enum:
@@ -243,7 +244,7 @@ shop_ui := class:
 
     # アイテム詳細
     Desc_RarityTexture:texture_block = texture_block{DefaultImage := ShopTextures_Rarities.square_L1_common, DefaultDesiredSize := vector2{X := 300.0, Y := 300.0}}
-    Desc_ItemTexture:texture_block = texture_block{DefaultImage := ShopTextures_Items.AssaultRifle, DefaultDesiredSize := vector2{X := 300.0, Y := 300.0}}
+    Desc_ItemTexture:texture_block = texture_block{DefaultImage := ShopTextures_Items.AssaultRifle1, DefaultDesiredSize := vector2{X := 300.0, Y := 300.0}}
     Desc_ItemNameText:text_block = text_block{}
     var Desc_DescTexts:[]text_block = array{}
     Desc_GoldsText:text_block = text_block{DefaultTextColor := color{R := 0.516, G := 0.272, B := 0.0}}
@@ -282,7 +283,7 @@ shop_ui := class:
         if(PlayerUI := GetPlayerUI[AddPlayer], Fort := AddPlayer.GetFortCharacter[]):
             SetUpWidgetElem() # ウィジェット要素のセットアップ
 
-            OnTabClick(item_category_enum.AR) # UI系の各種変数に初期値を設定
+            OnTabClick(item_category_enum.SG) # UI系の各種変数に初期値を設定
             if(Health := Int[Fort.GetMaxHealth()], Shield := Int[Fort.GetMaxShield()]):
                 set PlayerHealth = Health
                 set PlayerShield = Shield
@@ -1079,17 +1080,21 @@ shop_ui := class:
         var IsNotBought:logic = true
 
         # 既存スロットに重ねて追加できるか
-        for(Item:PlayerItems, IsNotBought?): 
-            if(SelectedItem = Item.ItemEnum, SelectedRarity = Item.RarityEnum):
-                ItemData := Item.ItemEnum.ToItemData()
-                if(Item.CarryOverCount + Item.BuyCount < ItemData.MaxCapacity):
-                    set Item.BuyCount += 1
-                    set PlayerGolds -= Price
-                    set IsNotBought = false
-                    Print("アイテムを既存スロットに追加した: {Item.CarryOverCount + Item.BuyCount} => {Item.CarryOverCount + Item.BuyCount}")
-                else:
-                    Print("同じアイテムを所持していたが、重ねられなかった: {Item.CarryOverCount + Item.BuyCount}")
-
+        for(Item:PlayerItems, IsNotBought?, SelectedItem = Item.ItemEnum): 
+            if(SelectedItemData.CanBuyMultiple?):
+                if(SelectedRarity = Item.RarityEnum):
+                    ItemData := Item.ItemEnum.ToItemData()
+                    if(Item.CarryOverCount + Item.BuyCount < ItemData.MaxCapacity):
+                        set Item.BuyCount += 1
+                        set PlayerGolds -= Price
+                        set IsNotBought = false
+                        Print("アイテムを既存スロットに追加した: {Item.CarryOverCount + Item.BuyCount - 1} => {Item.CarryOverCount + Item.BuyCount}")
+                    else:
+                        Print("同じアイテムを所持していたが、重ねられなかった: {Item.CarryOverCount + Item.BuyCount}")
+            else:
+                set IsNotBought = false
+                Print("複数スロットに保持できないアイテムです")
+            
         # 重ねて追加できなかった場合に、新規スロットに追加できるか
         if(IsNotBought?):
             if(PlayerItems.Length < HoldingNum):
@@ -1265,4 +1270,6 @@ shop_ui := class:
         for(Item:PlayerItems):
             ItemIndex := ShopDatas.GetIndexByItemAndRarity(Item.ItemEnum, Item.RarityEnum)
             for(Index := 0..(Item.CarryOverCount + Item.BuyCount) - 1, ItemIndex <> -1):
+                Print("ItemIndex: {ItemIndex}")
                 ItemGranter.GrantItemIndex(AddPlayer, ItemIndex)
+        Print("アイテムを与えた")

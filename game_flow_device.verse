@@ -16,7 +16,7 @@ game_flow_device := class(creative_device):
     ### @editable系 ---------------------------------------------------------------------
     # 自作デバイス
     @editable
-    SelectPresetDevice:select_preset_device = select_preset_device{}
+    ShopUIDevice:shop_ui_device = shop_ui_device{}
     
     @editable
     RoundUIDevice:round_ui_device = round_ui_device{}
@@ -70,6 +70,9 @@ game_flow_device := class(creative_device):
     CountDownHud:hud_message_device = hud_message_device{}
 
     @editable
+    BuyPhaseTimeHud:hud_message_device = hud_message_device{} # ショップUIを開いているときに表示されるカウントダウン
+
+    @editable
     StartDelayHud:hud_message_device = hud_message_device{} # 試合開始直前のカウントダウンを表示するHUD（数字を大きめにしたいから別で用意）
 
     @editable
@@ -83,9 +86,6 @@ game_flow_device := class(creative_device):
 
     @editable
     LoseWinHudDevice:hud_message_device = hud_message_device{}
-
-    @editable
-    GoldHudDevice:hud_message_device = hud_message_device{}
 
     # ムービーシーケンス
     @editable
@@ -107,9 +107,11 @@ game_flow_device := class(creative_device):
 
     SideSwitchNum:int = 2 # 何ラウンドごとに陣営を変更するか
     
+    BuyPhaseTime:int = 30 # 購入フェーズの時間
+
     StartDelay:int = 3 # ラウンド開始前などに設ける時間
 
-    RoundTime:int = 180
+    RoundTime:int = 120
 
     BallisticTime:int = 45 # バリスティックの仕掛けを起動してから爆発するまでの時間
 
@@ -118,6 +120,10 @@ game_flow_device := class(creative_device):
     VictoryAndDefeatTime:float = 5.0 # 勝利、敗北UIを表示する秒数
 
     PlayerStatsManager:player_stat_manager = player_stat_manager{}
+
+    ## ショップ系
+    RoundWinGold:int = 3000
+
     ### ----------------------------------------------------------------------------------
 
 
@@ -168,7 +174,6 @@ game_flow_device := class(creative_device):
         set GamePlayers = GetPlayspace().GetPlayers()
 
         for(Player:GamePlayers, Fort := Player.GetFortCharacter[]):
-            GoldHudDevice.Hide(Player)
             ItemRemover.Remove(Player)
             PlayerStatsManager.UpdateRoundCountStat(Player) # ラウンドカウント１増やす
             Fort.SetVulnerability(false) # ダメージ受けないようにする
@@ -229,9 +234,25 @@ game_flow_device := class(creative_device):
         RoundUIDevice.AddRoundStatusUI(TeamRemainingMap, TeamWinsMap)
         RoundUIDevice.UpdateRoundTimeText(S2M("{CalcElapsedTime(RoundTime)}"))
 
-        # 武器を付与する（自作デバイスを使って実装した）
-        for(Player:GamePlayers):
-            spawn{SelectPresetDevice.MakePresetsUI(Player)}
+        # アイテムを購入できるようにする
+        ShopUIDevice.EnableInputTriggerDevice()
+        
+        # アイテム購入フェーズカウントダウン
+        set Count = BuyPhaseTime
+        BuyPhaseTimeHud.SetText(S2M("{Count}"))
+        ShopUIDevice.UpdataBuyPhaseTime()
+        loop:
+            Sleep(1.0)
+            set Count -= 1
+            if(Count <= 0):
+                break
+            BuyPhaseTimeHud.SetText(S2M("{Count}"))
+            ShopUIDevice.UpdataBuyPhaseTime()
+
+        # アイテムを購入できないようにする
+        ShopUIDevice.DisableInputTriggerDevice()
+        ShopUIDevice.KillAllUI()
+        # StartDelayHud.Hide()
 
         # ラウンド開始前に数秒カウントダウンする
         set Count = StartDelay
@@ -334,13 +355,12 @@ game_flow_device := class(creative_device):
         for(RiftPointVolume:RiftPointVolumes):
             RiftPointVolume.Disable()
         BombCountStopEvent.Signal()
-        
-        # セレクトウェポンUIを削除する
-        SelectPresetDevice.KillAllPresetsUI()
 
         # プレイヤーがダメージを受けないようにする
         for(Player:GamePlayers, Fort := Player.GetFortCharacter[]):
             Fort.SetVulnerability(false)
+
+        Sleep(5.0) # ラウンドの決着がついた後に敵の武器を回収できるように時間差を設ける
 
         ### ラウンド終了処理
         var OWinAgent:?agent = false

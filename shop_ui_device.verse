@@ -60,6 +60,9 @@ shop_ui_device := class(creative_device):
     CondBtnStructs:[]condbtn_struct = array{} # 以前のラウンドからの持ち越しアイテムを特定するために必要
 
     @editable
+    InputTriggerDevice:input_trigger_device = input_trigger_device{} # Fを押したらショップUIを開けるようにする
+
+    @editable
     ItemRemover:item_remover_device = item_remover_device{} # 手持ちアイテムをデータ化した後に削除するために必要
 
     @editable
@@ -71,13 +74,15 @@ shop_ui_device := class(creative_device):
     PlayerHealthHudDevice:hud_message_device = hud_message_device{}
     @editable
     PlayerShieldHudDevice:hud_message_device = hud_message_device{}
+    @editable
+    BuyPhaseTimeHudDevice:hud_message_device = hud_message_device{}
 
     var CondBtnItemLinks:[]condbtn_item_lick = array{}
     var PlayerItemsMap:[player][]player_item = map{}
     var PlayerShopUIMap:[player]shop_ui = map{}
 
     ShopDatas:shop_datas = shop_datas{} # アイテムのデータを定義したクラス
-    KillUIEvent:event() = event(){}
+    BuyPhaseTimeEvent:event() = event(){}
     
     OnBegin<override>()<suspends>:void=
         for(CondBtnStruct:CondBtnStructs):
@@ -90,32 +95,55 @@ shop_ui_device := class(creative_device):
             CondBtnItemLink.CondBtn.ActivatedEvent.Subscribe(CondBtnItemLink.ActivateCondBtn)
             set CondBtnItemLinks += array{CondBtnItemLink}
 
-    # すべてのプレイヤーにショップUIを付与する関数
-    AddShopUIForAll(GamePlayers:[]player)<suspends>:void=
+        InputTriggerDevice.PressedEvent.Subscribe(TriggerAddShopUI)
+
+    # 入力トリガーの仕掛けを有効化する関数
+    EnableInputTriggerDevice():void=
+        InputTriggerDevice.Enable()
+        Print("入力トリガーの仕掛けを有効化した")
+    
+    # 入力トリガーの仕掛けを無効化する関数
+    DisableInputTriggerDevice():void=
+        InputTriggerDevice.Disable()
+        Print("入力トリガーの仕掛けを無効化した")
+
+    # 入力トリガーの仕掛けに登録する関数。AddShopUIを呼び出すだけ
+    TriggerAddShopUI(Agent:agent):void=
+        Print("入力を感知した")
+        if(Player := player[Agent]):
+            spawn{AddShopUI(Player)}
+
+    # プレイヤーにショップUIを付与する関数
+    AddShopUI(Player:player)<suspends>:void=
         # 以前のラウンドからの持ち越しアイテムをデータ化
-        for(Player:GamePlayers):
-            CarryOverItemsToData(Player)
+        CarryOverItemsToData(Player)
 
         Sleep(0.0) # ディレイを設けないと、条件付きボタンの処理が終わる前にUIを作成してしまう
 
-        RemovePlayersItems(GamePlayers) # 手持ちアイテムの削除
+        RemovePlayersItems(Player) # 手持ちアイテムの削除
 
         # ショップUIを付与
-        for(Player:GamePlayers, PlayerUI := GetPlayerUI[Player], PlayerItems := PlayerItemsMap[Player]):
+        if(PlayerUI := GetPlayerUI[Player], PlayerItems := PlayerItemsMap[Player]):
             NewShopUI := shop_ui:
                 AddPlayer := Player
                 PlayerItems := PlayerItems
-                KillUIEvent := KillUIEvent
+                BuyPhaseTimeEvent := BuyPhaseTimeEvent
                 PlayerGoldsHudDevice := PlayerGoldsHudDevice
                 PlayerHealthHudDevice := PlayerHealthHudDevice
                 PlayerShieldHudDevice := PlayerShieldHudDevice
+                BuyPhaseTimeHudDevice := BuyPhaseTimeHudDevice
                 ItemGranter := ItemGranter
             spawn{NewShopUI.Init()}
             if. set PlayerShopUIMap[Player] = NewShopUI
 
     # すべてのプレイヤーからショップUIを削除する関数
     KillAllUI():void=
-        KillUIEvent.Signal()
+        for(ShopUI:PlayerShopUIMap):
+            ShopUI.KillUIEvent.Signal()
+
+    # 購入フェーズの時間テキストを更新する関数
+    UpdataBuyPhaseTime():void=
+        BuyPhaseTimeEvent.Signal()
 
     # 引数のプレイヤーの、以前のラウンドからの持ち越しアイテムをデータ化させる関数
     CarryOverItemsToData(Player:player):void=
@@ -134,10 +162,9 @@ shop_ui_device := class(creative_device):
                 ItemNum := Item.CarryOverCount
                 Print("{Index}番目: {ItemRarity}の{ItemName}が{ItemNum}個")
 
-    # すべてのプレイヤーからアイテムを削除する関数
-    RemovePlayersItems(Players:[]player):void=
-        for(Player:Players):
-            ItemRemover.Remove(Player)
+    # プレイヤーからアイテムを削除する関数
+    RemovePlayersItems(Player:player):void=
+        ItemRemover.Remove(Player)
         Print("アイテムを削除した")
 
 # ボタンを識別するための列挙型
@@ -186,10 +213,11 @@ btn_enum := enum:
 shop_ui := class:
     AddPlayer:player
     var PlayerItems:[]player_item
-    KillUIEvent:event()
+    BuyPhaseTimeEvent:event()
     PlayerGoldsHudDevice:hud_message_device
     PlayerHealthHudDevice:hud_message_device
     PlayerShieldHudDevice:hud_message_device
+    BuyPhaseTimeHudDevice:hud_message_device
     ItemGranter:item_granter_device
 
     var Widget:widget = canvas{}
@@ -277,6 +305,8 @@ shop_ui := class:
     MaxPageNum:int = 5 # 1カテゴリーにおける最大のページ数
     DescTextNum:int = 5 # アイテム説明の箇条書き行数
 
+    KillUIEvent:event() = event(){}
+
     ShopDatas:shop_datas = shop_datas{}
 
     Init()<suspends>:void=
@@ -294,6 +324,7 @@ shop_ui := class:
             
             PlayerUI.AddWidget(Widget, player_ui_slot{InputMode := ui_input_mode.All})
             spawn{HandleButtonClick()}
+            spawn{UpdateShowBuyPhaseTime()}
             Print("ショップUIを付与した")
 
             KillUIEvent.Await() # UIの終了を待機
@@ -301,12 +332,24 @@ shop_ui := class:
             PlayerGoldsHudDevice.Hide(AddPlayer)
             PlayerHealthHudDevice.Hide(AddPlayer)
             PlayerShieldHudDevice.Hide(AddPlayer)
+            BuyPhaseTimeHudDevice.Hide(AddPlayer)
             PlayerUI.RemoveWidget(Widget)
             Print("ショップUIを削除した")
 
             GrantAllSelectedItems()
             Print("プレイヤーにアイテムを与えた")
         return
+
+    # 購入フェーズのカウントダウンを更新・表示する関数
+    UpdateShowBuyPhaseTime()<suspends>:void=
+        BuyPhaseTimeHudDevice.Show(AddPlayer)
+        race:
+            block:
+                KillUIEvent.Await()
+                Print("購入フェーズのカウントダウンが停止された")
+            loop:
+                BuyPhaseTimeEvent.Await()
+                BuyPhaseTimeHudDevice.Show(AddPlayer)
 
     # ウィジェット要素を初期化する関数
     SetUpWidgetElem():void=
@@ -432,7 +475,7 @@ shop_ui := class:
                                             SizeToContent := true
                                             Widget := CreateItemDetailStackBox()
                             overlay_slot: # 閉じるボタン
-                                Padding := margin{Left := 0.0, Top := 42.5, Right := 45.0, Bottom := 0.0}
+                                Padding := margin{Left := 0.0, Top := 180.0, Right := 45.0, Bottom := 0.0}
                                 HorizontalAlignment := horizontal_alignment.Right
                                 VerticalAlignment := vertical_alignment.Top
                                 Widget := canvas:
@@ -842,7 +885,8 @@ shop_ui := class:
                     ItemTexture.SetImage(Item.ItemEnum.ToTexture())
 
                     Count := Item.CarryOverCount + Item.BuyCount
-                    if(1 < Count):
+                    MaxCapacity := Item.ItemEnum.ToItemData().MaxCapacity
+                    if(1 < MaxCapacity):
                         ItemCountText.SetText(S2M("{Count}"))
                     else:
                         ItemCountText.SetText(S2M(""))

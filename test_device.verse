@@ -31,18 +31,45 @@ test_device := class(creative_device):
 
     @editable
     ShopUIDevice:shop_ui_device = shop_ui_device{}
+
+    @editable
+    BuyPhaseTimeHud:hud_message_device = hud_message_device{}
     
     OnBegin<override>()<suspends>:void=
         Trigger.TriggeredEvent.Subscribe(OnTriggered)
         Trigger2.TriggeredEvent.Subscribe(OnTriggered2)
+
+        
         
 
     OnTriggered(OAgent:?agent):void=
+        spawn{AA()}
         return
+
+    AA()<suspends>:void=
+        Print("購入フェーズ開始！！！")
+        ShopUIDevice.EnableInputTriggerDevice()
+
+        # アイテム購入フェーズカウントダウン
+        var Count:int = 30
+        BuyPhaseTimeHud.SetText(S2M("{Count}"))
+        ShopUIDevice.UpdataBuyPhaseTime()
+        loop:
+            Sleep(1.0)
+            set Count -= 1
+            if(Count <= 0):
+                break
+            BuyPhaseTimeHud.SetText(S2M("{Count}"))
+            ShopUIDevice.UpdataBuyPhaseTime()
+
+        # アイテムを購入できないようにする
+        ShopUIDevice.DisableInputTriggerDevice()
+        ShopUIDevice.KillAllUI()
+
+        Print("購入フェーズ終了！！！")
 
     OnTriggered2(OAgent:?agent):void=
         if(Agent := OAgent?, Player := player[Agent]):
-            spawn{ShopUIDevice.AddShopUIForAll(array{Player})}
         return
             
     # OnTriggered(OAgent:?agent):void=

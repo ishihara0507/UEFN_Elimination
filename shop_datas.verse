@@ -15,7 +15,7 @@ item_enum := enum:
     Bandage
     Medkit
     NitroFists
-    Pistol # ここから
+    Pistol
     Revolver
     MammothPistol
     TacticalPistol
@@ -40,6 +40,8 @@ item_enum := enum:
     TheKneecapper
     ThornesVampiricBlade
     TyphoonBlade
+    Grappler
+    GrappleGlove
 
 (IE:item_enum).ToTexture():texture=
     case(IE):
@@ -78,8 +80,9 @@ item_enum := enum:
         item_enum.TheKneecapper =>  ShopTextures_Items.TheKneecapper
         item_enum.ThornesVampiricBlade =>  ShopTextures_Items.ThornesVampiricBlade
         item_enum.TyphoonBlade =>  ShopTextures_Items.TyphoonBlade
+        item_enum.Grappler => ShopTextures_Items.Grappler
+        item_enum.GrappleGlove => ShopTextures_Items.GrappleGlove
         
-
 (IE:item_enum).ToItemData():item_data=
     ShopDatas:shop_datas = shop_datas{}
     case(IE):
@@ -93,7 +96,7 @@ item_enum := enum:
         item_enum.Bandage => ShopDatas.Bandage
         item_enum.Medkit => ShopDatas.Medkit
         item_enum.NitroFists => ShopDatas.NitroFists
-        item_enum.Pistol =>  ShopDatas.Pistol # ここから
+        item_enum.Pistol =>  ShopDatas.Pistol
         item_enum.Revolver =>  ShopDatas.Revolver
         item_enum.MammothPistol =>  ShopDatas.MammothPistol
         item_enum.TacticalPistol =>  ShopDatas.TacticalPistol
@@ -118,6 +121,8 @@ item_enum := enum:
         item_enum.TheKneecapper =>  ShopDatas.TheKneecapper
         item_enum.ThornesVampiricBlade =>  ShopDatas.ThornesVampiricBlade
         item_enum.TyphoonBlade =>  ShopDatas.TyphoonBlade
+        item_enum.Grappler =>  ShopDatas.Grappler
+        item_enum.GrappleGlove => ShopDatas.GrappleGlove
 
 
 (IE:item_enum).ToString():string=
@@ -132,7 +137,7 @@ item_enum := enum:
         item_enum.Bandage => "Bandage"
         item_enum.Medkit => "Medkit"
         item_enum.NitroFists => "Nitro Fists"
-        item_enum.Pistol =>  "Pistol" # ここから
+        item_enum.Pistol =>  "Pistol"
         item_enum.Revolver =>  "Revolver"
         item_enum.MammothPistol =>  "Mammoth Pistol"
         item_enum.TacticalPistol =>  "Tactical Pistol"
@@ -157,6 +162,8 @@ item_enum := enum:
         item_enum.TheKneecapper =>  "The Kneecapper"
         item_enum.ThornesVampiricBlade => "Thorne\'s Vampiric\nBlade"
         item_enum.TyphoonBlade =>  "Typhoon Blade"
+        item_enum.Grappler =>  "Grappler"
+        item_enum.GrappleGlove => "GrappleGlove"
 
 # rarity_enum.L1_Common
 # rarity_enum.L2_Uncommon
@@ -181,6 +188,33 @@ shop_datas := class:
         item_enum.SmallShieldPotion
         item_enum.ShieldPot
         item_enum.NitroFists
+        item_enum.Pistol # ここから
+        item_enum.Revolver
+        item_enum.MammothPistol
+        item_enum.TacticalPistol
+        item_enum.SentinelPumpShotgun
+        item_enum.TwinfireAutoShotgun
+        item_enum.OutlawShotgun
+        item_enum.PumpAndDump
+        item_enum.CombatSMG
+        item_enum.VeiledPrecisionSMG
+        item_enum.RapidFireSMG
+        item_enum.ChargeSMG
+        item_enum.StrikerBurstRifle
+        item_enum.HoloTwisterAssaultRifle
+        item_enum.CollateralDamageAssaultRifle
+        item_enum.CombatAssaultRifle
+        item_enum.TacticalAssaultRifle
+        item_enum.BoltActionSniperRifle
+        item_enum.HeavySniperRifle
+        item_enum.LeverActionRifle
+        item_enum.RocketLauncher
+        item_enum.FireOniMask
+        item_enum.TheKneecapper
+        item_enum.ThornesVampiricBlade
+        item_enum.TyphoonBlade
+        item_enum.Grappler
+        item_enum.GrappleGlove
 
     # 引数で与えられたカテゴリーに分類されたアイテムを配列で返す関数
     # ここでの順番がUIに表示される順番になる
@@ -224,10 +258,13 @@ shop_datas := class:
                 item_enum.Medkit
                 item_enum.SmallShieldPotion
                 item_enum.ShieldPot
+                item_enum.Grappler
             item_category_enum.SP => set ReturnItems = array:
                 item_enum.RocketLauncher
+                item_enum.GrappleGlove
                 item_enum.NitroFists
                 item_enum.FireOniMask
+                item_enum.TyphoonBlade
                 item_enum.ThornesVampiricBlade
                 item_enum.TheKneecapper
             item_category_enum.EX => set ReturnItems = array:
@@ -795,7 +832,7 @@ shop_datas := class:
                 "Reload: 1.25"
                 ""
                 
-    SentinelPumpShotgun:item_data = item_data: # センチネルポンプショットガン
+    SentinelPumpShotgun:item_data = item_data: # センチネル ポンプショットガン
         Item := item_enum.SentinelPumpShotgun
         CanBuyMultiple := true
         MaxCapacity := 1
@@ -1099,7 +1136,7 @@ shop_datas := class:
                 "Reload: 1.85"
                 ""
                 
-    RapidFireSMG:item_data = item_data: # 連射式サブマシンガン
+    RapidFireSMG:item_data = item_data: # 速射式サブマシンガン
         Item := item_enum.RapidFireSMG
         CanBuyMultiple := true
         MaxCapacity := 1
@@ -1315,7 +1352,7 @@ shop_datas := class:
                 "Reload: 2.38"
                 ""
                 
-    CollateralDamageAssaultRifle:item_data = item_data: # コラテラルダメージアサルトライフル
+    CollateralDamageAssaultRifle:item_data = item_data: # コラテラルダメージ アサルトライフル
         Item := item_enum.CollateralDamageAssaultRifle
         CanBuyMultiple := true
         MaxCapacity := 1
@@ -1507,7 +1544,7 @@ shop_datas := class:
                 "Reload: 2.35"
                 ""
                 
-    HeavySniperRifle:item_data = item_data: # 
+    HeavySniperRifle:item_data = item_data: # ヘビースナイパーライフル
         Item := item_enum.HeavySniperRifle
         CanBuyMultiple := true
         MaxCapacity := 1
@@ -1641,13 +1678,13 @@ shop_datas := class:
             rarity_enum.L4_Epic => array:
                 "Dmg: 100"
                 "Ammo Capacity: 2"
-                "Max Ammo: 8"
+                "Uses: 8"
                 "Cooldown: 8 sec"
                 ""
             rarity_enum.L6_Mythic => array:
                 "Dmg: 100"
                 "Ammo Capacity: 2"
-                "Max Ammo: 16"
+                "Uses: 16"
                 "Cooldown: 8 sec"
                 ""
                 
@@ -1683,7 +1720,7 @@ shop_datas := class:
                 "7(On Attack)"
                 "12(On Dash Attack)"
          
-    TyphoonBlade:item_data = item_data: # タイフーンブレイド
+    TyphoonBlade:item_data = item_data: # タイフーン・ブレイド
         Item := item_enum.TyphoonBlade
         CanBuyMultiple := false
         MaxCapacity := 1
@@ -1706,6 +1743,39 @@ shop_datas := class:
                 "70(Slam)"
                 "90(Cyclone Slash)"
                 "Cooldown: 6.5 sec"
+                
+    Grappler:item_data = item_data: # グラップラー
+        Item := item_enum.Grappler
+        CanBuyMultiple := true
+        MaxCapacity := 1
+        Rarities := array:
+            rarity_enum.L4_Epic
+        RarityPriceMap := map:
+            rarity_enum.L4_Epic => 500
+        RarityDescMap := map:
+            rarity_enum.L4_Epic => array:
+                "Uses: 10"
+                "Cooldown: 1.26 sec"
+                ""
+                ""
+                ""
+
+    GrappleGlove:item_data = item_data: # グラップルグローブ
+        Item := item_enum.GrappleGlove
+        CanBuyMultiple := false
+        MaxCapacity := 1
+        Rarities := array:
+            rarity_enum.L4_Epic
+        RarityPriceMap := map:
+            rarity_enum.L4_Epic => 500
+        RarityDescMap := map:
+            rarity_enum.L4_Epic => array:
+                "Uses: 30"
+                ""
+                ""
+                ""
+                ""
+
 
     ### ↓ 新しいアイテムを追加する際に加筆する必要はない -------------------------------------------------------
 

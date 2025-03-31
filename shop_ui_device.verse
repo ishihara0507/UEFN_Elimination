@@ -69,7 +69,7 @@ shop_ui_device := class(creative_device):
     ItemGranter:item_granter_device = item_granter_device{} # 購入したアイテムをプレイヤーに渡すために必要
 
     @editable
-    PlayerGoldsHudDevice:hud_message_device = hud_message_device{}
+    PlayerGoldHudDevice:hud_message_device = hud_message_device{}
     @editable
     PlayerHealthHudDevice:hud_message_device = hud_message_device{}
     @editable
@@ -128,7 +128,7 @@ shop_ui_device := class(creative_device):
                 AddPlayer := Player
                 PlayerItems := PlayerItems
                 BuyPhaseTimeEvent := BuyPhaseTimeEvent
-                PlayerGoldsHudDevice := PlayerGoldsHudDevice
+                PlayerGoldHudDevice := PlayerGoldHudDevice
                 PlayerHealthHudDevice := PlayerHealthHudDevice
                 PlayerShieldHudDevice := PlayerShieldHudDevice
                 BuyPhaseTimeHudDevice := BuyPhaseTimeHudDevice
@@ -214,7 +214,7 @@ shop_ui := class:
     AddPlayer:player
     var PlayerItems:[]player_item
     BuyPhaseTimeEvent:event()
-    PlayerGoldsHudDevice:hud_message_device
+    PlayerGoldHudDevice:hud_message_device
     PlayerHealthHudDevice:hud_message_device
     PlayerShieldHudDevice:hud_message_device
     BuyPhaseTimeHudDevice:hud_message_device
@@ -290,7 +290,7 @@ shop_ui := class:
 
     var PlayerHealth:int = 10
     var PlayerShield:int = 10
-    var PlayerGolds:int = 99999
+    var PlayerGold:int = 0
     
     var SelectedCategoryItems:[]item_enum = array{} # 現在選択されているカテゴリーに属しているアイテムすべてを保持
     var DisplayedItems:[]item_enum = array{} # 現在ショップ部分に表示されているアイテムを保持する
@@ -308,6 +308,7 @@ shop_ui := class:
     KillUIEvent:event() = event(){}
 
     ShopDatas:shop_datas = shop_datas{}
+    PlayerStatManager:player_stat_manager = player_stat_manager{}
 
     Init()<suspends>:void=
         if(PlayerUI := GetPlayerUI[AddPlayer], Fort := AddPlayer.GetFortCharacter[]):
@@ -317,7 +318,13 @@ shop_ui := class:
             if(Health := Int[Fort.GetMaxHealth()], Shield := Int[Fort.GetMaxShield()]):
                 set PlayerHealth = Health
                 set PlayerShield = Shield
-            ### ゴールドの値の設定も行う #####################
+            
+            # 所持金の設定
+            var StartingGold:int = 0 # アイテム購入前の所持金
+            OPlayerStats := PlayerStatManager.GetPlayerStats(AddPlayer)
+            if(PlayerStats := OPlayerStats?):
+                set PlayerGold = PlayerStats.CurrentGold
+                set StartingGold = PlayerStats.CurrentGold
 
             CreateUI() # UIの作成
             InitializeUI() # UIにデータを適用し、初期化する
@@ -329,12 +336,15 @@ shop_ui := class:
 
             KillUIEvent.Await() # UIの終了を待機
 
-            PlayerGoldsHudDevice.Hide(AddPlayer)
+            PlayerGoldHudDevice.Hide(AddPlayer)
             PlayerHealthHudDevice.Hide(AddPlayer)
             PlayerShieldHudDevice.Hide(AddPlayer)
             BuyPhaseTimeHudDevice.Hide(AddPlayer)
             PlayerUI.RemoveWidget(Widget)
             Print("ショップUIを削除した")
+
+            PlayerStatManager.UpdateCurrentGoldStat(AddPlayer, PlayerGold - StartingGold)
+            Print("所持金の持続データを更新した")
 
             GrantAllSelectedItems()
             Print("プレイヤーにアイテムを与えた")
@@ -868,7 +878,7 @@ shop_ui := class:
     # プレイヤーのステータスと手持ちアイテムの部分を更新する関数
     UpdatePlayerStatus():void=
         # ステータステキストの更新
-        PlayerGoldsHudDevice.Show(AddPlayer, S2M("{PlayerGolds}"))
+        PlayerGoldHudDevice.Show(AddPlayer, S2M("{PlayerGold}"))
         PlayerHealthHudDevice.Show(AddPlayer, S2M("Health: {PlayerHealth}"))
         PlayerShieldHudDevice.Show(AddPlayer, S2M("Shield: {PlayerShield}"))
 
@@ -986,7 +996,7 @@ shop_ui := class:
                 ItemData := Item.ItemEnum.ToItemData()
                 if(SoldPrice := ItemData.RarityPriceMap[Item.RarityEnum]):
                     set Item.BuyCount -= 1
-                    set PlayerGolds += SoldPrice
+                    set PlayerGold += SoldPrice
                     Print("{Item.RarityEnum.ToString()}の{Item.ItemEnum.ToString()}を{SoldPrice}ゴールドで売却した")
             else if(0 < Item.CarryOverCount):
                 set Item.CarryOverCount -= 1
@@ -1116,7 +1126,7 @@ shop_ui := class:
             set Price = P
         
         # 所持金が足りていなかったら処理を終了する
-        if(PlayerGolds < Price):
+        if(PlayerGold < Price):
             Print("所持金が足りなかった")
             return
 
@@ -1130,7 +1140,7 @@ shop_ui := class:
                     ItemData := Item.ItemEnum.ToItemData()
                     if(Item.CarryOverCount + Item.BuyCount < ItemData.MaxCapacity):
                         set Item.BuyCount += 1
-                        set PlayerGolds -= Price
+                        set PlayerGold -= Price
                         set IsNotBought = false
                         Print("アイテムを既存スロットに追加した: {Item.CarryOverCount + Item.BuyCount - 1} => {Item.CarryOverCount + Item.BuyCount}")
                     else:
@@ -1147,7 +1157,7 @@ shop_ui := class:
                         ItemEnum := SelectedItem
                         RarityEnum := SelectedRarity
                         BuyCount := 1
-                set PlayerGolds -= Price
+                set PlayerGold -= Price
                 Print("アイテムを新規スロットに追加した")
             else:
                 Print("手持ちスロットに空きがなかった")

@@ -38,6 +38,22 @@ player_stat_manager := class():
                 Version := CurrentPlayerStat.Version + 1
             if. set PlayerStatMap[Player] = NewStat
 
+    # IsPrevWin を IsWin にする
+    UpdateIsPrevWinStat(Agent:agent, IsWin:logic):void=
+        if(Player := player[Agent], Player.IsActive[], CurrentPlayerStat := PlayerStatMap[Player]):
+            NewStat := player_stat:
+                MakeUpdatedPlayerStat<constructor>(CurrentPlayerStat)
+                IsPrevWin := IsWin
+            if. set PlayerStatMap[Player] = NewStat
+
+    # IsDeathWin を IsWin にする
+    UpdateIsDeathWinStat(Agent:agent, IsDeath:logic):void=
+        if(Player := player[Agent], Player.IsActive[], CurrentPlayerStat := PlayerStatMap[Player]):
+            NewStat := player_stat:
+                MakeUpdatedPlayerStat<constructor>(CurrentPlayerStat)
+                IsPrevDeath := IsDeath
+            if. set PlayerStatMap[Player] = NewStat
+
     # RoundCount を１加算する
     UpdateRoundCountStat(Agent:agent):void=
         if(Player := player[Agent], Player.IsActive[], CurrentPlayerStat := PlayerStatMap[Player]):
@@ -52,6 +68,14 @@ player_stat_manager := class():
             NewStat := player_stat:
                 MakeUpdatedPlayerStat<constructor>(CurrentPlayerStat)
                 RoundWins := CurrentPlayerStat.RoundWins + AddValue
+            if. set PlayerStatMap[Player] = NewStat
+    
+    # CurrentGold に AddValue の値を加算する
+    UpdateCurrentGoldStat(Agent:agent, AddValue:int):void=
+        if(Player := player[Agent], Player.IsActive[], CurrentPlayerStat := PlayerStatMap[Player]):
+            NewStat := player_stat:
+                MakeUpdatedPlayerStat<constructor>(CurrentPlayerStat)
+                CurrentGold := CurrentPlayerStat.CurrentGold + AddValue
             if. set PlayerStatMap[Player] = NewStat
 
     # CurrentKills を１加算する
@@ -84,6 +108,25 @@ player_stat_manager := class():
             NewStat := player_stat:
                 MakeUpdatedPlayerStat<constructor>(CurrentPlayerStat)
                 CurrentStopBombs := CurrentPlayerStat.CurrentStopBombs + 1
+            if. set PlayerStatMap[Player] = NewStat
+       
+    # CurrentRarityPullsArray の RarityIndex 番目に 1 を加算する
+    UpdateCurrentRarityPullsArrayStat(Agent:agent, RarityIndex:int):void=
+        if(Player := player[Agent], Player.IsActive[], CurrentPlayerStat := PlayerStatMap[Player]):
+            var NewCurrentRarityPullsArray:[]int = array{0, 0, 0, 0, 0, 0, 0}
+            
+            OldCurrentRarityPullsArray := CurrentPlayerStat.CurrentRarityPullsArray
+            for(Index->Pulls:OldCurrentRarityPullsArray):
+                var AddValue:int = 0
+                if(Index = RarityIndex):
+                    set AddValue = 1
+                if:
+                    Count := OldCurrentRarityPullsArray[Index]
+                    set NewCurrentRarityPullsArray[Index] =  Count + AddValue
+
+            NewStat := player_stat:
+                MakeUpdatedPlayerStat<constructor>(CurrentPlayerStat)
+                CurrentRarityPullsArray := NewCurrentRarityPullsArray
             if. set PlayerStatMap[Player] = NewStat
 
     # TotalWins を１加算する
@@ -133,6 +176,24 @@ player_stat_manager := class():
             NewStat := player_stat:
                 MakeUpdatedPlayerStat<constructor>(CurrentPlayerStat)
                 TotalStopBombs := CurrentPlayerStat.TotalStopBombs + AddValue
+            if. set PlayerStatMap[Player] = NewStat
+    
+    # TotalRarityPullsArray に CurrentRarityPullsArray の値を加算する
+    UpdateTotalRarityPullsArrayStat(Agent:agent):void=
+        if(Player := player[Agent], Player.IsActive[], CurrentPlayerStat := PlayerStatMap[Player]):
+            var NewTotalRarityPullsArray:[]int = array{0, 0, 0, 0, 0, 0, 0}
+
+            OldTotalRarityPullsArray := CurrentPlayerStat.TotalRarityPullsArray
+            CurrentRarityPullsArray := CurrentPlayerStat.CurrentRarityPullsArray
+            for(Index := 0..OldTotalRarityPullsArray.Length - 1):
+                if:
+                    OldTotal := OldTotalRarityPullsArray[Index]
+                    Current := CurrentRarityPullsArray[Index]
+                    set NewTotalRarityPullsArray[Index] = OldTotal + Current
+
+            NewStat := player_stat:
+                MakeUpdatedPlayerStat<constructor>(CurrentPlayerStat)
+                TotalRarityPullsArray := NewTotalRarityPullsArray
             if. set PlayerStatMap[Player] = NewStat
 
     # SetIndex 番目の Preset を SetPreset に変更する
@@ -223,10 +284,12 @@ player_stat_manager := class():
                 MakeUpdatedPlayerStat<constructor>(CurrentPlayerStat)
                 RoundCount := 0
                 RoundWins := 0
+                CurrentGold := 1000 # 初期値は 1000 にしておく
                 CurrentKills := 0
                 CurrentDeaths := 0
                 CurrentStartBombs := 0
                 CurrentStopBombs := 0
+                CurrentRarityPullsArray := array{0, 0, 0, 0, 0, 0, 0}
             if. set PlayerStatMap[Player] = NewStat
 
     ### デバッグ用 ------------------------------------------------------------------------------------
@@ -258,9 +321,20 @@ player_stat_manager := class():
         if(PlayerStats := OPlayerStats?):
             Print("Version: {PlayerStats.Version}")
 
+            Print("前のラウンドの状況を把握するためのデータ系")
+            if(PlayerStats.IsPrevWin?):
+                Print("IsPrevWin: true")
+            else:
+                Print("IsPrevWin: else")
+            if(PlayerStats.IsPrevDeath?):
+                Print("IsPrevDeath: true")
+            else:
+                Print("IsPrevDeath: else")
+
             Print("試合ごとに変わるデータ系")
             Print("RoundCount: {PlayerStats.RoundCount}")
             Print("RoundWins: {PlayerStats.RoundWins}")
+            Print("CurrentGold: {PlayerStats.CurrentGold}")
             Print("CurrentKills: {PlayerStats.CurrentKills}")
             Print("CurrentDeaths: {PlayerStats.CurrentDeaths}")
             Print("CurrentStartBombs: {PlayerStats.CurrentStartBombs}")

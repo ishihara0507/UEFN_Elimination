@@ -17,59 +17,62 @@ test_device := class(creative_device):
     Trigger:trigger_device = trigger_device{}
     @editable
     Trigger2:trigger_device = trigger_device{}
+    @editable
+    Trigger3:trigger_device = trigger_device{}
+    @editable
+    Trigger4:trigger_device = trigger_device{}
 
     @editable
-    SelectPresetDevice:select_preset_device = select_preset_device{}
+    ItemGranter:item_granter_device = item_granter_device{}
 
     @editable
-    HudDevice:hud_message_device = hud_message_device{}
+    Button:button_device = button_device{}
 
-    PlayerStatsManager:player_stat_manager = player_stat_manager{}
-
-    @editable
-    CondBtn:conditional_button_device = conditional_button_device{}
+    Event:event() = event(){}
 
     @editable
-    ShopUIDevice:shop_ui_device = shop_ui_device{}
+    GachaDevice:gacha_device = gacha_device{}
 
     @editable
-    BuyPhaseTimeHud:hud_message_device = hud_message_device{}
+    InputTriggerDevice:input_trigger_device = input_trigger_device{}
+
+    PlayerStatManager:player_stat_manager = player_stat_manager{}
     
     OnBegin<override>()<suspends>:void=
         Trigger.TriggeredEvent.Subscribe(OnTriggered)
         Trigger2.TriggeredEvent.Subscribe(OnTriggered2)
+        Button.InteractedWithEvent.Subscribe(AA)
 
-        
-        
+        Event.Await()
+
+        for(Agent:GetPlayspace().GetParticipants(), not player[Agent]):
+            Print("アイテムを付与した")
+            ItemGranter.GrantItem(Agent)
+
+    AA(Agent:agent):void=
+        Print("ボタンが押された")
+        OPlayerStats := PlayerStatManager.GetPlayerStats(Agent)
+        if(Player := player[Agent]):
+            Print("1")
+            if(Player.IsActive[]):
+                Print("2")
+            if(CurrentPlayerStat := PlayerStatMap[Player]):
+                Print("3")
+        if(PlayerStats := OPlayerStats?):
+            Print("持続データをとれた")
+        else:
+            Print("持続データを取れなかった")
 
     OnTriggered(OAgent:?agent):void=
-        spawn{AA()}
+        if(Agent := OAgent?):
+            Print("登録した")
+            GachaDevice.RegisterInputTriggerDevice(Agent)
         return
 
-    AA()<suspends>:void=
-        Print("購入フェーズ開始！！！")
-        ShopUIDevice.EnableInputTriggerDevice()
-
-        # アイテム購入フェーズカウントダウン
-        var Count:int = 30
-        BuyPhaseTimeHud.SetText(S2M("{Count}"))
-        ShopUIDevice.UpdataBuyPhaseTime()
-        loop:
-            Sleep(1.0)
-            set Count -= 1
-            if(Count <= 0):
-                break
-            BuyPhaseTimeHud.SetText(S2M("{Count}"))
-            ShopUIDevice.UpdataBuyPhaseTime()
-
-        # アイテムを購入できないようにする
-        ShopUIDevice.DisableInputTriggerDevice()
-        ShopUIDevice.KillAllUI()
-
-        Print("購入フェーズ終了！！！")
-
     OnTriggered2(OAgent:?agent):void=
-        if(Agent := OAgent?, Player := player[Agent]):
+        if(Agent := OAgent?):
+            Print("解除した")
+            GachaDevice.UnregisterInputTriggerDevice(Agent)
         return
             
     # OnTriggered(OAgent:?agent):void=

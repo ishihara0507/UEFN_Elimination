@@ -320,7 +320,7 @@ shop_datas := class:
     #             ""
 
     # 実際にアイテムのデータの中身を定義
-    AssaultRifle:item_data = item_data: # アサルトライフル
+    AssaultRifle:item_data = item_data: # アサルトライフル　お
         Item := item_enum.AssaultRifle
         CanBuyMultiple := true
         MaxCapacity := 1
@@ -368,7 +368,7 @@ shop_datas := class:
                 "Reload: 2.25"
                 ""
 
-    SidearmPistol:item_data = item_data: # サイドアームピストル
+    SidearmPistol:item_data = item_data: # サイドアームピストル　お
         Item := item_enum.SidearmPistol
         CanBuyMultiple := true
         MaxCapacity := 1
@@ -379,11 +379,11 @@ shop_datas := class:
             rarity_enum.L4_Epic
             rarity_enum.L5_Legend
         RarityPriceMap := map:
-            rarity_enum.L1_Common => 200
-            rarity_enum.L2_Uncommon => 300
-            rarity_enum.L3_Rare => 400
-            rarity_enum.L4_Epic => 500
-            rarity_enum.L5_Legend => 600
+            rarity_enum.L1_Common => 800
+            rarity_enum.L2_Uncommon => 850
+            rarity_enum.L3_Rare => 900
+            rarity_enum.L4_Epic => 950
+            rarity_enum.L5_Legend => 1000
         RarityDescMap := map:
             rarity_enum.L1_Common => array:
                 "Dmg: 25"
@@ -416,7 +416,7 @@ shop_datas := class:
                 "Reload: 1.26"
                 ""
                 
-    CombatShotgun:item_data = item_data: # コンバットショットガン
+    CombatShotgun:item_data = item_data: # コンバットショットガン　お
         Item := item_enum.CombatShotgun
         CanBuyMultiple := true
         MaxCapacity := 1
@@ -427,11 +427,11 @@ shop_datas := class:
             rarity_enum.L4_Epic
             rarity_enum.L5_Legend
         RarityPriceMap := map:
-            rarity_enum.L1_Common => 200
-            rarity_enum.L2_Uncommon => 300
-            rarity_enum.L3_Rare => 400
-            rarity_enum.L4_Epic => 500
-            rarity_enum.L5_Legend => 600
+            rarity_enum.L1_Common => 800
+            rarity_enum.L2_Uncommon => 850
+            rarity_enum.L3_Rare => 900
+            rarity_enum.L4_Epic => 950
+            rarity_enum.L5_Legend => 1000
         RarityDescMap := map:
             rarity_enum.L1_Common => array:
                 "Dmg: 60"
@@ -464,7 +464,7 @@ shop_datas := class:
                 "Reload: 4.74"
                 ""
                 
-    SubmachineGun:item_data = item_data: # サブマシンガン
+    SubmachineGun:item_data = item_data: # サブマシンガン　お
         Item := item_enum.SubmachineGun
         CanBuyMultiple := true
         MaxCapacity := 1
@@ -475,11 +475,11 @@ shop_datas := class:
             rarity_enum.L4_Epic
             rarity_enum.L5_Legend
         RarityPriceMap := map:
-            rarity_enum.L1_Common => 200
-            rarity_enum.L2_Uncommon => 300
-            rarity_enum.L3_Rare => 400
-            rarity_enum.L4_Epic => 500
-            rarity_enum.L5_Legend => 600
+            rarity_enum.L1_Common => 900
+            rarity_enum.L2_Uncommon => 950
+            rarity_enum.L3_Rare => 1000
+            rarity_enum.L4_Epic => 1050
+            rarity_enum.L5_Legend => 1100
         RarityDescMap := map:
             rarity_enum.L1_Common => array:
                 "Dmg: 16"
@@ -512,7 +512,7 @@ shop_datas := class:
                 "Reload: 1.89"
                 ""
                 
-    FalconEyeSniper:item_data = item_data: # ファルコンアイスナイパー
+    FalconEyeSniper:item_data = item_data: # ファルコンアイスナイパー　お
         Item := item_enum.FalconEyeSniper
         CanBuyMultiple := true
         MaxCapacity := 1
@@ -560,7 +560,7 @@ shop_datas := class:
                 "Reload: 3.6"
                 ""
                 
-    SmallShieldPotion:item_data = item_data: # ミニシールドポーション
+    SmallShieldPotion:item_data = item_data: # ミニシールドポーション　お
         Item := item_enum.SmallShieldPotion
         CanBuyMultiple := true
         MaxCapacity := 6
@@ -576,7 +576,7 @@ shop_datas := class:
                 "Stack: 6"
                 ""
                 
-    ShieldPot:item_data = item_data: # シールドポーション
+    ShieldPot:item_data = item_data: # シールドポーション　お
         Item := item_enum.ShieldPot
         CanBuyMultiple := true
         MaxCapacity := 3
@@ -592,7 +592,7 @@ shop_datas := class:
                 ""
                 ""
                 
-    Bandage:item_data = item_data: # 包帯
+    Bandage:item_data = item_data: # 包帯　お
         Item := item_enum.Bandage
         CanBuyMultiple := true
         MaxCapacity := 15
@@ -608,7 +608,7 @@ shop_datas := class:
                 "Stack: 15"
                 ""
                 
-    Medkit:item_data = item_data: # 医療キット
+    Medkit:item_data = item_data: # 医療キット　お
         Item := item_enum.Medkit
         CanBuyMultiple := true
         MaxCapacity := 3
@@ -624,7 +624,7 @@ shop_datas := class:
                 ""
                 ""
                 
-    NitroFists:item_data = item_data: # ニトロフィスト
+    NitroFists:item_data = item_data: # ニトロフィスト　お
         Item := item_enum.NitroFists
         CanBuyMultiple := false
         MaxCapacity := 1
@@ -648,7 +648,7 @@ shop_datas := class:
                 "Ammo Capacity: 5"
                 "Cooldown: 11 sec"
     
-    Pistol:item_data = item_data: # ピストル
+    Pistol:item_data = item_data: # ピストル　おｋ
         Item := item_enum.Pistol
         CanBuyMultiple := true
         MaxCapacity := 1
@@ -657,9 +657,9 @@ shop_datas := class:
             rarity_enum.L2_Uncommon
             rarity_enum.L3_Rare
         RarityPriceMap := map:
-            rarity_enum.L1_Common => 200
-            rarity_enum.L2_Uncommon => 300
-            rarity_enum.L3_Rare => 400
+            rarity_enum.L1_Common => 800
+            rarity_enum.L2_Uncommon => 850
+            rarity_enum.L3_Rare => 900
         RarityDescMap := map:
             rarity_enum.L1_Common => array:
                 "Dmg: 24"
@@ -680,7 +680,7 @@ shop_datas := class:
                 "Reload: 1.4"
                 ""
 
-    Revolver:item_data = item_data: # リボルバー
+    Revolver:item_data = item_data: # リボルバー お
         Item := item_enum.Revolver
         CanBuyMultiple := true
         MaxCapacity := 1
@@ -691,11 +691,11 @@ shop_datas := class:
             rarity_enum.L4_Epic
             rarity_enum.L5_Legend
         RarityPriceMap := map:
-            rarity_enum.L1_Common => 200
-            rarity_enum.L2_Uncommon => 300
-            rarity_enum.L3_Rare => 400
-            rarity_enum.L4_Epic => 500
-            rarity_enum.L5_Legend => 600
+            rarity_enum.L1_Common => 700
+            rarity_enum.L2_Uncommon => 750
+            rarity_enum.L3_Rare => 800
+            rarity_enum.L4_Epic => 850
+            rarity_enum.L5_Legend => 900
         RarityDescMap := map:
             rarity_enum.L1_Common => array:
                 "Dmg: 54"
@@ -728,7 +728,7 @@ shop_datas := class:
                 "Reload: 1.98"
                 ""
                 
-    MammothPistol:item_data = item_data: # マンモスピストル
+    MammothPistol:item_data = item_data: # マンモスピストル　お
         Item := item_enum.MammothPistol
         CanBuyMultiple := true
         MaxCapacity := 1
@@ -739,11 +739,11 @@ shop_datas := class:
             rarity_enum.L4_Epic
             rarity_enum.L5_Legend
         RarityPriceMap := map:
-            rarity_enum.L1_Common => 200
-            rarity_enum.L2_Uncommon => 300
-            rarity_enum.L3_Rare => 400
-            rarity_enum.L4_Epic => 500
-            rarity_enum.L5_Legend => 600
+            rarity_enum.L1_Common => 750
+            rarity_enum.L2_Uncommon => 800
+            rarity_enum.L3_Rare => 850
+            rarity_enum.L4_Epic => 900
+            rarity_enum.L5_Legend => 950
         RarityDescMap := map:
             rarity_enum.L1_Common => array:
                 "Dmg: 89"
@@ -776,7 +776,7 @@ shop_datas := class:
                 "Reload: 1.71"
                 ""
                 
-    TacticalPistol:item_data = item_data: # タクティカルピストル
+    TacticalPistol:item_data = item_data: # タクティカルピストル　お
         Item := item_enum.TacticalPistol
         CanBuyMultiple := true
         MaxCapacity := 1
@@ -788,12 +788,12 @@ shop_datas := class:
             rarity_enum.L5_Legend
             rarity_enum.L6_Mythic
         RarityPriceMap := map:
-            rarity_enum.L1_Common => 200
-            rarity_enum.L2_Uncommon => 300
-            rarity_enum.L3_Rare => 400
-            rarity_enum.L4_Epic => 500
-            rarity_enum.L5_Legend => 600
-            rarity_enum.L6_Mythic => 700
+            rarity_enum.L1_Common => 800
+            rarity_enum.L2_Uncommon => 850
+            rarity_enum.L3_Rare => 900
+            rarity_enum.L4_Epic => 950
+            rarity_enum.L5_Legend => 1000
+            rarity_enum.L6_Mythic => 1050
         RarityDescMap := map:
             rarity_enum.L1_Common => array:
                 "Dmg: 23"
@@ -832,7 +832,7 @@ shop_datas := class:
                 "Reload: 1.25"
                 ""
                 
-    SentinelPumpShotgun:item_data = item_data: # センチネル ポンプショットガン
+    SentinelPumpShotgun:item_data = item_data: # センチネル ポンプショットガン　お
         Item := item_enum.SentinelPumpShotgun
         CanBuyMultiple := true
         MaxCapacity := 1
@@ -843,11 +843,11 @@ shop_datas := class:
             rarity_enum.L4_Epic
             rarity_enum.L5_Legend
         RarityPriceMap := map:
-            rarity_enum.L1_Common => 200
-            rarity_enum.L2_Uncommon => 300
-            rarity_enum.L3_Rare => 400
-            rarity_enum.L4_Epic => 500
-            rarity_enum.L5_Legend => 600
+            rarity_enum.L1_Common => 850
+            rarity_enum.L2_Uncommon => 900
+            rarity_enum.L3_Rare => 950
+            rarity_enum.L4_Epic => 1000
+            rarity_enum.L5_Legend => 1050
         RarityDescMap := map:
             rarity_enum.L1_Common => array:
                 "Dmg: 92"
@@ -880,7 +880,7 @@ shop_datas := class:
                 "Reload: 4.41"
                 ""
                 
-    TwinfireAutoShotgun:item_data = item_data: # ツインファイア オートショットガン
+    TwinfireAutoShotgun:item_data = item_data: # ツインファイア オートショットガン　お
         Item := item_enum.TwinfireAutoShotgun
         CanBuyMultiple := true
         MaxCapacity := 1
@@ -891,11 +891,11 @@ shop_datas := class:
             rarity_enum.L4_Epic
             rarity_enum.L5_Legend
         RarityPriceMap := map:
-            rarity_enum.L1_Common => 200
-            rarity_enum.L2_Uncommon => 300
-            rarity_enum.L3_Rare => 400
-            rarity_enum.L4_Epic => 500
-            rarity_enum.L5_Legend => 600
+            rarity_enum.L1_Common => 850
+            rarity_enum.L2_Uncommon => 900
+            rarity_enum.L3_Rare => 950
+            rarity_enum.L4_Epic => 1000
+            rarity_enum.L5_Legend => 1050
         RarityDescMap := map:
             rarity_enum.L1_Common => array:
                 "Dmg: 65"
@@ -928,7 +928,7 @@ shop_datas := class:
                 "Reload: 4.14"
                 ""
                 
-    OutlawShotgun:item_data = item_data: # アウトローショットガン
+    OutlawShotgun:item_data = item_data: # アウトローショットガン　お
         Item := item_enum.OutlawShotgun
         CanBuyMultiple := true
         MaxCapacity := 1
@@ -939,11 +939,11 @@ shop_datas := class:
             rarity_enum.L4_Epic
             rarity_enum.L5_Legend
         RarityPriceMap := map:
-            rarity_enum.L1_Common => 200
-            rarity_enum.L2_Uncommon => 300
-            rarity_enum.L3_Rare => 400
-            rarity_enum.L4_Epic => 500
-            rarity_enum.L5_Legend => 600
+            rarity_enum.L1_Common => 750
+            rarity_enum.L2_Uncommon => 800
+            rarity_enum.L3_Rare => 850
+            rarity_enum.L4_Epic => 900
+            rarity_enum.L5_Legend => 950
         RarityDescMap := map:
             rarity_enum.L1_Common => array:
                 "Dmg: 96"
@@ -976,7 +976,7 @@ shop_datas := class:
                 "Reload: 1.71"
                 ""
                 
-    PumpAndDump:item_data = item_data: # ポンプ&ダンプ
+    PumpAndDump:item_data = item_data: # ポンプ&ダンプ　お
         Item := item_enum.PumpAndDump
         CanBuyMultiple := true
         MaxCapacity := 1
@@ -988,12 +988,12 @@ shop_datas := class:
             rarity_enum.L5_Legend
             rarity_enum.L6_Mythic
         RarityPriceMap := map:
-            rarity_enum.L1_Common => 200
-            rarity_enum.L2_Uncommon => 300
-            rarity_enum.L3_Rare => 400
-            rarity_enum.L4_Epic => 500
-            rarity_enum.L5_Legend => 600
-            rarity_enum.L6_Mythic => 600
+            rarity_enum.L1_Common => 800
+            rarity_enum.L2_Uncommon => 850
+            rarity_enum.L3_Rare => 900
+            rarity_enum.L4_Epic => 950
+            rarity_enum.L5_Legend => 1000
+            rarity_enum.L6_Mythic => 1050
         RarityDescMap := map:
             rarity_enum.L1_Common => array:
                 "Dmg: 81"
@@ -1032,7 +1032,7 @@ shop_datas := class:
                 "Reload: 1.57"
                 ""
                 
-    CombatSMG:item_data = item_data: # コンバットサブマシンガン
+    CombatSMG:item_data = item_data: # コンバットサブマシンガン　お
         Item := item_enum.CombatSMG
         CanBuyMultiple := true
         MaxCapacity := 1
@@ -1044,12 +1044,12 @@ shop_datas := class:
             rarity_enum.L5_Legend
             rarity_enum.L6_Mythic
         RarityPriceMap := map:
-            rarity_enum.L1_Common => 200
-            rarity_enum.L2_Uncommon => 300
-            rarity_enum.L3_Rare => 400
-            rarity_enum.L4_Epic => 500
-            rarity_enum.L5_Legend => 600
-            rarity_enum.L6_Mythic => 700
+            rarity_enum.L1_Common => 950
+            rarity_enum.L2_Uncommon => 1000
+            rarity_enum.L3_Rare => 1050
+            rarity_enum.L4_Epic => 1100
+            rarity_enum.L5_Legend => 1150
+            rarity_enum.L6_Mythic => 1200
         RarityDescMap := map:
             rarity_enum.L1_Common => array:
                 "Dmg: 18"
@@ -1088,7 +1088,7 @@ shop_datas := class:
                 "Reload: 2.04"
                 ""
                 
-    VeiledPrecisionSMG:item_data = item_data: # ヴェールド プレシジョンSMG
+    VeiledPrecisionSMG:item_data = item_data: # ヴェールド プレシジョンSMG　お
         Item := item_enum.VeiledPrecisionSMG
         CanBuyMultiple := true
         MaxCapacity := 1
@@ -1099,11 +1099,11 @@ shop_datas := class:
             rarity_enum.L4_Epic
             rarity_enum.L5_Legend
         RarityPriceMap := map:
-            rarity_enum.L1_Common => 200
-            rarity_enum.L2_Uncommon => 300
-            rarity_enum.L3_Rare => 400
-            rarity_enum.L4_Epic => 500
-            rarity_enum.L5_Legend => 600
+            rarity_enum.L1_Common => 850
+            rarity_enum.L2_Uncommon => 900
+            rarity_enum.L3_Rare => 950
+            rarity_enum.L4_Epic => 1000
+            rarity_enum.L5_Legend => 1050
         RarityDescMap := map:
             rarity_enum.L1_Common => array:
                 "Dmg: 15"
@@ -1136,7 +1136,7 @@ shop_datas := class:
                 "Reload: 1.85"
                 ""
                 
-    RapidFireSMG:item_data = item_data: # 速射式サブマシンガン
+    RapidFireSMG:item_data = item_data: # 速射式サブマシンガン　お
         Item := item_enum.RapidFireSMG
         CanBuyMultiple := true
         MaxCapacity := 1
@@ -1148,12 +1148,12 @@ shop_datas := class:
             rarity_enum.L5_Legend
             rarity_enum.L6_Mythic
         RarityPriceMap := map:
-            rarity_enum.L1_Common => 200
-            rarity_enum.L2_Uncommon => 300
-            rarity_enum.L3_Rare => 400
-            rarity_enum.L4_Epic => 500
-            rarity_enum.L5_Legend => 600
-            rarity_enum.L6_Mythic => 700
+            rarity_enum.L1_Common => 900
+            rarity_enum.L2_Uncommon => 950
+            rarity_enum.L3_Rare => 1000
+            rarity_enum.L4_Epic => 1050
+            rarity_enum.L5_Legend => 1100
+            rarity_enum.L6_Mythic => 1150
         RarityDescMap := map:
             rarity_enum.L1_Common => array:
                 "Dmg: 13"
@@ -1192,7 +1192,7 @@ shop_datas := class:
                 "Reload: 1.27"
                 ""
                 
-    ChargeSMG:item_data = item_data: # チャージサブマシンガン
+    ChargeSMG:item_data = item_data: # チャージサブマシンガン　お
         Item := item_enum.ChargeSMG
         CanBuyMultiple := true
         MaxCapacity := 1
@@ -1204,12 +1204,12 @@ shop_datas := class:
             rarity_enum.L5_Legend
             rarity_enum.L6_Mythic
         RarityPriceMap := map:
-            rarity_enum.L1_Common => 200
-            rarity_enum.L2_Uncommon => 300
-            rarity_enum.L3_Rare => 400
-            rarity_enum.L4_Epic => 500
-            rarity_enum.L5_Legend => 600
-            rarity_enum.L6_Mythic => 700
+            rarity_enum.L1_Common => 900
+            rarity_enum.L2_Uncommon => 950
+            rarity_enum.L3_Rare => 1000
+            rarity_enum.L4_Epic => 1050
+            rarity_enum.L5_Legend => 1100
+            rarity_enum.L6_Mythic => 1150
         RarityDescMap := map:
             rarity_enum.L1_Common => array:
                 "Dmg: 15"
@@ -1248,7 +1248,7 @@ shop_datas := class:
                 "Reload: 1.36"
                 ""
                 
-    StrikerBurstRifle:item_data = item_data: # ストライカーバーストライフル
+    StrikerBurstRifle:item_data = item_data: # ストライカーバーストライフル　お
         Item := item_enum.StrikerBurstRifle
         CanBuyMultiple := true
         MaxCapacity := 1
@@ -1304,7 +1304,7 @@ shop_datas := class:
                 "Reload: 2.21"
                 ""
                 
-    HoloTwisterAssaultRifle:item_data = item_data: # ホロツイスター アサルトライフル
+    HoloTwisterAssaultRifle:item_data = item_data: # ホロツイスター アサルトライフル　お
         Item := item_enum.HoloTwisterAssaultRifle
         CanBuyMultiple := true
         MaxCapacity := 1
@@ -1352,7 +1352,7 @@ shop_datas := class:
                 "Reload: 2.38"
                 ""
                 
-    CollateralDamageAssaultRifle:item_data = item_data: # コラテラルダメージ アサルトライフル
+    CollateralDamageAssaultRifle:item_data = item_data: # コラテラルダメージ アサルトライフル　お
         Item := item_enum.CollateralDamageAssaultRifle
         CanBuyMultiple := true
         MaxCapacity := 1
@@ -1400,7 +1400,7 @@ shop_datas := class:
                 "Reload: 2.03"
                 ""
                 
-    CombatAssaultRifle:item_data = item_data: # コンバットアサルトライフル
+    CombatAssaultRifle:item_data = item_data: # コンバットアサルトライフル　お
         Item := item_enum.CombatAssaultRifle
         CanBuyMultiple := true
         MaxCapacity := 1
@@ -1448,7 +1448,7 @@ shop_datas := class:
                 "Reload: 2.79"
                 ""
                 
-    TacticalAssaultRifle:item_data = item_data: # タクティカルアサルトライフル
+    TacticalAssaultRifle:item_data = item_data: # タクティカルアサルトライフル　お
         Item := item_enum.TacticalAssaultRifle
         CanBuyMultiple := true
         MaxCapacity := 1
@@ -1496,7 +1496,7 @@ shop_datas := class:
                 "Reload: 1.98"
                 ""
                 
-    BoltActionSniperRifle:item_data = item_data: # ボルトアクションスナイパーライフル
+    BoltActionSniperRifle:item_data = item_data: # ボルトアクションスナイパーライフル　お
         Item := item_enum.BoltActionSniperRifle
         CanBuyMultiple := true
         MaxCapacity := 1
@@ -1544,7 +1544,7 @@ shop_datas := class:
                 "Reload: 2.35"
                 ""
                 
-    HeavySniperRifle:item_data = item_data: # ヘビースナイパーライフル
+    HeavySniperRifle:item_data = item_data: # ヘビースナイパーライフル　お
         Item := item_enum.HeavySniperRifle
         CanBuyMultiple := true
         MaxCapacity := 1
@@ -1576,7 +1576,7 @@ shop_datas := class:
                 "Reload: 3.4"
                 ""
                 
-    LeverActionRifle:item_data = item_data: # レバーアクションライフル
+    LeverActionRifle:item_data = item_data: # レバーアクションライフル　お
         Item := item_enum.LeverActionRifle
         CanBuyMultiple := true
         MaxCapacity := 1
@@ -1616,7 +1616,7 @@ shop_datas := class:
                 "Reload: 5.4"
                 ""
                 
-    RocketLauncher:item_data = item_data: # ロケットランチャー
+    RocketLauncher:item_data = item_data: # ロケットランチャー　お
         Item := item_enum.RocketLauncher
         CanBuyMultiple := true
         MaxCapacity := 1
@@ -1664,7 +1664,7 @@ shop_datas := class:
                 "Reload: 2.52"
                 ""
                 
-    FireOniMask:item_data = item_data: # 火の鬼の仮面
+    FireOniMask:item_data = item_data: # 火の鬼の仮面　お
         Item := item_enum.FireOniMask
         CanBuyMultiple := false
         MaxCapacity := 1
@@ -1688,7 +1688,7 @@ shop_datas := class:
                 "Cooldown: 8 sec"
                 ""
                 
-    TheKneecapper:item_data = item_data: # ニーキャッパー
+    TheKneecapper:item_data = item_data: # ニーキャッパー　お
         Item := item_enum.TheKneecapper
         CanBuyMultiple := false
         MaxCapacity := 1
@@ -1704,7 +1704,7 @@ shop_datas := class:
                 "Min: 60"
                 "Max: 90"
                 
-    ThornesVampiricBlade:item_data = item_data: # ソーンのヴァンパイアブレイド
+    ThornesVampiricBlade:item_data = item_data: # ソーンのヴァンパイアブレイド　お
         Item := item_enum.ThornesVampiricBlade
         CanBuyMultiple := false
         MaxCapacity := 1
@@ -1720,7 +1720,7 @@ shop_datas := class:
                 "7(On Attack)"
                 "12(On Dash Attack)"
          
-    TyphoonBlade:item_data = item_data: # タイフーン・ブレイド
+    TyphoonBlade:item_data = item_data: # タイフーン・ブレイド　お
         Item := item_enum.TyphoonBlade
         CanBuyMultiple := false
         MaxCapacity := 1
@@ -1744,7 +1744,7 @@ shop_datas := class:
                 "90(Cyclone Slash)"
                 "Cooldown: 6.5 sec"
                 
-    Grappler:item_data = item_data: # グラップラー
+    Grappler:item_data = item_data: # グラップラー　お
         Item := item_enum.Grappler
         CanBuyMultiple := true
         MaxCapacity := 1
@@ -1760,7 +1760,7 @@ shop_datas := class:
                 ""
                 ""
 
-    GrappleGlove:item_data = item_data: # グラップルグローブ
+    GrappleGlove:item_data = item_data: # グラップルグローブ　お
         Item := item_enum.GrappleGlove
         CanBuyMultiple := false
         MaxCapacity := 1

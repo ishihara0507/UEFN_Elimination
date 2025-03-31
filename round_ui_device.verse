@@ -30,6 +30,7 @@ round_ui_device := class(creative_device):
 
     # ラウンド結果を表示するUI用 --------------------------------------------------------------------------------------
 
+    ## 現行バージョンでは使ってない ##
     @editable
     WinMTHudDevices:[]hud_message_device = array{} # 自分のチームが勝利したときの、自分のチーム側のウィジェット
     @editable
@@ -39,6 +40,17 @@ round_ui_device := class(creative_device):
     LoseMTHudDevices:[]hud_message_device = array{} # 自分のチームが敗北したときの、自分のチーム側のウィジェット
     @editable
     LoseETHudDevices:[]hud_message_device = array{} # 自分のチームが敗北したときの、敵のチーム側のウィジェット
+    ####
+
+    @editable
+    WinMTHudDevice:hud_message_device = hud_message_device{} # 自分のチームが勝利したときの、自分のチーム側のウィジェット
+    @editable
+    WinETHudDevice:hud_message_device = hud_message_device{} # 自分のチームが勝利したときの、敵のチーム側のウィジェット
+    
+    @editable
+    LoseMTHudDevice:hud_message_device = hud_message_device{} # 自分のチームが敗北したときの、自分のチーム側のウィジェット
+    @editable
+    LoseETHudDevice:hud_message_device = hud_message_device{} # 自分のチームが敗北したときの、敵のチーム側のウィジェット
 
     @editable
     RoundCountHudDevice:hud_message_device = hud_message_device{}
@@ -116,32 +128,58 @@ round_ui_device := class(creative_device):
     HideBallisticTime():void=
         BallisticTimeHudDevice.Hide()
 
-    # ラウンド結果を表示するUIを全プレイヤーに付与する関数
+    ### 3ラウンド勝利したら勝者となる場合に使用する ###
+    # # ラウンド結果を表示するUIを全プレイヤーに付与する関数
+    # ShowRoundResult(TeamWinsMap:[team]int, RoundCount:int, ORoundWinTeam:?team):void=
+    #     TeamCollection := GetPlayspace().GetTeamCollection()
+    #     TeamArray := TeamCollection.GetTeams()
+
+    #     if(RoundWinTeam := ORoundWinTeam?):
+    #         for(Index->Team:TeamArray, Agents := TeamCollection.GetAgents[Team]):
+    #             # 使用するHUDデバイスの配列を決定する
+    #             MTHudDevices := if(Team = RoundWinTeam). WinMTHudDevices else. LoseMTHudDevices
+    #             ETHudDevices := if(Team = RoundWinTeam). WinETHudDevices else. LoseETHudDevices
+
+    #             # 上で決定した配列の中から、使用するHUDデバイスを決定する
+    #             var MTIndex:int = -1
+    #             var ETIndex:int = -1
+    #             for(Team2:TeamArray, Wins := TeamWinsMap[Team2]):
+    #                 if(Team2 = Team):
+    #                     set MTIndex = if(Team2 = RoundWinTeam). Wins - 1 else. Wins
+    #                 else:
+    #                     set ETIndex = if(Team2 = RoundWinTeam). Wins - 1 else. Wins
+
+    #             # 表示する
+    #             if(MTHudDevice := MTHudDevices[MTIndex], ETHudDevice := ETHudDevices[ETIndex]):
+    #                 for(Agent:Agents):
+    #                     RoundCountHudDevice.Show(Agent, S2M("Round {RoundCount}"))
+    #                     MTHudDevice.Show(Agent)
+    #                     ETHudDevice.Show(Agent)
+
+    ### 4ラウンド以上だったらこっちを使う ###
     ShowRoundResult(TeamWinsMap:[team]int, RoundCount:int, ORoundWinTeam:?team):void=
         TeamCollection := GetPlayspace().GetTeamCollection()
         TeamArray := TeamCollection.GetTeams()
 
         if(RoundWinTeam := ORoundWinTeam?):
             for(Index->Team:TeamArray, Agents := TeamCollection.GetAgents[Team]):
-                # 使用するHUDデバイスの配列を決定する
-                MTHudDevices := if(Team = RoundWinTeam). WinMTHudDevices else. LoseMTHudDevices
-                ETHudDevices := if(Team = RoundWinTeam). WinETHudDevices else. LoseETHudDevices
-
-                # 上で決定した配列の中から、使用するHUDデバイスを決定する
-                var MTIndex:int = -1
-                var ETIndex:int = -1
+                var MTWins:int = 0
+                var ETWins:int = 0
                 for(Team2:TeamArray, Wins := TeamWinsMap[Team2]):
                     if(Team2 = Team):
-                        set MTIndex = if(Team2 = RoundWinTeam). Wins - 1 else. Wins
+                        set MTWins = Wins
                     else:
-                        set ETIndex = if(Team2 = RoundWinTeam). Wins - 1 else. Wins
+                        set ETWins = Wins
 
+                # 使用するHUDデバイスの配列を決定する
+                MTHudDevice := if(Team = RoundWinTeam). WinMTHudDevice else. LoseMTHudDevice
+                ETHudDevice := if(Team = RoundWinTeam). WinETHudDevice else. LoseETHudDevice
+                
                 # 表示する
-                if(MTHudDevice := MTHudDevices[MTIndex], ETHudDevice := ETHudDevices[ETIndex]):
-                    for(Agent:Agents):
-                        RoundCountHudDevice.Show(Agent, S2M("Round {RoundCount}"))
-                        MTHudDevice.Show(Agent)
-                        ETHudDevice.Show(Agent)
+                for(Agent:Agents):
+                    RoundCountHudDevice.Show(Agent, S2M("Round {RoundCount}"))
+                    MTHudDevice.Show(Agent, S2M("{MTWins}"))
+                    ETHudDevice.Show(Agent, S2M("{ETWins}"))
 
     HideRoundResult(GamePlayers:[]player):void=
         HudDevices := array{RoundCountHudDevice} + WinMTHudDevices + LoseMTHudDevices + WinETHudDevices + LoseETHudDevices

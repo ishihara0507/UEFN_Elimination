@@ -11,7 +11,7 @@ waiting_players_device := class(creative_device):
     GameFlowDevice:game_flow_device = game_flow_device{}
 
     @editable
-    SavePresetDevice:save_preset_device = save_preset_device{}
+    GoldItemGeneratorDevice:gold_item_generator_device = gold_item_generator_device{} # 練習場のやつ
 
     @editable
     StartPlayerSpawners:[]player_spawner_device = array{} # マップに入ったときにスポーンするやつ
@@ -62,7 +62,6 @@ waiting_players_device := class(creative_device):
     var VoteNoCount:int = 0
     var ThisMatchPlayerNum:int = MatchPlayerNum # 今回の試合に参加するプレイヤー人数（8人未満の場合もあるため用意）
 
-
     StartDelay:int = 5 # プレイヤーがそろってから試合を開始するまでの秒数
 
     WaitMinutes:int = 2 # 何分おきに人数の変更を促すか
@@ -95,7 +94,7 @@ waiting_players_device := class(creative_device):
         var NotGameStarted:logic = false
         loop:
             var CheckedPlayerCount:int = 0
-            Print("プレイヤーを確認")
+            # Print("プレイヤーを確認")
             for(Player:GetPlayspace().GetPlayers()):
                 OPlayerStats := PlayerStatsManager.GetPlayerStats(Player)
                 if(PlayerStats := OPlayerStats?, SpawnedPlayers.Find[Player]):
@@ -103,14 +102,16 @@ waiting_players_device := class(creative_device):
                     if(PlayerStats.RoundWins = -1):
                         set NotGameStarted = true
                 else:
-                    Print("プレイヤーを正常に確認できなかった")
+                    # Print("プレイヤーを正常に確認できなかった")
             if(CheckedPlayerCount >= 1):
-                Print("プレイヤーを正常に確認できた")
+                # Print("プレイヤーを正常に確認できた")
                 break
             else:
-                Print("CheckedPlayerCount: {CheckedPlayerCount}")
+                # Print("CheckedPlayerCount: {CheckedPlayerCount}")
                 Sleep(1.0)
             
+        GoldItemGeneratorDevice.StartGeneration() # 練習場のコインの生成を開始
+        
         var WaitedTime:int = 0
         if(NotGameStarted?):
             loop: # プレイヤー待ちループ
@@ -140,6 +141,7 @@ waiting_players_device := class(creative_device):
                     MessageHud.Hide()
                     VoteStartPopupDevice.Hide()
                     VoteResultPopupDevice.Hide()
+                    GoldItemGeneratorDevice.EndGeneration() # 練習場のコインの生成を停止する
 
                     var Count:int = StartDelay
                     CountDownHud.Show(S2M("ゲーム開始まで: {Count}\nGame starts in: {Count}"))
@@ -159,7 +161,6 @@ waiting_players_device := class(creative_device):
                         PlayerStatsManager.InitializePlayerStat(Player) # 念のため初期化処理
                         PlayerStatsManager.SetGameStats(Player)
 
-                    SavePresetDevice.KillAllPresetsUI() # プリセット登録UIを全プレイヤーから削除する
                     ShowVsUIAndTeleportToStage() # 参加するプレイヤーの名前を見せて、ステージへのテレポートも行う
 
                     set GameFlowDevice.GameStarted = true # 試合開始の合図

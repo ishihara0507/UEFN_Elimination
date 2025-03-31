@@ -16,13 +16,16 @@ game_flow_device := class(creative_device):
     ### @editable系 ---------------------------------------------------------------------
     # 自作デバイス
     @editable
-    ShopUIDevice:shop_ui_device = shop_ui_device{}
+    GachaDevice:gacha_device = gacha_device{}
     
     @editable
     RoundUIDevice:round_ui_device = round_ui_device{}
 
     @editable
     BallisticTrackingDevice:ballistic_tracking_device = ballistic_tracking_device{}
+
+    @editable
+    GoldItemGeneratorDevice:gold_item_generator_device = gold_item_generator_device{} # 試合中のやつ
 
     # いろいろ
     @editable
@@ -70,7 +73,7 @@ game_flow_device := class(creative_device):
     CountDownHud:hud_message_device = hud_message_device{}
 
     @editable
-    BuyPhaseTimeHud:hud_message_device = hud_message_device{} # ショップUIを開いているときに表示されるカウントダウン
+    GachaHud:hud_message_device = hud_message_device{} # ガチャが引けることを説明するHUD
 
     @editable
     StartDelayHud:hud_message_device = hud_message_device{} # 試合開始直前のカウントダウンを表示するHUD（数字を大きめにしたいから別で用意）
@@ -103,11 +106,11 @@ game_flow_device := class(creative_device):
 
 
     ### 定数 -----------------------------------------------------------------------------
-    WinningPoints:int = 3 # 先に何ラウンド取ったら勝利となるか
+    WinningPoints:int = 7 # 先に何ラウンド取ったら勝利となるか
 
-    SideSwitchNum:int = 2 # 何ラウンドごとに陣営を変更するか
+    SideSwitchNum:int = 6 # 何ラウンドごとに陣営を変更するか
     
-    BuyPhaseTime:int = 30 # 購入フェーズの時間
+    GachaTime:int = 5 # ガチャの説明の時間
 
     StartDelay:int = 3 # ラウンド開始前などに設ける時間
 
@@ -234,25 +237,20 @@ game_flow_device := class(creative_device):
         RoundUIDevice.AddRoundStatusUI(TeamRemainingMap, TeamWinsMap)
         RoundUIDevice.UpdateRoundTimeText(S2M("{CalcElapsedTime(RoundTime)}"))
 
-        # アイテムを購入できるようにする
-        ShopUIDevice.EnableInputTriggerDevice()
+        # ガチャを回せるようにする
+        for(Player:GamePlayers):
+            GachaDevice.RegisterInputTriggerDevice(Player)
         
-        # アイテム購入フェーズカウントダウン
-        set Count = BuyPhaseTime
-        BuyPhaseTimeHud.SetText(S2M("{Count}"))
-        ShopUIDevice.UpdataBuyPhaseTime()
-        loop:
-            Sleep(1.0)
-            set Count -= 1
-            if(Count <= 0):
-                break
-            BuyPhaseTimeHud.SetText(S2M("{Count}"))
-            ShopUIDevice.UpdataBuyPhaseTime()
-
-        # アイテムを購入できないようにする
-        ShopUIDevice.DisableInputTriggerDevice()
-        ShopUIDevice.KillAllUI()
-        # StartDelayHud.Hide()
+        # 「ガチャを回せるよ」という説明を表示（ラウンド１だけ表示する）
+        if(RoundCount = 1):
+            set Count = GachaTime
+            GachaHud.Show()
+            loop:
+                Sleep(1.0)
+                set Count -= 1
+                if(Count <= 0):
+                    break
+            GachaHud.Hide()
 
         # ラウンド開始前に数秒カウントダウンする
         set Count = StartDelay
@@ -274,6 +272,9 @@ game_flow_device := class(creative_device):
 
         for(Player:GamePlayers, Fort := Player.GetFortCharacter[]):
             Fort.SetVulnerability(true) # ダメージ受けるようにする
+
+        # ゴールドアイテムの生成を開始
+        GoldItemGeneratorDevice.StartGeneration()
             
         # ラウンド終了待ち
         var ORoundWinTeam:?team = false
@@ -359,6 +360,13 @@ game_flow_device := class(creative_device):
         # プレイヤーがダメージを受けないようにする
         for(Player:GamePlayers, Fort := Player.GetFortCharacter[]):
             Fort.SetVulnerability(false)
+        
+        # ガチャを回せないようにする
+        for(Player:GamePlayers):
+            GachaDevice.UnregisterInputTriggerDevice(Player)
+            
+        # ゴールドアイテムの生成を停止
+        GoldItemGeneratorDevice.EndGeneration()
 
         Sleep(5.0) # ラウンドの決着がついた後に敵の武器を回収できるように時間差を設ける
 
@@ -635,8 +643,7 @@ game_flow_device := class(creative_device):
                 TeamCollection := GetPlayspace().GetTeamCollection()
                 WinLoseHudDevice := WinLoseHudDevice
                 LoseWinHudDevice := LoseWinHudDevice
-            GameResult.AddGameResultUI() # 試合結果を表示
-            GameResult.SavePlayersResult() # 持続データを更新
+            GameResult.AddGameResultUI() # 試合結果を表示と、試合結果を持続データへの反映
 
         # XPを与える
         for(Team:TeamArray, Agents := TeamCollection.GetAgents[Team], WinningTeam := OWinningTeam?):

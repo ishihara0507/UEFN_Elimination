@@ -40,6 +40,8 @@ game_result := class:
                 set ValueMap["StartBombs"] = PlayerStats.CurrentStartBombs
                 set ValueMap["StopBombs"] = PlayerStats.CurrentStopBombs
                 set PlayerResultMap[Player] = ValueMap
+
+            SavePlayersResult() # 試合結果を持続データへの反映
             
             PlayerStatsManager.ResetGameStats(Player) # 試合ごとに初期化するデータをリセット
 
@@ -69,6 +71,10 @@ game_result := class:
                 PlayerStatsManager.UpdateTotalStartBombsStat(Player, AddStartBombs)
             if(AddStopBombs := ResultMap["StopBombs"]):
                 PlayerStatsManager.UpdateTotalStopBombsStat(Player, AddStopBombs)
+
+        # ガチャの結果を更新
+        for(Player:GamePlayers):
+            PlayerStatsManager.UpdateTotalRarityPullsArrayStat(Player)
 
         # 勝利数または敗北数を更新
         for(Index->Team:TeamCollection.GetTeams(), Agents := TeamCollection.GetAgents[Team]):

@@ -46,8 +46,8 @@ player_stat_manager := class():
                 IsPrevWin := IsWin
             if. set PlayerStatMap[Player] = NewStat
 
-    # IsDeathWin を IsWin にする
-    UpdateIsDeathWinStat(Agent:agent, IsDeath:logic):void=
+    # IsPrevDeath を IsWin にする
+    UpdateIsPrevDeathStat(Agent:agent, IsDeath:logic):void=
         if(Player := player[Agent], Player.IsActive[], CurrentPlayerStat := PlayerStatMap[Player]):
             NewStat := player_stat:
                 MakeUpdatedPlayerStat<constructor>(CurrentPlayerStat)

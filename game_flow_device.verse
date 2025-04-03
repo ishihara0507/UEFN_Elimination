@@ -114,7 +114,7 @@ game_flow_device := class(creative_device):
 
     StartDelay:int = 3 # ラウンド開始前などに設ける時間
 
-    RoundTime:int = 120
+    RoundTime:int = 150
 
     BallisticTime:int = 45 # バリスティックの仕掛けを起動してから爆発するまでの時間
 
@@ -124,9 +124,12 @@ game_flow_device := class(creative_device):
 
     PlayerStatsManager:player_stat_manager = player_stat_manager{}
 
-    ## ショップ系
-    RoundWinGold:int = 3000
-
+    ## ゴールド系
+    RoundWinGold:int = 4000
+    RoundLoseGold:int = 2000
+    RoundLoseAliveGold:int = 1000
+    KillGold:int = 500
+    BombGold:int = 500
     ### ----------------------------------------------------------------------------------
 
 
@@ -206,7 +209,9 @@ game_flow_device := class(creative_device):
                 if. set TeamWinsMap[Team] = (RoundCount - 1) - ETWins
 
         # 試合が終了していたらここで処理を終える
+        Print("ラウンド勝利数")
         for(Team->Wins:TeamWinsMap):
+            Print("Wins: {Wins}")
             if(Wins >= WinningPoints):
                 GameEndMutator.Enable()
                 BillBoard.ShowText()
@@ -222,6 +227,8 @@ game_flow_device := class(creative_device):
             # プレイヤーの静止状態を解除する
             for(Player:GamePlayers, Fort := Player.GetFortCharacter[]):
                 Fort.ReleaseFromStasis()
+                Fort.SetHealth(100.0) # 体力を回復
+                Fort.SetShield(100.0) # シールドを回復
 
         # 陣営を表示
         RoundUIDevice.ShowSide(GamePlayers)
@@ -236,10 +243,6 @@ game_flow_device := class(creative_device):
         # ラウンドUIを初期化して表示
         RoundUIDevice.AddRoundStatusUI(TeamRemainingMap, TeamWinsMap)
         RoundUIDevice.UpdateRoundTimeText(S2M("{CalcElapsedTime(RoundTime)}"))
-
-        # ガチャを回せるようにする
-        for(Player:GamePlayers):
-            GachaDevice.RegisterInputTriggerDevice(Player)
         
         # 「ガチャを回せるよ」という説明を表示（ラウンド１だけ表示する）
         if(RoundCount = 1):
@@ -272,6 +275,25 @@ game_flow_device := class(creative_device):
 
         for(Player:GamePlayers, Fort := Player.GetFortCharacter[]):
             Fort.SetVulnerability(true) # ダメージ受けるようにする
+
+        # ガチャを回せるようにする
+        for(Player:GamePlayers):
+            GachaDevice.RegisterInputTriggerDevice(Player)
+
+        # 前回のラウンドの結果に応じたゴールドを与える
+        if(not RoundCount = 1):
+            for(Player:GamePlayers):
+                OPlayerStats := PlayerStatsManager.GetPlayerStats(Player)
+                if(PlayerStats := OPlayerStats?):
+                    if(PlayerStats.IsPrevWin?):
+                        GachaDevice.GetGold(Player, RoundWinGold)
+                    else if(PlayerStats.IsPrevDeath?):
+                        GachaDevice.GetGold(Player, RoundLoseGold)
+                    else:
+                        GachaDevice.GetGold(Player, RoundLoseAliveGold)
+                # データのリセット
+                PlayerStatsManager.UpdateIsPrevWinStat(Player, false)
+                PlayerStatsManager.UpdateIsPrevDeathStat(Player, false)
 
         # ゴールドアイテムの生成を開始
         GoldItemGeneratorDevice.StartGeneration()
@@ -350,6 +372,7 @@ game_flow_device := class(creative_device):
                     block:
                         BombEndEvent.Await()
                         set ORoundWinTeam = option{TeamArray[0]} # 攻撃側の勝ち
+                        RoundUIDevice.UpdateBallisticTimeText(S2M("00:00"))
                         Print("爆弾が爆発しました")
 
         # 爆弾を置けないようにする
@@ -367,8 +390,6 @@ game_flow_device := class(creative_device):
             
         # ゴールドアイテムの生成を停止
         GoldItemGeneratorDevice.EndGeneration()
-
-        Sleep(5.0) # ラウンドの決着がついた後に敵の武器を回収できるように時間差を設ける
 
         ### ラウンド終了処理
         var OWinAgent:?agent = false
@@ -390,6 +411,7 @@ game_flow_device := class(creative_device):
             # 持続データのラウンド勝利数の更新
             for(Agent:TeamCollection.GetAgents[RoundWinTeam]):
                 PlayerStatsManager.UpdateRoundWinsStat(Agent, 1)
+                PlayerStatsManager.UpdateIsPrevWinStat(Agent, true)
                 if(not OWinAgent?):
                     set OWinAgent = option{Agent}
             
@@ -490,7 +512,6 @@ game_flow_device := class(creative_device):
                     break
             block:
                 BombEndEvent.Await()
-                RoundUIDevice.UpdateBallisticTimeText(S2M("00:00"))
             block:
                 BombCountStopEvent.Await()
 
@@ -506,12 +527,14 @@ game_flow_device := class(creative_device):
         for(RiftPointVolume:RiftPointVolumes):
             RiftPointVolume.Disable()
 
+        GachaDevice.GetGold(Agent, BombGold) # ゴールドを与える
         PlayerStatsManager.UpdateCurrentStartBombsStat(Agent)
         
     # バリスティックの仕掛けを解除したときに実行する関数
     RiftDefuse(Agent:agent):void=
         BombStopEvent.Signal()
 
+        GachaDevice.GetGold(Agent, BombGold) # ゴールドを与える
         PlayerStatsManager.UpdateCurrentStopBombsStat(Agent)
 
     # バリスティックの仕掛けを爆破したときに実行する関数
@@ -565,10 +588,13 @@ game_flow_device := class(creative_device):
 
         if(EliminatorFort := OEliminatorFort?, EliminatorAgent := EliminatorFort.GetAgent[]):
             EliminationXPDevice.Award(EliminatorAgent) # XPを与える
+            GachaDevice.GetGold(EliminatorAgent, KillGold) # ゴールドを与える
             PlayerStatsManager.UpdateCurrentKillsStat(EliminatorAgent)
 
         if(EliminatedAgent := EliminatedFort.GetAgent[]):
             PlayerStatsManager.UpdateCurrentDeathsStat(EliminatedAgent)
+            PlayerStatsManager.UpdateIsPrevDeathStat(EliminatedAgent, true)
+            GachaDevice.UnregisterInputTriggerDevice(EliminatedAgent) # ガチャHUDを消す
             KillEvent.Signal(EliminatedAgent)
 
     # ラウンド終了判定を行う関数

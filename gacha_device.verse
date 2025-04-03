@@ -40,12 +40,15 @@ gacha_device := class(creative_device):
     @editable
     InputTriggerDevice:input_trigger_device = input_trigger_device{}
 
+    # HUD
     @editable
     ShowGoldHud:hud_message_device = hud_message_device{}
     @editable
     AnimGoldHud:hud_message_device = hud_message_device{}
     @editable
     NotEnoughGoldHud:hud_message_device = hud_message_device{}
+    @editable
+    AnimGachaHuds:[]hud_message_device = array{}
 
     # 練習エリアの出入り口に設置するミューテーターゾーン
     @editable
@@ -66,13 +69,13 @@ gacha_device := class(creative_device):
 
     RarityCount:int = 7 # レアリティの数
     RarityProbs:[]int = array: # リアリティごとに出る確率を変える
-        35 # Common
+        38 # Common
         25 # Uncommon
         15 # Rare
         10 # Epic
-        7  # Legendary
-        3  # Mythic
-        5  # Exotic
+        6  # Legendary
+        2  # Mythic
+        4  # Exotic
     var ProbArray:[]int = array{}
 
     var RarityGranters:[][]granter_item_num = array:
@@ -91,6 +94,8 @@ gacha_device := class(creative_device):
         0 # Legendary
         0 # Mythic
         0 # Exotic
+
+    var PullingGachaPlayers:[]player = array{} # 現在進行形でガチャを引いているプレイヤーを保持する（ガチャアニメーションが終了するまでは次のガチャを引けないようにするため）
 
     PlayerStatsManager:player_stat_manager = player_stat_manager{}
     
@@ -123,9 +128,6 @@ gacha_device := class(creative_device):
                     ItemGranter := ItemGranters[RarityIndex]
                     set RarityGranters[RarityIndex] += array{ItemGranter}
                     set RarityItemCounts[RarityIndex] += ItemGranter.ItemCount
-
-        for(Index->Count:RarityItemCounts):
-            Print("{Index}番目のレアリティは、アイテム数が{Count}個")
 
 
         # # ピストル
@@ -183,7 +185,7 @@ gacha_device := class(creative_device):
         # for(ItemGranter:ItemGranters_Item):
         #     set AllItemCount += ItemGranter.ItemCount
 
-        Print("AllItemCount: {AllItemCount}")
+        # Print("AllItemCount: {AllItemCount}")
 
     EnterMutator(Agent:agent):void=
         Print("練習場に入った")
@@ -205,6 +207,8 @@ gacha_device := class(creative_device):
         ShowGoldHud.Hide(Agent)
         AnimGoldHud.Hide(Agent)
         NotEnoughGoldHud.Hide(Agent)
+        for(AnimGachaHud:AnimGachaHuds):
+            AnimGachaHud.Hide(Agent)
         Print("入力トリガーの仕掛けから解除した")
 
     # 所持金表示HUDの更新を行う関数
@@ -232,10 +236,16 @@ gacha_device := class(creative_device):
     # 入力トリガーの仕掛けに登録する関数。AddShopUIを呼び出すだけ
     TriggerSpinGacha(Agent:agent):void=
         Print("入力を感知した")
-        SpinGacha(Agent)
+        if(Player := player[Agent]):
+            if(PullingGachaPlayers.Find[Player]):
+                Print("現在のガチャが引き終わるまで待ってね！")
+            else:
+                Print("ガチャを引く")
+                set PullingGachaPlayers += array{Player}
+                spawn{SpinGacha(Agent)}
 
     # レアリティごとに重みをつけたガチャを引く処理を実行する関数
-    SpinGacha(Agent:agent):void=
+    SpinGacha(Agent:agent)<suspends>:void=
         NotEnoughGoldHud.Hide(Agent)
 
         OPlayerStats := PlayerStatsManager.GetPlayerStats(Agent)
@@ -253,16 +263,28 @@ gacha_device := class(creative_device):
                 SelectedRarity := RandomArray[0]
                 RandomNum := Random.GetRandomInt(1, RarityItemCounts[SelectedRarity])
                 ItemGranters := RarityGranters[SelectedRarity]
+                AnimGachaHud := AnimGachaHuds[SelectedRarity]
             then:
                 Print("{SelectedRarity}番目のレアリティが選ばれた")
                 var CurrentItemCount:int = 0
                 for(Index->ItemGranter:ItemGranters):
                     if(RandomNum <= (CurrentItemCount + ItemGranter.ItemCount)):
-                        # アイテムを与える処理
-                        ItemGranter.ItemGranter.GrantItemIndex(Agent, (RandomNum - CurrentItemCount) - 1)
-                        PlayerStatsManager.UpdateCurrentGoldStat(Agent, -GachaCost)
+                        PlayerStatsManager.UpdateCurrentGoldStat(Agent, -GachaCost) # 所持金データの更新
                         ShowGold(Agent) # 所持金HUDの更新
-                        AnimGold(Agent, GachaCost) # 所持金変動アニメを表示
+                        AnimGold(Agent, -GachaCost) # 所持金変動アニメを表示
+                        
+                        # 持続データへの反映
+                        if(0 <= PlayerStats.RoundWins): # 試合中だったらって意味
+                            # 持続データへ保存
+                            PlayerStatsManager.UpdateCurrentRarityPullsArrayStat(Agent, SelectedRarity)
+                            Print("持続データに保存: ガチャを引いた回数と、{SelectedRarity}を引いた回数をそれぞれ +1 した。")
+
+                        # ガチャアニメーションを流す
+                        AnimGachaHud.Show(Agent)
+                        Sleep(3.15) # アニメーションでカプセルが排出されるまでの時間
+                        ItemGranter.ItemGranter.GrantItemIndex(Agent, (RandomNum - CurrentItemCount) - 1) # アイテムを与える
+                        Sleep(0.85) # アニメーションが終わるまで待機
+                        AnimGachaHud.Hide(Agent)
 
                         # XPを与える
                         GachaXPDevice.Award(Agent) # ガチャを引いた
@@ -270,13 +292,16 @@ gacha_device := class(creative_device):
                             Print("ミシックを引いた！！")
                             PulledMythicXPDevice.Award(Agent) # ミシックを引いた
 
-                        # 持続データへの反映
-                        if(0 < PlayerStats.RoundWins): # 試合中だったらって意味
-                            # 持続データへ保存
-                            PlayerStatsManager.UpdateCurrentRarityPullsArrayStat(Agent, SelectedRarity)
-                            Print("持続データに保存: ガチャを引いた回数と、{SelectedRarity}を引いた回数をそれぞれ +1 した。")
-
                         Print("{Index}個目の種類の{(RandomNum - CurrentItemCount) - 1}番目のアイテムを渡した！！")
+
+                        # ガチャ引いているプレイヤーを保持する配列から削除する
+                        if:
+                            Player := player[Agent]
+                            RemoveIndex := PullingGachaPlayers.Find[Player]
+                            NewArray := PullingGachaPlayers.RemoveElement[RemoveIndex]
+                        then:
+                            set PullingGachaPlayers = NewArray
+
                         return
                     else:
                         set CurrentItemCount += ItemGranter.ItemCount
@@ -285,6 +310,15 @@ gacha_device := class(creative_device):
             if(PlayerStats := OPlayerStats?):
                 Print("所持金: {PlayerStats.CurrentGold}")
             Print("所持金が足りなかったため、ガチャを回せなかった")
+
+        # ガチャ引いているプレイヤーを保持する配列から削除する
+        if:
+            Player := player[Agent]
+            RemoveIndex := PullingGachaPlayers.Find[Player]
+            NewArray := PullingGachaPlayers.RemoveElement[RemoveIndex]
+        then:
+            set PullingGachaPlayers = NewArray
+
 
     # # 確率調整のない完全にランダムなガチャを引く処理を実行する関数
     # SpinCompletelyrandomGacha(Agent:agent):void=

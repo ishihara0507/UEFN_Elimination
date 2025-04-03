@@ -156,6 +156,12 @@ round_ui_device := class(creative_device):
     #                     MTHudDevice.Show(Agent)
     #                     ETHudDevice.Show(Agent)
 
+    # HideRoundResult(GamePlayers:[]player):void=
+    #     HudDevices := array{RoundCountHudDevice} + WinMTHudDevices + LoseMTHudDevices + WinETHudDevices + LoseETHudDevices
+    #     for(Player:GamePlayers):
+    #         for(HudDevice:HudDevices):
+    #             HudDevice.Hide(Player)
+
     ### 4ラウンド以上だったらこっちを使う ###
     ShowRoundResult(TeamWinsMap:[team]int, RoundCount:int, ORoundWinTeam:?team):void=
         TeamCollection := GetPlayspace().GetTeamCollection()
@@ -180,9 +186,9 @@ round_ui_device := class(creative_device):
                     RoundCountHudDevice.Show(Agent, S2M("Round {RoundCount}"))
                     MTHudDevice.Show(Agent, S2M("{MTWins}"))
                     ETHudDevice.Show(Agent, S2M("{ETWins}"))
-
+                    
     HideRoundResult(GamePlayers:[]player):void=
-        HudDevices := array{RoundCountHudDevice} + WinMTHudDevices + LoseMTHudDevices + WinETHudDevices + LoseETHudDevices
+        HudDevices := array{RoundCountHudDevice, WinMTHudDevice, LoseMTHudDevice, WinETHudDevice, LoseETHudDevice}
         for(Player:GamePlayers):
             for(HudDevice:HudDevices):
                 HudDevice.Hide(Player)

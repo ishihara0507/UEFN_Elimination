@@ -14,10 +14,13 @@ waiting_players_device := class(creative_device):
     GoldItemGeneratorDevice:gold_item_generator_device = gold_item_generator_device{} # 練習場のやつ
 
     @editable
+    GachaDevice:gacha_device = gacha_device{}
+
+    @editable
     StartPlayerSpawners:[]player_spawner_device = array{} # マップに入ったときにスポーンするやつ
 
     @editable
-    PlayerSpawners:[]player_spawner_device = array{} # DefenderPlayerSpawnersとAttackerPlayerSpawnersと試合終了後に出るスポナーを合わせたやつ
+    GamePlayerSpawners:[]player_spawner_device = array{} # DefenderPlayerSpawnersとAttackerPlayerSpawnersと試合終了後に出るスポナーを合わせたやつ
 
     @editable
     EnterMutator:mutator_zone_device = mutator_zone_device{}
@@ -75,8 +78,8 @@ waiting_players_device := class(creative_device):
     PlayerStatsManager:player_stat_manager = player_stat_manager{}
 
     OnBegin<override>()<suspends>:void=
-        for(PlayerSpawner:PlayerSpawners):
-            PlayerSpawner.SpawnedEvent.Subscribe(OnPlayerSpawn)
+        for(PlayerSpawner:GamePlayerSpawners):
+            PlayerSpawner.SpawnedEvent.Subscribe(OnGamePlayerSpawn)
 
         for(PlayerSpawner:StartPlayerSpawners):
             Print("スポナーに登録した")
@@ -94,7 +97,7 @@ waiting_players_device := class(creative_device):
         var NotGameStarted:logic = false
         loop:
             var CheckedPlayerCount:int = 0
-            # Print("プレイヤーを確認")
+            Print("プレイヤーを確認")
             for(Player:GetPlayspace().GetPlayers()):
                 OPlayerStats := PlayerStatsManager.GetPlayerStats(Player)
                 if(PlayerStats := OPlayerStats?, SpawnedPlayers.Find[Player]):
@@ -102,16 +105,16 @@ waiting_players_device := class(creative_device):
                     if(PlayerStats.RoundWins = -1):
                         set NotGameStarted = true
                 else:
-                    # Print("プレイヤーを正常に確認できなかった")
+                    Print("プレイヤーを正常に確認できなかった")
             if(CheckedPlayerCount >= 1):
-                # Print("プレイヤーを正常に確認できた")
+                Print("プレイヤーを正常に確認できた")
                 break
             else:
-                # Print("CheckedPlayerCount: {CheckedPlayerCount}")
+                Print("CheckedPlayerCount: {CheckedPlayerCount}")
                 Sleep(1.0)
-            
-        GoldItemGeneratorDevice.StartGeneration() # 練習場のコインの生成を開始
         
+        GoldItemGeneratorDevice.StartGeneration() # 練習場のコインの生成を開始
+
         var WaitedTime:int = 0
         if(NotGameStarted?):
             loop: # プレイヤー待ちループ
@@ -141,6 +144,7 @@ waiting_players_device := class(creative_device):
                     MessageHud.Hide()
                     VoteStartPopupDevice.Hide()
                     VoteResultPopupDevice.Hide()
+
                     GoldItemGeneratorDevice.EndGeneration() # 練習場のコインの生成を停止する
 
                     var Count:int = StartDelay
@@ -160,6 +164,7 @@ waiting_players_device := class(creative_device):
                     for(Player:GamePlayers):
                         PlayerStatsManager.InitializePlayerStat(Player) # 念のため初期化処理
                         PlayerStatsManager.SetGameStats(Player)
+                        GachaDevice.UnregisterInputTriggerDevice(Player)
 
                     ShowVsUIAndTeleportToStage() # 参加するプレイヤーの名前を見せて、ステージへのテレポートも行う
 
@@ -181,6 +186,7 @@ waiting_players_device := class(creative_device):
                     set WaitedTime = 0
         else:
             set GameFlowDevice.GameStarted = true # ラウンド開始の合図
+            GoldItemGeneratorDevice.EndGeneration() # 練習場のコインの生成を停止する
             Print("試合は始まっている")
 
     # マップに入って最初にスポーンするプレイヤースポナーに登録する関数
@@ -189,11 +195,12 @@ waiting_players_device := class(creative_device):
         Print("データを-1に初期化")
         PlayerStatsManager.InitializePlayerStat(Agent) # 持続データをプレイヤーに割り当てる
         PlayerStatsManager.ResetGameStats(Agent) # 試合ごとに-1にするデータを初期化する
-        if(Player := player[Agent]):
+        GachaDevice.UnregisterInputTriggerDevice(Agent)
+        if(Player := player[Agent], not SpawnedPlayers.Find[Player]):
             Print("プレイヤーがスポーンした")
             set SpawnedPlayers += array{Player}
 
-    OnPlayerSpawn(Agent:agent):void=
+    OnGamePlayerSpawn(Agent:agent):void=
         if(Player := player[Agent], not SpawnedPlayers.Find[Player]):
             Print("プレイヤーがスポーンした")
             set SpawnedPlayers += array{Player}

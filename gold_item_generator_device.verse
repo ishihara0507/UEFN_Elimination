@@ -106,7 +106,6 @@ gold_item_generator_device := class(creative_device):
             EndingEvent.Await()
             loop:
                 DiamondSpawner.SpawnItem()
-                Print("ダイヤモンドを生成した")
                 Sleep(DiamondCooldown)
         Print("ダイヤモンドの生成を終了した")
 
@@ -129,7 +128,6 @@ gold_item_generator_device := class(creative_device):
                     RandomSpawner_ATK.SpawnItem()
                     RandomSpawner_DEF.SpawnItem()
 
-                Print("ランダムコインを生成した")
                 Sleep(RandomCooldown)
         Print("ランダムコインの生成を終了した")
 
@@ -151,8 +149,7 @@ gold_item_generator_device := class(creative_device):
                         Spawner_ATK.SpawnItem()
                         Spawner_DEF.SpawnItem()
                     
-                    Print("固定コインを生成した")
-                    Sleep(RandomCooldown)
+                    Sleep(FixedCooldown)
             Print("固定コインの生成を終了した")
         else:
             Print("固定コインスポナーが設定されていない")

@@ -13,7 +13,7 @@ player_stat := class<final><persistable>:
     # 今回の試合のデータ系（ラウンドの仕掛けを使うので、クラス変数などでデータを保持できないから）
     RoundCount:int = 0 # 試合の現在のラウンド数
     RoundWins:int = -1 # このプレイヤーが所属するチームが何ラウンド勝利したかを保持。試合が始まっているかを判定するために必要不可欠。初期値は-1。
-    CurrentGold:int = 800 # その試合での所持金を保持する
+    CurrentGold:int = 1000 # その試合での所持金を保持する
     CurrentKills:int = 0
     CurrentDeaths:int = 0
     CurrentStartBombs:int = 0

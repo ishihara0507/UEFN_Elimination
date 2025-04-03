@@ -28,7 +28,7 @@ game_result := class:
 
     # 全プレイヤーに試合結果のUIを表示する関数
     AddGameResultUI():void=
-        # PlayerResultMap の初期化（ソートをするならここ）
+        # データの作成（PlayerResultMap の初期化、ソート処理を行うならここ）
         for(Player:GamePlayers):
             var ValueMap:[string]int = map{} # １人のプレイヤーのキル・デス・ボムの値を保持
             OPlayerStats := PlayerStatsManager.GetPlayerStats(Player)
@@ -41,10 +41,10 @@ game_result := class:
                 set ValueMap["StopBombs"] = PlayerStats.CurrentStopBombs
                 set PlayerResultMap[Player] = ValueMap
 
-            SavePlayersResult() # 試合結果を持続データへの反映
-            
-            PlayerStatsManager.ResetGameStats(Player) # 試合ごとに初期化するデータをリセット
+        # 試合結果を持続データへの反映
+        SavePlayersResult() 
 
+        # UIの付与
         TeamArray := TeamCollection.GetTeams()
         for(Team:TeamArray):
             for(Agent:TeamCollection.GetAgents[Team], Player := player[Agent]):
@@ -58,6 +58,7 @@ game_result := class:
                     PlayerResultMap := PlayerResultMap
                     TeamCollection := TeamCollection
                 spawn{GameResultUI.Init()}
+                PlayerStatsManager.ResetGameStats(Player) # 試合ごとに初期化するデータをリセット
 
     # 全プレイヤーの試合結果を持続データに反映する関数
     SavePlayersResult():void=
